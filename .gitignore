@@ -1,0 +1,43 @@
+# Python / build
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+.eggs/
+*.egg
+
+# Virtualenvs
+.venv/
+venv/
+env/
+
+# Secrets — NEVER commit real credentials
+.env
+*.env
+config.yaml
+config.yml
+*.key
+*.pem
+
+# Local runtime data (SQLite DB, user config live here in real use)
+.invoiceguard/*.db
+.invoiceguard/*.db-journal
+
+# Tests / dev
+.pytest_cache/
+.coverage
+coverage.xml
+htmlcov/
+
+# Editors / OS
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# Docker
+.docker/

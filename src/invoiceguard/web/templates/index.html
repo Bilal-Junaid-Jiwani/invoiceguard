@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+{% block title %}Invoices · InvoiceGuard{% endblock %}
+{% block content %}
+
+<section class="stats">
+  <div class="stat">
+    <div class="stat-label">Outstanding</div>
+    <div class="stat-value">{{ fmt(totals.outstanding) }}</div>
+    <div class="stat-sub">sent + overdue invoices</div>
+  </div>
+  <div class="stat stat-warn">
+    <div class="stat-label">Overdue</div>
+    <div class="stat-value">{{ fmt(totals.overdue) }}</div>
+    <div class="stat-sub">needs escalation</div>
+  </div>
+  <div class="stat stat-ok">
+    <div class="stat-label">Collected</div>
+    <div class="stat-value">{{ fmt(totals.collected) }}</div>
+    <div class="stat-sub">paid invoices</div>
+  </div>
+</section>
+{% if totals.currencies > 1 %}
+<p class="note">Totals mix {{ totals.currencies }} currencies — shown as raw cent sums.</p>
+{% endif %}
+
+<nav class="filters" aria-label="Filter by status">
+  <a href="/" class="filter{% if active == 'all' %} active{% endif %}">All</a>
+  {% for s in statuses %}
+  <a href="/?status={{ s }}" class="filter{% if active == s %} active{% endif %}">{{ s|title }} <span class="count">{{ counts[s] }}</span></a>
+  {% endfor %}
+</nav>
+
+<section class="inv-list">
+  {% if invoices %}
+  <div class="inv-head" aria-hidden="true">
+    <span>Client / Project</span><span>Amount</span><span>Status</span><span>Due</span><span>Escalation</span><span></span>
+  </div>
+  {% for inv in invoices %}
+  <article class="inv">
+    <div class="inv-main">
+      <div class="inv-title">{{ inv.client_name }}</div>
+      <div class="inv-sub">
+        <span class="kind kind-{{ inv.kind }}">{{ inv.kind }}</span>
+        <span>{{ inv.project_title }}</span>
+        <span class="muted">#{{ inv.id }}</span>
+      </div>
+    </div>
+    <div class="inv-amount mono">{{ fmt(inv.amount_cents, inv.currency) }}</div>
+    <div class="inv-status">
+      <span class="chip chip-{{ inv.status }}">{{ inv.status }}{% if inv.paid_late %} · late{% endif %}</span>
+    </div>
+    <div class="inv-due">
+      {% if inv.due_date %}
+        <span class="mono">{{ inv.due_date[:10] }}</span>
+        {% if inv.days_overdue %}<span class="overdue-tag">{{ inv.days_overdue }}d overdue</span>{% endif %}
+      {% else %}<span class="muted">—</span>{% endif %}
+    </div>
+    <div class="inv-stage">
+      {% if inv.status in ('sent', 'overdue') %}
+        {% if inv.stage %}<span class="stage stage-{{ inv.stage }}">{{ stage_display[inv.stage] }}</span>
+        {% else %}<span class="muted">none</span>{% endif %}
+      {% else %}<span class="muted">—</span>{% endif %}
+    </div>
+    <div class="inv-actions">
+      {% if inv.stripe_url and inv.status in ('sent', 'overdue') %}
+      <a class="btn-pay" href="{{ inv.stripe_url }}" target="_blank" rel="noopener">Pay</a>
+      {% endif %}
+      <a class="btn-ghost" href="/invoices/{{ inv.id }}">Details</a>
+    </div>
+  </article>
+  {% endfor %}
+  {% else %}
+  <div class="empty">
+    <div class="empty-title">No invoices{% if active != 'all' %} with status “{{ active }}”{% endif %}</div>
+    <div class="empty-sub">Invoices created from the InvoiceGuard CLI will appear here.</div>
+  </div>
+  {% endif %}
+</section>
+{% endblock %}

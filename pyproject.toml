@@ -1,0 +1,51 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "invoiceguard"
+version = "0.1.0"
+description = "Freelancer payment enforcement: deposit links tied to a contract with a late-fee clause, then automated 3-stage collections."
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "Apache-2.0" }
+authors = [{ name = "InvoiceGuard contributors" }]
+keywords = ["freelance", "invoicing", "stripe", "collections", "dunning"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: End Users/Desktop",
+    "License :: OSI Approved :: Apache Software License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Environment :: Console",
+    "Topic :: Office/Business :: Financial",
+]
+dependencies = [
+    "stripe>=12,<16",
+    "PyYAML>=6",
+    "click>=8",
+    "fastapi>=0.110",
+    "uvicorn[standard]>=0.29",
+    "python-multipart>=0.0.18",
+    "jinja2>=3.1",  # dashboard templates
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8",
+    "httpx>=0.27",  # FastAPI TestClient for dashboard tests
+]
+
+[project.scripts]
+invoiceguard = "invoiceguard.cli:main"
+
+[project.urls]
+Homepage = "https://github.com/Bilal-Junaid-Jiwani/invoiceguard"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

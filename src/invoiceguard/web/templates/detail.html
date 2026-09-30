@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+{% block title %}Invoice #{{ invoice.id }} · InvoiceGuard{% endblock %}
+{% block content %}
+<a class="back" href="/">← All invoices</a>
+
+<div class="detail-grid">
+  <section class="card">
+    <div class="card-head">
+      <h1>Invoice #{{ invoice.id }}</h1>
+      <span class="chip chip-{{ invoice.status }}">{{ invoice.status }}{% if invoice.paid_late %} · late{% endif %}</span>
+    </div>
+    <dl class="facts">
+      <div><dt>Client</dt><dd>{{ invoice.client_name }}{% if invoice.client_email %} <span class="muted">{{ invoice.client_email }}</span>{% endif %}</dd></div>
+      <div><dt>Project</dt><dd>{{ invoice.project_title }}</dd></div>
+      <div><dt>Kind</dt><dd><span class="kind kind-{{ invoice.kind }}">{{ invoice.kind }}</span></dd></div>
+      <div><dt>Amount</dt><dd class="mono big">{{ fmt(invoice.amount_cents, invoice.currency) }}</dd></div>
+      <div><dt>Due date</dt><dd class="mono">{{ invoice.due_date[:10] if invoice.due_date else "—" }}{% if invoice.days_overdue %} <span class="overdue-tag">{{ invoice.days_overdue }}d overdue</span>{% endif %}</dd></div>
+      <div><dt>Sent</dt><dd class="mono">{{ invoice.sent_at[:10] if invoice.sent_at else "—" }}</dd></div>
+      <div><dt>Paid</dt><dd class="mono">{{ invoice.paid_at[:10] if invoice.paid_at else "—" }}</dd></div>
+      <div><dt>Escalation stage</dt><dd>{% if invoice.stage %}<span class="stage stage-{{ invoice.stage }}">{{ stage_display[invoice.stage] }}</span>{% else %}<span class="muted">none</span>{% endif %}</dd></div>
+      {% if invoice.stripe_url and invoice.status in ('sent', 'overdue') %}
+      <div><dt>Payment link</dt><dd><a class="btn-pay" href="{{ invoice.stripe_url }}" target="_blank" rel="noopener">Open Stripe checkout</a></dd></div>
+      {% endif %}
+    </dl>
+  </section>
+
+  <section class="card">
+    <div class="card-head"><h2>Contract &amp; terms</h2></div>
+    <dl class="facts">
+      <div><dt>Acknowledged</dt><dd>
+        {% if invoice.contract_ack %}<span class="ack-yes">✓ acknowledged</span>{% if invoice.contract_ack_at %} <span class="muted mono">{{ invoice.contract_ack_at[:10] }}</span>{% endif %}
+        {% else %}<span class="ack-no">✗ not acknowledged</span>{% endif %}
+      </dd></div>
+      <div><dt>Deposit</dt><dd class="mono">{{ invoice.deposit_pct }}%</dd></div>
+      <div><dt>Late fee</dt><dd class="mono">{{ invoice.late_fee_pct }}% after {{ invoice.late_fee_grace_days }}-day grace</dd></div>
+      <div><dt>Project value</dt><dd class="mono">{{ fmt(invoice.project_amount_cents, invoice.project_currency) }}</dd></div>
+    </dl>
+  </section>
+</div>
+
+<section class="card timeline-card">
+  <div class="card-head"><h2>Timeline</h2></div>
+  {% if timeline %}
+  <ol class="timeline">
+    {% for t in timeline %}
+    <li><span class="t-dot"></span><span class="t-label">{{ t.label }}</span><span class="t-date mono">{{ t.at[:10] if t.at|length > 10 else t.at }}</span></li>
+    {% endfor %}
+  </ol>
+  {% else %}
+  <p class="muted">No events yet — this invoice is still a draft.</p>
+  {% endif %}
+</section>
+{% endblock %}

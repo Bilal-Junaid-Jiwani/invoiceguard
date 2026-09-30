@@ -1,0 +1,29 @@
+Metadata-Version: 2.4
+Name: invoiceguard
+Version: 0.1.0
+Summary: Freelancer payment enforcement: deposit links tied to a contract with a late-fee clause, then automated 3-stage collections.
+Author: InvoiceGuard contributors
+License: Apache-2.0
+Project-URL: Homepage, https://github.com/Bilal-Junaid-Jiwani/invoiceguard
+Keywords: freelance,invoicing,stripe,collections,dunning
+Classifier: Development Status :: 3 - Alpha
+Classifier: Intended Audience :: End Users/Desktop
+Classifier: License :: OSI Approved :: Apache Software License
+Classifier: Programming Language :: Python :: 3
+Classifier: Programming Language :: Python :: 3.10
+Classifier: Programming Language :: Python :: 3.11
+Classifier: Programming Language :: Python :: 3.12
+Classifier: Environment :: Console
+Classifier: Topic :: Office/Business :: Financial
+Requires-Python: >=3.10
+Description-Content-Type: text/markdown
+License-File: LICENSE
+Requires-Dist: stripe<16,>=12
+Requires-Dist: PyYAML>=6
+Requires-Dist: click>=8
+Requires-Dist: fastapi>=0.110
+Requires-Dist: uvicorn[standard]>=0.29
+Requires-Dist: python-multipart>=0.0.18
+Provides-Extra: dev
+Requires-Dist: pytest>=8; extra == "dev"
+Dynamic: license-file

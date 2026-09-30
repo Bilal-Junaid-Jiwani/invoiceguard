@@ -1,0 +1,9 @@
+stripe<16,>=12
+PyYAML>=6
+click>=8
+fastapi>=0.110
+uvicorn[standard]>=0.29
+python-multipart>=0.0.18
+
+[dev]
+pytest>=8
