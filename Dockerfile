@@ -13,7 +13,6 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY pyproject.toml README.md LICENSE ./
 COPY src/ src/
-COPY templates/ templates/
 RUN pip install --no-cache-dir .
 
 # Local-first data lives in this volume (config, SQLite DB, templates)

@@ -20,7 +20,9 @@ def home(tmp_path, monkeypatch):
     monkeypatch.setenv("INVOICEGUARD_CONFIG", str(cfg_dir / "config.yaml"))
     monkeypatch.setenv("INVOICEGUARD_DB", str(cfg_dir / "invoiceguard.db"))
     # templates live next to the config file
-    src_templates = Path(__file__).resolve().parent.parent / "templates"
+    import invoiceguard
+
+    src_templates = Path(invoiceguard.__file__).resolve().parent / "email_templates"
     dest = cfg_dir / "templates"
     shutil.copytree(src_templates, dest)
     return cfg_dir

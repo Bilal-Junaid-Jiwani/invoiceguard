@@ -47,5 +47,14 @@ Homepage = "https://github.com/Bilal-Junaid-Jiwani/invoiceguard"
 [tool.setuptools.packages.find]
 where = ["src"]
 
+# Non-Python files that must ship inside the installed package:
+# dashboard HTML/CSS + the dunning email templates installed by `init`.
+[tool.setuptools.package-data]
+invoiceguard = [
+    "web/templates/*.html",
+    "web/static/*",
+    "email_templates/*.md",
+]
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]

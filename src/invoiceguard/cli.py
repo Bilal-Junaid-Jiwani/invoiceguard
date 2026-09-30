@@ -16,7 +16,7 @@ from .db import DB
 from .dunning import check_due, money
 from .stripe_links import create_payment_link, default_due_date
 
-TEMPLATE_SOURCE = Path(__file__).resolve().parent.parent.parent / "templates"
+TEMPLATE_SOURCE = Path(__file__).resolve().parent / "email_templates"
 
 
 def _db() -> DB:
