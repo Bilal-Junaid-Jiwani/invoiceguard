@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>InvoiceGuard — Stop chasing invoices</title>
+  <meta name="description" content="InvoiceGuard ties a Stripe deposit link to a contract with a late-fee clause — before work starts. Overdue invoice? Escalation emails send themselves: day-1 nudge, day-7 reminder, day-15 formal notice.">
+  <link rel="icon" href="assets/img/logo.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="assets/css/style.css">
+</head>
+<body>
+
+<header class="site-header">
+  <div class="wrap nav">
+    <a class="brand" href="index.html"><img src="assets/img/logo.svg" alt="">InvoiceGuard</a>
+    <button class="nav-toggle" aria-label="Toggle navigation" aria-expanded="false">☰</button>
+    <nav class="nav-links" aria-label="Primary">
+      <a href="docs.html">Docs</a>
+      <a href="changelog.html">Changelog</a>
+
+      <a class="btn btn-sm btn-ghost" href="https://github.com/Bilal-Junaid-Jiwani/invoiceguard">GitHub</a>
+    </nav>
+  </div>
+</header>
+
+<main>
+  <!-- HERO -->
+  <section class="hero">
+    <div class="wrap hero-inner">
+      <span class="eyebrow"><span class="dot"></span>v0.1.0 · self-hosted · Stripe test-mode friendly</span>
+      <h1>Stop chasing <span class="accent">invoices</span>.</h1>
+      <p class="lede">InvoiceGuard ties a Stripe deposit link to a contract with a late-fee clause — <strong>before work starts</strong>. If the final invoice goes overdue, escalation emails send themselves: a polite nudge on day&nbsp;1, a firm reminder on day&nbsp;7, a formal notice on day&nbsp;15 quoting the signed clause.</p>
+      <div class="hero-ctas">
+        <a class="btn btn-primary" href="docs.html">Read the docs</a>
+        <a class="btn btn-ghost" href="https://github.com/Bilal-Junaid-Jiwani/invoiceguard">View on GitHub</a>
+      </div>
+      <div class="hero-meta">
+        <span>Local-first SQLite</span>
+        <span>Single YAML config</span>
+        <span>CLI + Docker Compose</span>
+        <span>Bring-your-own SMTP</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- PAIN -->
+  <section class="block">
+    <div class="wrap">
+      <p class="kicker">The problem</p>
+      <h2>Late payment isn't bad luck. It's the norm.</h2>
+      <p class="section-sub">These aren't vibes — they're published numbers.</p>
+      <div class="stats">
+        <div class="stat">
+          <div class="num">85%</div>
+          <p>of freelancers experience late payment.</p>
+          <span class="src">Kaplan Group report, April 2026</span>
+        </div>
+        <div class="stat">
+          <div class="num">91%</div>
+          <p>experienced late or overdue payments.</p>
+          <span class="src">Freelancers Union 2022 survey (NY, with writer &amp; creative guilds)</span>
+        </div>
+        <div class="stat">
+          <div class="num">54%</div>
+          <p>faced delays of three months or more.</p>
+          <span class="src">Freelancers Union 2022 survey</span>
+        </div>
+        <div class="stat">
+          <div class="num money">$400–$9k</div>
+          <p>typical invoices at stake. Rent depends on it.</p>
+          <span class="src">Reported invoice ranges</span>
+        </div>
+      </div>
+      <div class="pain-note">
+        <strong>Today's playbook:</strong> polite <em>"just following up"</em> emails — or quietly eating the loss. InvoiceGuard replaces both with a contract signed up front and escalation that runs itself.
+      </div>
+    </div>
+  </section>
+
+  <!-- HOW IT WORKS -->
+  <section class="block">
+    <div class="wrap">
+      <p class="kicker">How it works</p>
+      <h2>Three steps. The power shifts before work starts.</h2>
+      <p class="section-sub">The leverage isn't in the reminder — it's in the deposit link tied to a signed late-fee clause, collected before the first hour of work.</p>
+      <div class="steps">
+        <div class="step">
+          <h3>Create a project</h3>
+          <p>Get a deposit payment link tied to a contract carrying a late-fee clause. The client acknowledges it before paying.</p>
+        </div>
+        <div class="step">
+          <h3>Client pays the deposit</h3>
+          <p>Paid via Stripe before work starts. No deposit, no kickoff — the boundary is set by the system, not by you.</p>
+        </div>
+        <div class="step">
+          <h3>Escalation runs itself</h3>
+          <p>If the final invoice goes overdue, emails go out automatically.</p>
+          <span class="flow">day&#8209;1 polite nudge → day&#8209;7 <b>firm reminder</b> → day&#8209;15 <b>formal notice</b> quoting the signed clause</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- SCREENSHOTS (real captures, 16:10 — swap 1:1, layout unchanged) -->
+  <section class="block">
+    <div class="wrap">
+      <p class="kicker">See it in action</p>
+      <h2>Built for the terminal-first freelancer.</h2>
+      <p class="section-sub">Real captures from a local demo instance — every client is labeled (demo).</p>
+      <div class="shots">
+        <div>
+          <div class="shot-frame shot-real">
+            <img src="assets/img/dashboard-list.png" alt="InvoiceGuard local dashboard: invoice list with totals, status filters, and escalation stages (demo data)" width="1280" height="800">
+          </div>
+          <p class="shot-cap"><code>invoiceguard dashboard</code> — projects, invoices, and dunning status at a glance.</p>
+        </div>
+        <div>
+          <div class="shot-frame shot-real">
+            <img src="assets/img/dashboard-detail.png" alt="Invoice detail page: contract terms, Day 15 escalation stage, and the full day-1 to day-15 escalation timeline (demo data)" width="1280" height="800">
+          </div>
+          <p class="shot-cap">Invoice detail — full day-1 → day-7 → day-15 escalation timeline.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- WEDGE -->
+  <section class="block">
+    <div class="wrap">
+      <div class="sidekick">
+        <div>
+          <p class="kicker">The wedge</p>
+          <h3>A sidekick, not a switch.</h3>
+          <p>InvoiceGuard works <strong>alongside</strong> whatever you invoice with today — through Stripe. Nobody changes platforms, nobody migrates data. It just adds the one thing your stack is missing: a deposit and a late-fee contract collected before work begins.</p>
+        </div>
+        <div class="toolchips" aria-label="Works alongside your stack">
+          <span>FreshBooks</span>
+          <span>Wave</span>
+          <span>Your invoicing tool</span>
+          <span>Stripe</span>
+          <span class="you">+ InvoiceGuard</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- QUICKSTART -->
+  <section class="block">
+    <div class="wrap">
+      <p class="kicker">Quickstart</p>
+      <h2>Up and running in minutes.</h2>
+      <p class="section-sub">Install, initialize, set your Stripe key, add a client, create a project, create an invoice — then let a daily cron run the escalation.</p>
+      <div class="codeblock">
+        <header><span><span class="dots"><i></i><i></i><i></i></span>terminal</span><button class="copy-btn" data-copy>Copy</button></header>
+        <pre><span class="c"># install (InvoiceGuard isn't on PyPI — install straight from the repo)</span>
+<span class="cmd">pip install git+https://github.com/Bilal-Junaid-Jiwani/invoiceguard.git</span>
+
+<span class="c"># one-time setup: SQLite database + single YAML config</span>
+<span class="cmd">invoiceguard init</span>
+
+<span class="c"># set your Stripe TEST key first — invoice create needs it</span>
+<span class="arg">export INVOICEGUARD_STRIPE_SECRET_KEY="sk_test_..."</span>
+
+<span class="c"># add a client, create a project (deposit link + late-fee contract)</span>
+<span class="cmd">invoiceguard client add</span>
+<span class="cmd">invoiceguard project create</span>
+
+<span class="c"># create the final invoice with a due date</span>
+<span class="cmd">invoiceguard invoice create</span>
+
+<span class="c"># check what's overdue and send day-1 / day-7 / day-15 escalations</span>
+<span class="cmd">invoiceguard check-due</span>
+
+<span class="c"># run it every morning via cron:</span>
+<span class="arg">0 9 * * * invoiceguard check-due</span></pre>
+      </div>
+      <p class="term-note">Prefer a UI? <code>invoiceguard dashboard</code> serves the local dashboard on your machine.</p>
+    </div>
+  </section>
+
+  <!-- ROI -->
+  <section class="block">
+    <div class="wrap">
+      <div class="roi">
+        <p class="kicker">Why it pays</p>
+        <p class="big">One recovered invoice <span class="accent">pays for years.</span></p>
+        <p>You're the buyer — no sales call, no seat licenses. v1 is self-hosted and free to run on your own machine.</p>
+        <div class="price-line"><strong>Managed hosting</strong> is coming later, planned at <strong>$15–29/mo</strong> — flat, no per-seat math.</div>
+        <div class="soon-note"><strong>Coming soon — honestly:</strong> no waitlist, no launch date, no prices to announce yet. The self-hosted v1 is ready now.</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- FINAL CTA -->
+  <section class="block">
+    <div class="wrap">
+      <div class="cta-band">
+        <h2>Retire <em>"just following up."</em></h2>
+        <p>Set the terms before work starts. Let the system do the chasing.</p>
+        <div class="hero-ctas">
+          <a class="btn btn-primary" href="docs.html">Read the docs</a>
+          <a class="btn btn-ghost" href="https://github.com/Bilal-Junaid-Jiwani/invoiceguard">View on GitHub</a>
+        </div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer class="site-footer">
+  <div class="wrap">
+    <div class="foot">
+      <a class="brand" href="index.html"><img src="assets/img/logo.svg" alt="" width="24" height="24">InvoiceGuard</a>
+      <nav aria-label="Footer">
+        <a href="docs.html">Docs</a>
+        <a href="changelog.html">Changelog</a>
+        <a href="https://github.com/Bilal-Junaid-Jiwani/invoiceguard">GitHub</a>
+      </nav>
+    </div>
+    <p class="foot-small">© <span data-year>2026</span> InvoiceGuard. Late-payment statistics cited from the Kaplan Group report (April 2026) and the Freelancers Union 2022 survey. Built for freelancers who'd rather be working than chasing.</p>
+  </div>
+</footer>
+
+<script src="assets/js/main.js"></script>
+</body>
+</html>

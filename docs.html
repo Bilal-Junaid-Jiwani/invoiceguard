@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Documentation — InvoiceGuard</title>
+  <meta name="description" content="InvoiceGuard docs: installation, Stripe setup, SMTP setup, contract and dunning configuration, CLI reference, FAQ, v1 limits, and roadmap.">
+  <link rel="icon" href="assets/img/logo.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="assets/css/style.css">
+</head>
+<body>
+
+<header class="site-header">
+  <div class="wrap nav">
+    <a class="brand" href="index.html"><img src="assets/img/logo.svg" alt="">InvoiceGuard</a>
+    <button class="nav-toggle" aria-label="Toggle navigation" aria-expanded="false">☰</button>
+    <nav class="nav-links" aria-label="Primary">
+      <a href="docs.html" class="active">Docs</a>
+      <a href="changelog.html">Changelog</a>
+
+      <a class="btn btn-sm btn-ghost" href="https://github.com/Bilal-Junaid-Jiwani/invoiceguard">GitHub</a>
+    </nav>
+  </div>
+</header>
+
+<div class="wrap">
+  <div class="page-hero">
+    <h1>Documentation</h1>
+    <p>Everything you need to run InvoiceGuard v0.1.0: install it, connect Stripe, bring your own SMTP, configure contracts and dunning — and know exactly what v1 doesn't do yet.</p>
+  </div>
+
+  <div class="docs-layout">
+    <nav class="docs-nav" aria-label="Docs sections">
+      <h5>On this page</h5>
+      <a href="#installation">Installation</a>
+      <a href="#stripe">Stripe setup</a>
+      <a href="#smtp">SMTP setup</a>
+      <a href="#contract">Contract &amp; dunning</a>
+      <a href="#cli">CLI reference</a>
+      <a href="#faq">FAQ</a>
+      <a href="#limits">Limits of v1</a>
+      <a href="#roadmap">Roadmap</a>
+    </nav>
+
+    <div class="docs-content">
+      <section id="installation">
+        <h2>Installation</h2>
+        <p>InvoiceGuard is local-first: everything runs on your machine against a SQLite database, driven by a single YAML config file. It isn't on PyPI yet — install straight from the GitHub repo:</p>
+        <h3>pip (recommended)</h3>
+        <div class="codeblock">
+          <header><span><span class="dots"><i></i><i></i><i></i></span>terminal</span><button class="copy-btn" data-copy>Copy</button></header>
+          <pre><span class="cmd">pip install git+https://github.com/Bilal-Junaid-Jiwani/invoiceguard.git</span>
+<span class="cmd">invoiceguard init</span></pre>
+        </div>
+        <p><code>invoiceguard init</code> walks you through one-time setup: it creates the SQLite database and writes the single YAML config file with sane defaults.</p>
+        <h3>Docker Compose</h3>
+        <p>Prefer containers? A Compose file is included — it runs InvoiceGuard plus the local dashboard. See the README in the repo for the exact service definition.</p>
+        <div class="codeblock">
+          <header><span><span class="dots"><i></i><i></i><i></i></span>terminal</span><button class="copy-btn" data-copy>Copy</button></header>
+          <pre><span class="cmd">docker compose up -d</span></pre>
+        </div>
+      </section>
+
+      <section id="stripe">
+        <h2>Stripe setup</h2>
+        <p>InvoiceGuard collects deposits through Stripe payment links. It is <strong>test-mode friendly</strong> — you can run the entire flow end to end without moving real money.</p>
+        <ol>
+          <li>In your Stripe dashboard, create a <strong>restricted API key</strong> (payment links + customers are enough).</li>
+          <li>Paste the key into your YAML config (or the <code>init</code> wizard).</li>
+          <li>Point a Stripe webhook at your instance so deposit payments are recorded automatically.</li>
+          <li>Stay in <strong>test mode</strong> until you've run a full project cycle, then switch the key to live.</li>
+        </ol>
+        <div class="callout"><strong>Tip:</strong> run your first project entirely in test mode — create a project, pay the test deposit, create a test invoice, and let <code>check-due</code> fire the day-1 nudge at yourself.</div>
+      </section>
+
+      <section id="smtp">
+        <h2>SMTP setup</h2>
+        <p>InvoiceGuard has <strong>no built-in mail service</strong>. Bring your own SMTP — Gmail, your host, Amazon SES, anything that speaks SMTP. Add it to the single YAML config:</p>
+        <div class="codeblock">
+          <header><span><span class="dots"><i></i><i></i><i></i></span>config.yaml</span><button class="copy-btn" data-copy>Copy</button></header>
+          <pre><span class="arg">smtp:</span>
+  <span class="arg">host:</span> smtp.example.com
+  <span class="arg">port:</span> 587
+  <span class="arg">username:</span> you@example.com
+  <span class="c"># password via the INVOICEGUARD_SMTP_PASSWORD environment variable —</span>
+  <span class="c"># never store it in the config file</span></pre>
+        </div>
+        <p>All escalation emails are sent from your address, so replies land in your inbox — not a third party's.</p>
+      </section>
+
+      <section id="contract">
+        <h2>Contract &amp; dunning configuration</h2>
+        <p>Each project links a Stripe deposit payment link to a contract that carries a <strong>late-fee clause</strong>. Before the client can pay the deposit, they acknowledge the contract with a checkbox.</p>
+        <h3>The escalation schedule</h3>
+        <p>When <code>invoiceguard check-due</code> finds an invoice past its due date, it sends the next stage automatically:</p>
+        <ul>
+          <li><strong>Day 1 — polite nudge.</strong> Friendly tone, invoice attached, payment link included.</li>
+          <li><strong>Day 7 — firm reminder.</strong> Direct tone, due date and days-overdue stated.</li>
+          <li><strong>Day 15 — formal notice.</strong> Quotes the signed late-fee clause and states that fees now apply.</li>
+        </ul>
+        <p>All three email templates live in the YAML config — edit the subject lines, the body copy, and the late-fee terms to match how you talk to clients.</p>
+        <div class="callout warn"><strong>Not legal advice.</strong> The late-fee clause is a template starting point. For invoices that matter, have a local professional review your contract terms.</div>
+      </section>
+
+      <section id="cli">
+        <h2>CLI reference</h2>
+        <table class="cli">
+          <thead><tr><th>Command</th><th>What it does</th></tr></thead>
+          <tbody>
+            <tr><td>invoiceguard init</td><td>One-time setup: creates the SQLite database and the single YAML config.</td></tr>
+            <tr><td>invoiceguard dashboard</td><td>Launches the local dashboard (<code>http://127.0.0.1:8000</code>) — projects, invoices, dunning status.</td></tr>
+            <tr><td>invoiceguard client add</td><td>Adds a client (name, email). Interactive.</td></tr>
+            <tr><td>invoiceguard project create</td><td>Creates a project: Stripe deposit link + late-fee contract.</td></tr>
+            <tr><td>invoiceguard invoice create</td><td>Creates the final invoice with a due date. Needs a Stripe key first — see <a href="#stripe">Stripe setup</a>.</td></tr>
+            <tr><td>invoiceguard check-due</td><td>Finds overdue invoices and sends the next dunning stage. Run daily via cron:<br><code>0 9 * * * invoiceguard check-due</code></td></tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section id="faq">
+        <h2>FAQ</h2>
+        <div class="faq-item">
+          <summary>Do I have to stop using FreshBooks / Wave / my invoicing tool?</summary>
+          <div class="faq-body">No. InvoiceGuard is a sidekick, not a switch — it works alongside your existing tools through Stripe. Keep invoicing wherever you invoice; InvoiceGuard adds the deposit link, the late-fee contract, and the automatic escalation.</div>
+        </div>
+        <div class="faq-item">
+          <summary>Is the client's checkbox acknowledgment legally binding?</summary>
+          <div class="faq-body">In v1 it's an acknowledgment checkbox, not a full e-signature — it records that the client saw and accepted the late-fee clause before paying the deposit. Real e-signature support is on the roadmap. This isn't legal advice; for large invoices, get your terms reviewed professionally.</div>
+        </div>
+        <div class="faq-item">
+          <summary>Where does my data live?</summary>
+          <div class="faq-body">On your machine, in a local SQLite database. There is no cloud account in v1 and nothing is sent anywhere except Stripe (for payments) and your own SMTP server (for emails).</div>
+        </div>
+        <div class="faq-item">
+          <summary>What does it cost?</summary>
+          <div class="faq-body">v1 is self-hosted — free to run on your own machine. Managed hosting is coming later, planned at a flat $15–29/mo. No dates announced yet.</div>
+        </div>
+        <div class="faq-item">
+          <summary>Does it work in Stripe test mode?</summary>
+          <div class="faq-body">Yes — it's designed to be set up and tested fully in test mode before you switch a key to live.</div>
+        </div>
+      </section>
+
+      <section id="limits">
+        <h2>Limits of v1</h2>
+        <p>Honest boundaries, so there are no surprises:</p>
+        <ul>
+          <li><strong>Acknowledgment checkbox, not e-signature.</strong> The client confirms the late-fee clause with a checkbox. Real e-signature is roadmap.</li>
+          <li><strong>No built-in mail service.</strong> You bring your own SMTP credentials.</li>
+          <li><strong>Single machine.</strong> SQLite, one YAML config — no multi-user or team features in v1.</li>
+          <li><strong>Email-only dunning.</strong> Escalation goes out by email; SMS/WhatsApp reminders are not in v1.</li>
+          <li><strong>Managed hosting: coming soon.</strong> No waitlist, no launch date yet.</li>
+        </ul>
+      </section>
+
+      <section id="roadmap">
+        <h2>Roadmap</h2>
+        <p>What's planned next — <strong>no dates</strong>, shipped when ready:</p>
+        <ul>
+          <li>Real e-signature for the late-fee contract (replacing the v1 acknowledgment checkbox).</li>
+          <li>Managed hosting — flat $15–29/mo planned, so you don't have to run anything yourself.</li>
+          <li>More dunning channels beyond email.</li>
+          <li>Milestone-based deposit links for longer projects.</li>
+        </ul>
+      </section>
+    </div>
+  </div>
+</div>
+
+<footer class="site-footer">
+  <div class="wrap">
+    <div class="foot">
+      <a class="brand" href="index.html"><img src="assets/img/logo.svg" alt="" width="24" height="24">InvoiceGuard</a>
+      <nav aria-label="Footer">
+        <a href="docs.html">Docs</a>
+        <a href="changelog.html">Changelog</a>
+        <a href="https://github.com/Bilal-Junaid-Jiwani/invoiceguard">GitHub</a>
+      </nav>
+    </div>
+    <p class="foot-small">© <span data-year>2026</span> InvoiceGuard. Late-payment statistics cited from the Kaplan Group report (April 2026) and the Freelancers Union 2022 survey.</p>
+  </div>
+</footer>
+
+<script src="assets/js/main.js"></script>
+</body>
+</html>

@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Changelog — InvoiceGuard</title>
+  <meta name="description" content="InvoiceGuard release history.">
+  <link rel="icon" href="assets/img/logo.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="assets/css/style.css">
+</head>
+<body>
+
+<header class="site-header">
+  <div class="wrap nav">
+    <a class="brand" href="index.html"><img src="assets/img/logo.svg" alt="">InvoiceGuard</a>
+    <button class="nav-toggle" aria-label="Toggle navigation" aria-expanded="false">☰</button>
+    <nav class="nav-links" aria-label="Primary">
+      <a href="docs.html">Docs</a>
+      <a href="changelog.html" class="active">Changelog</a>
+
+      <a class="btn btn-sm btn-ghost" href="https://github.com/Bilal-Junaid-Jiwani/invoiceguard">GitHub</a>
+    </nav>
+  </div>
+</header>
+
+<div class="wrap">
+  <div class="page-hero">
+    <h1>Changelog</h1>
+    <p>Every release, newest first. No marketing fluff — just what shipped.</p>
+  </div>
+
+  <div class="changelog">
+    <article class="release">
+      <div class="release-head">
+        <h2>v0.1.0</h2>
+        <span class="badge">latest</span>
+        <span class="release-date">2026-09-30</span>
+      </div>
+      <p style="color: var(--muted)">Initial release. The full loop works: contract → deposit → invoice → automatic escalation.</p>
+      <ul>
+        <li>CLI: <code>init</code>, <code>dashboard</code>, <code>check-due</code>, <code>client add</code>, <code>project create</code>, <code>invoice create</code></li>
+        <li>Stripe deposit payment links per project, test-mode friendly</li>
+        <li>Late-fee contract with client acknowledgment checkbox before deposit</li>
+        <li>Automatic 3-stage dunning: day-1 polite nudge → day-7 firm reminder → day-15 formal notice quoting the signed clause</li>
+        <li>Local-first: SQLite database, single YAML config, bring-your-own SMTP</li>
+        <li>Docker Compose setup for containerized runs</li>
+        <li>Fully editable email templates and late-fee terms in config</li>
+      </ul>
+    </article>
+  </div>
+</div>
+
+<footer class="site-footer">
+  <div class="wrap">
+    <div class="foot">
+      <a class="brand" href="index.html"><img src="assets/img/logo.svg" alt="" width="24" height="24">InvoiceGuard</a>
+      <nav aria-label="Footer">
+        <a href="docs.html">Docs</a>
+        <a href="changelog.html">Changelog</a>
+        <a href="https://github.com/Bilal-Junaid-Jiwani/invoiceguard">GitHub</a>
+      </nav>
+    </div>
+    <p class="foot-small">© <span data-year>2026</span> InvoiceGuard.</p>
+  </div>
+</footer>
+
+<script src="assets/js/main.js"></script>
+</body>
+</html>
