@@ -21,6 +21,8 @@ Local-first (SQLite), open-source (Apache-2.0), works alongside your existing in
 
 > **Honest scope:** v1's "signature" is a client-acknowledgment checkbox (recorded when the deposit link is paid), not a legal e-signature. See [Limits of v1](#limits-of-v1).
 
+![InvoiceGuard dashboard — invoice list with escalation stages](https://raw.githubusercontent.com/Bilal-Junaid-Jiwani/invoiceguard/main/docs/assets/img/dashboard-list.png)
+
 ---
 
 ## 5-minute quickstart
@@ -89,6 +91,8 @@ Send the pay link to the client. That's the whole pre-work flow.
 2. URL: `https://YOUR-HOST/webhooks/stripe` (the dashboard app serves this; see below).
 3. Select event: `checkout.session.completed`.
 4. Copy the **Signing secret** (`whsec_...`) into `stripe_webhook_secret` in the config (or export `INVOICEGUARD_STRIPE_WEBHOOK_SECRET`). The dashboard webhook reads the secret from the env var first, then the config file, then the legacy `STRIPE_WEBHOOK_SECRET` env var.
+
+> ⭐ If InvoiceGuard helped you, a star means a lot — it helps other developers find the project.
 
 ---
 
