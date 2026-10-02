@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{title}} — invoiceguard docs</title>
+  <meta name="description" content="{{description}}">
+  <meta property="og:title" content="{{title}} — invoiceguard docs">
+  <meta property="og:description" content="{{description}}">
+  <meta property="og:type" content="article">
+  <meta property="og:url" content="{{canonical}}">
+  <meta property="og:site_name" content="invoiceguard docs">
+  <meta name="twitter:card" content="summary">
+  <meta name="twitter:title" content="{{title}} — invoiceguard docs">
+  <meta name="twitter:description" content="{{description}}">
+  <link rel="canonical" href="{{canonical}}">
+  <link rel="icon" href="assets/img/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="assets/css/docs.css">
+{{jsonld}}
+</head>
+<body data-page="{{active_slug}}">
+<header class="site-header">
+  <div class="header-inner">
+    <a class="brand" href="install.html">
+      <img class="brand-mark" src="assets/img/logo.svg" alt="" width="30" height="30">
+      <span class="brand-word">InvoiceGuard <em>docs</em></span>
+    </a>
+    <nav class="top-links" aria-label="Project links">
+      <a href="https://github.com/Bilal-Junaid-Jiwani/invoiceguard">GitHub</a>
+      <a href="https://pypi.org/project/invoiceguard/">PyPI</a>
+      <a href="site/index.html" class="site-link">Website</a>
+    </nav>
+    <div class="search-wrap">
+      <input id="search-input" type="search" placeholder="Search docs…" aria-label="Search docs" autocomplete="off">
+      <div id="search-results" class="search-results" hidden></div>
+    </div>
+    <button class="nav-toggle" id="nav-toggle" aria-label="Toggle navigation" aria-expanded="false">
+      <span></span><span></span><span></span>
+    </button>
+  </div>
+  <nav class="tabs" aria-label="Documentation sections">
+    <ul class="tab-list">
+      {{tabs_html}}
+    </ul>
+  </nav>
+</header>
+
+<div class="layout">
+  <aside class="sidebar" id="sidebar" aria-label="Page navigation">
+    {{sidebar_html}}
+    <div class="sidebar-foot">
+      <a href="https://github.com/Bilal-Junaid-Jiwani/invoiceguard">GitHub</a>
+      <span aria-hidden="true">·</span>
+      <a href="https://pypi.org/project/invoiceguard/">PyPI</a>
+      <span aria-hidden="true">·</span>
+      <a href="changelog.html">v0.1.0</a>
+    </div>
+  </aside>
+
+  <main class="content">
+    <article class="doc">
+      <p class="eyebrow">{{eyebrow}}</p>
+      <h1 class="doc-title">{{h1}}</h1>
+      <div class="toc-mobile">
+        <details>
+          <summary>On this page</summary>
+          {{toc_html}}
+        </details>
+      </div>
+      {{content_html}}
+      <nav class="prev-next" aria-label="Previous and next pages">
+        {{prev_link}}
+        {{next_link}}
+      </nav>
+    </article>
+    <footer class="doc-footer">
+      <p>InvoiceGuard is open source (Apache-2.0).
+      <a href="https://github.com/Bilal-Junaid-Jiwani/invoiceguard">GitHub</a> ·
+      <a href="https://pypi.org/project/invoiceguard/">PyPI</a> ·
+      <a href="site/index.html">Marketing site</a></p>
+    </footer>
+  </main>
+
+  <aside class="toc-side" aria-label="Table of contents">
+    <p class="toc-label">On this page</p>
+    {{toc_html}}
+  </aside>
+</div>
+
+<script src="assets/js/docs.js"></script>
+<script src="assets/js/search.js"></script>
+</body>
+</html>

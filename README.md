@@ -1,5 +1,15 @@
 # InvoiceGuard
 
+<p align="center">
+  <img src="https://raw.githubusercontent.com/Bilal-Junaid-Jiwani/invoiceguard/main/docs/assets/img/logo.svg" width="96" height="96" alt="InvoiceGuard logo — a shield with an invoice and checkmark">
+</p>
+
+[![PyPI](https://img.shields.io/pypi/v/invoiceguard.svg)](https://pypi.org/project/invoiceguard/)
+[![Python](https://img.shields.io/pypi/pyversions/invoiceguard.svg)](https://pypi.org/project/invoiceguard/)
+[![License](https://img.shields.io/github/license/Bilal-Junaid-Jiwani/invoiceguard.svg)](https://github.com/Bilal-Junaid-Jiwani/invoiceguard/blob/main/LICENSE)
+[![Docs](https://img.shields.io/badge/docs-website-12805C)](https://bilal-junaid-jiwani.github.io/invoiceguard/)
+[![Website](https://img.shields.io/badge/website-live-A8802F)](https://bilal-junaid-jiwani.github.io/invoiceguard/site/)
+
 **Freelancer payment enforcement: deposit links tied to a contract with a late-fee clause — then automated, escalating collections.**
 
 Solo freelancers don't get paid. A Kaplan Group report (April 2026) found **85% of freelancers experience late payment**; a Freelancers Union survey found **91%** have experienced late/overdue payments, with 54% waiting 3+ months. InvoiceGuard's wedge:

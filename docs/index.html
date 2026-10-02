@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>invoiceguard docs</title>
+  <meta name="description" content="InvoiceGuard is an open-source Python tool for freelancers who are tired of chasing late payments. Generate a contract with a late-fee clause, collect a deposit through a Stripe payment link, and let an automated 3-stage email escalation (day-1 nudge → day-7 reminder → day-15 formal notice) handle the collections. Local-first (SQLite), Apache-2.0.">
+  <meta property="og:title" content="invoiceguard docs">
+  <meta property="og:description" content="InvoiceGuard is an open-source Python tool for freelancers who are tired of chasing late payments. Generate a contract with a late-fee clause, collect a deposit through a Stripe payment link, and let an automated 3-stage email escalation (day-1 nudge → day-7 reminder → day-15 formal notice) handle the collections. Local-first (SQLite), Apache-2.0.">
+  <meta property="og:type" content="article">
+  <meta property="og:url" content="https://bilal-junaid-jiwani.github.io/invoiceguard/">
+  <meta property="og:site_name" content="invoiceguard docs">
+  <meta name="twitter:card" content="summary">
+  <meta name="twitter:title" content="invoiceguard docs">
+  <meta name="twitter:description" content="InvoiceGuard is an open-source Python tool for freelancers who are tired of chasing late payments. Generate a contract with a late-fee clause, collect a deposit through a Stripe payment link, and let an automated 3-stage email escalation (day-1 nudge → day-7 reminder → day-15 formal notice) handle the collections. Local-first (SQLite), Apache-2.0.">
+  <link rel="canonical" href="https://bilal-junaid-jiwani.github.io/invoiceguard/">
+  <link rel="icon" href="assets/img/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="assets/css/docs.css">
+  <script type="application/ld+json">
+[
+  {
+    "@context": "https://schema.org",
+    "@type": "WebSite",
+    "name": "invoiceguard docs",
+    "url": "https://bilal-junaid-jiwani.github.io/invoiceguard/"
+  },
+  {
+    "@context": "https://schema.org",
+    "@type": "WebPage",
+    "headline": "invoiceguard docs",
+    "description": "InvoiceGuard is an open-source Python tool for freelancers who are tired of chasing late payments. Generate a contract with a late-fee clause, collect a deposit through a Stripe payment link, and let an automated 3-stage email escalation (day-1 nudge → day-7 reminder → day-15 formal notice) handle the collections. Local-first (SQLite), Apache-2.0.",
+    "inLanguage": "en",
+    "isPartOf": {
+      "@type": "WebSite",
+      "name": "invoiceguard docs",
+      "url": "https://bilal-junaid-jiwani.github.io/invoiceguard/"
+    },
+    "mainEntityOfPage": "https://bilal-junaid-jiwani.github.io/invoiceguard/"
+  }
+]
+  </script>
+</head>
+<body data-page="index">
+<header class="site-header">
+  <div class="header-inner">
+    <a class="brand" href="index.html">
+      <img class="brand-mark" src="assets/img/logo.svg" alt="" width="30" height="30">
+      <span class="brand-word">InvoiceGuard <em>docs</em></span>
+    </a>
+    <nav class="top-links" aria-label="Project links">
+      <a href="https://github.com/Bilal-Junaid-Jiwani/invoiceguard">GitHub</a>
+      <a href="https://pypi.org/project/invoiceguard/">PyPI</a>
+      <a href="site/index.html" class="site-link">Website</a>
+    </nav>
+    <div class="search-wrap">
+      <input id="search-input" type="search" placeholder="Search docs…" aria-label="Search docs" autocomplete="off">
+      <div id="search-results" class="search-results" hidden></div>
+    </div>
+    <button class="nav-toggle" id="nav-toggle" aria-label="Toggle navigation" aria-expanded="false">
+      <span></span><span></span><span></span>
+    </button>
+  </div>
+  <nav class="tabs" aria-label="Documentation sections">
+    <ul class="tab-list">
+      <li class="tab-item"><a class="tab-link" href="install.html">Getting started</a></li>
+<li class="tab-item"><a class="tab-link" href="cli.html">User guide</a></li>
+<li class="tab-item"><a class="tab-link" href="troubleshooting.html">Reference</a></li>
+    </ul>
+  </nav>
+</header>
+
+<div class="layout">
+  <aside class="sidebar" id="sidebar" aria-label="Page navigation">
+    <div class="nav-group">
+<p class="nav-group-label">Start here</p>
+<ul class="nav-list">
+<li><a class="nav-item" href="install.html">Installation</a></li>
+<li><a class="nav-item" href="quickstart.html">Quickstart</a></li>
+<li><a class="nav-item" href="configuration.html">Configuration</a></li>
+</ul></div>
+    <div class="sidebar-foot">
+      <a href="https://github.com/Bilal-Junaid-Jiwani/invoiceguard">GitHub</a>
+      <span aria-hidden="true">·</span>
+      <a href="https://pypi.org/project/invoiceguard/">PyPI</a>
+      <span aria-hidden="true">·</span>
+      <a href="changelog.html">v0.1.0</a>
+    </div>
+  </aside>
+
+  <main class="content">
+    <article class="doc">
+      <p class="eyebrow">Overview</p>
+      <h1 class="doc-title">invoiceguard documentation</h1>
+      <div class="toc-mobile">
+        <details>
+          <summary>On this page</summary>
+          <ul class="toc-list">
+<li><a href="#start-here">Start here</a>
+</li>
+<li><a href="#how-it-works">How it works</a>
+</li>
+<li><a href="#reference">Reference</a>
+</li>
+<li><a href="#honest-scope">Honest scope</a>
+</li>
+</ul>
+        </details>
+      </div>
+      <p>InvoiceGuard is an open-source Python tool for freelancers who are tired of chasing late payments. Generate a contract with a late-fee clause, collect a deposit through a Stripe payment link, and let an automated 3-stage email escalation (day-1 nudge → day-7 reminder → day-15 formal notice) handle the collections. Local-first (SQLite), Apache-2.0.</p>
+<h2 id="start-here">Start here</h2>
+<ul>
+<li><a href="install.html">Installation</a> — <code>pip install invoiceguard</code>, requirements, install from source
+</li>
+<li><a href="quickstart.html">Quickstart</a> — the 5-minute flow: init, Stripe test key, first client, first deposit link
+</li>
+<li><a href="configuration.html">Configuration</a> — config file, environment variables, secret resolution
+</li>
+</ul>
+<h2 id="how-it-works">How it works</h2>
+<ol>
+<li><strong>Before work starts:</strong> <code>project create</code> generates a contract with a late-fee clause; <code>invoice create --kind deposit</code> makes a Stripe payment link. The client acknowledges the contract by accepting the deposit link.
+</li>
+<li><strong>After the due date:</strong> <code>check-due</code> (run from cron) sends the next escalation stage using editable markdown templates. Idempotent — a stage is never sent twice for the same invoice.
+</li>
+<li><strong>When the client pays:</strong> Stripe's webhook (<code>POST /webhooks/stripe</code>) marks the invoice paid automatically.
+</li>
+</ol>
+<h2 id="reference">Reference</h2>
+<div class="table-wrap"><table><thead><tr><th>Page</th><th>What it covers</th></tr></thead><tbody><tr><td><a href="cli.html">CLI reference</a></td><td>every command and option</td></tr><tr><td><a href="dashboard.html">Dashboard</a></td><td>the localhost web UI and its routes</td></tr><tr><td><a href="dunning.html">Dunning engine</a></td><td>3-stage escalation, templates, cron</td></tr><tr><td><a href="webhooks.html">Webhooks</a></td><td>Stripe webhook setup and secret resolution</td></tr><tr><td><a href="contracts.html">Contracts</a></td><td>contract generator and the acknowledgment model</td></tr><tr><td><a href="database.html">Database</a></td><td>SQLite schema (the frozen CLI↔dashboard contract)</td></tr><tr><td><a href="docker.html">Docker</a></td><td>compose setup</td></tr><tr><td><a href="troubleshooting.html">Troubleshooting</a></td><td>common problems and fixes</td></tr><tr><td><a href="changelog.html">Changelog</a></td><td>release history</td></tr><tr><td><a href="roadmap.html">Roadmap</a></td><td>what's planned, honestly labeled</td></tr></tbody></table></div>
+<h2 id="honest-scope">Honest scope</h2>
+<p>v1's "signature" is a client-acknowledgment checkbox (the deposit link being paid), not a legal e-signature. Stripe live calls were verified with a mocked SDK in this build environment; you add your own test key. Email deliverability is your SMTP. See <a href="troubleshooting.html">Troubleshooting</a> and <a href="troubleshooting.html#limits-of-v1">Limits</a> for the full picture.</p>
+      <nav class="prev-next" aria-label="Previous and next pages">
+        
+        <a class="page-next" href="install.html"><span class="prev-next-label">Next</span><span class="prev-next-title">Installation &rarr;</span></a>
+      </nav>
+    </article>
+    <footer class="doc-footer">
+      <p>InvoiceGuard is open source (Apache-2.0).
+      <a href="https://github.com/Bilal-Junaid-Jiwani/invoiceguard">GitHub</a> ·
+      <a href="https://pypi.org/project/invoiceguard/">PyPI</a> ·
+      <a href="site/index.html">Marketing site</a></p>
+    </footer>
+  </main>
+
+  <aside class="toc-side" aria-label="Table of contents">
+    <p class="toc-label">On this page</p>
+    <ul class="toc-list">
+<li><a href="#start-here">Start here</a>
+</li>
+<li><a href="#how-it-works">How it works</a>
+</li>
+<li><a href="#reference">Reference</a>
+</li>
+<li><a href="#honest-scope">Honest scope</a>
+</li>
+</ul>
+  </aside>
+</div>
+
+<script src="assets/js/docs.js"></script>
+<script src="assets/js/search.js"></script>
+</body>
+</html>

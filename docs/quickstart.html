@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Quickstart — invoiceguard docs</title>
+  <meta name="description" content="The 5-minute InvoiceGuard flow — init, Stripe test key, SMTP, first client, first deposit link, automated collections.">
+  <meta property="og:title" content="Quickstart — invoiceguard docs">
+  <meta property="og:description" content="The 5-minute InvoiceGuard flow — init, Stripe test key, SMTP, first client, first deposit link, automated collections.">
+  <meta property="og:type" content="article">
+  <meta property="og:url" content="https://bilal-junaid-jiwani.github.io/invoiceguard/quickstart.html">
+  <meta property="og:site_name" content="invoiceguard docs">
+  <meta name="twitter:card" content="summary">
+  <meta name="twitter:title" content="Quickstart — invoiceguard docs">
+  <meta name="twitter:description" content="The 5-minute InvoiceGuard flow — init, Stripe test key, SMTP, first client, first deposit link, automated collections.">
+  <link rel="canonical" href="https://bilal-junaid-jiwani.github.io/invoiceguard/quickstart.html">
+  <link rel="icon" href="assets/img/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="assets/css/docs.css">
+  <script type="application/ld+json">
+[
+  {
+    "@context": "https://schema.org",
+    "@type": "WebSite",
+    "name": "invoiceguard docs",
+    "url": "https://bilal-junaid-jiwani.github.io/invoiceguard/"
+  },
+  {
+    "@context": "https://schema.org",
+    "@type": "TechArticle",
+    "headline": "Quickstart",
+    "description": "The 5-minute InvoiceGuard flow — init, Stripe test key, SMTP, first client, first deposit link, automated collections.",
+    "inLanguage": "en",
+    "isPartOf": {
+      "@type": "WebSite",
+      "name": "invoiceguard docs",
+      "url": "https://bilal-junaid-jiwani.github.io/invoiceguard/"
+    },
+    "mainEntityOfPage": "https://bilal-junaid-jiwani.github.io/invoiceguard/quickstart.html"
+  }
+]
+  </script>
+</head>
+<body data-page="quickstart">
+<header class="site-header">
+  <div class="header-inner">
+    <a class="brand" href="install.html">
+      <img class="brand-mark" src="assets/img/logo.svg" alt="" width="30" height="30">
+      <span class="brand-word">InvoiceGuard <em>docs</em></span>
+    </a>
+    <nav class="top-links" aria-label="Project links">
+      <a href="https://github.com/Bilal-Junaid-Jiwani/invoiceguard">GitHub</a>
+      <a href="https://pypi.org/project/invoiceguard/">PyPI</a>
+      <a href="site/index.html" class="site-link">Website</a>
+    </nav>
+    <div class="search-wrap">
+      <input id="search-input" type="search" placeholder="Search docs…" aria-label="Search docs" autocomplete="off">
+      <div id="search-results" class="search-results" hidden></div>
+    </div>
+    <button class="nav-toggle" id="nav-toggle" aria-label="Toggle navigation" aria-expanded="false">
+      <span></span><span></span><span></span>
+    </button>
+  </div>
+  <nav class="tabs" aria-label="Documentation sections">
+    <ul class="tab-list">
+      <li class="tab-item"><a class="tab-link" href="install.html" data-active="true" aria-current="page">Getting started</a></li>
+<li class="tab-item"><a class="tab-link" href="cli.html">User guide</a></li>
+<li class="tab-item"><a class="tab-link" href="troubleshooting.html">Reference</a></li>
+    </ul>
+  </nav>
+</header>
+
+<div class="layout">
+  <aside class="sidebar" id="sidebar" aria-label="Page navigation">
+    <div class="nav-group">
+<p class="nav-group-label">Start here</p>
+<ul class="nav-list">
+<li><a class="nav-item" href="install.html">Installation</a></li>
+<li><a class="nav-item" href="quickstart.html" data-active="true" aria-current="page">Quickstart</a></li>
+<li><a class="nav-item" href="configuration.html">Configuration</a></li>
+</ul></div>
+    <div class="sidebar-foot">
+      <a href="https://github.com/Bilal-Junaid-Jiwani/invoiceguard">GitHub</a>
+      <span aria-hidden="true">·</span>
+      <a href="https://pypi.org/project/invoiceguard/">PyPI</a>
+      <span aria-hidden="true">·</span>
+      <a href="changelog.html">v0.1.0</a>
+    </div>
+  </aside>
+
+  <main class="content">
+    <article class="doc">
+      <p class="eyebrow">Getting started</p>
+      <h1 class="doc-title">Quickstart</h1>
+      <div class="toc-mobile">
+        <details>
+          <summary>On this page</summary>
+          <ul class="toc-list">
+<li><a href="#0-install-and-init">0. Install and init</a>
+</li>
+<li><a href="#1-add-your-stripe-test-key-2-min">1. Add your Stripe test key (~2 min)</a>
+</li>
+<li><a href="#2-add-your-smtp-details-2-min">2. Add your SMTP details (~2 min)</a>
+</li>
+<li><a href="#3-create-a-client-project-and-deposit-link-1-min">3. Create a client, project, and deposit link (~1 min)</a>
+</li>
+<li><a href="#4-let-collections-run-themselves">4. Let collections run themselves</a>
+</li>
+<li><a href="#5-stripe-webhook-so-payments-mark-invoices-paid">5. Stripe webhook (so payments mark invoices paid)</a>
+</li>
+<li><a href="#next">Next</a>
+</li>
+</ul>
+        </details>
+      </div>
+      <p>Five minutes, five steps. Nothing here touches real money until you decide it should.</p>
+<h2 id="0-install-and-init">0. Install and init</h2>
+<pre class="codeblock" data-lang="bash"><code>pip install invoiceguard
+invoiceguard init     # creates ~/.invoiceguard (config template, DB, email templates)
+</code></pre>
+<h2 id="1-add-your-stripe-test-key-2-min">1. Add your Stripe test key (~2 min)</h2>
+<ol>
+<li>Go to &lt;https://dashboard.stripe.com/test/apikeys&gt; (toggle <strong>Test mode</strong> on).
+</li>
+<li><strong>Developers → API keys → Create secret key</strong>, copy the <code>sk_test_...</code> value.
+</li>
+<li>Paste it into <code>~/.invoiceguard/config.yaml</code> as <code>stripe_secret_key</code>, <strong>or</strong> export it:
+</li>
+</ol>
+<pre class="codeblock" data-lang="bash"><code>export INVOICEGUARD_STRIPE_SECRET_KEY="sk_test_..."
+</code></pre>
+<h2 id="2-add-your-smtp-details-2-min">2. Add your SMTP details (~2 min)</h2>
+<p>Dunning emails are sent through <em>your</em> SMTP. In <code>~/.invoiceguard/config.yaml</code>:</p>
+<pre class="codeblock" data-lang="yaml"><code>smtp:
+  host: "smtp.gmail.com"
+  port: 587
+  username: "you@example.com"
+  password: "YOUR_GMAIL_APP_PASSWORD"   # or export INVOICEGUARD_SMTP_PASSWORD
+  from_addr: "you@example.com"
+  use_tls: true
+</code></pre>
+<p>(Gmail: create an <strong>App Password</strong> at Google Account → Security → 2-Step Verification → App passwords. Any SMTP provider works.)</p>
+<h2 id="3-create-a-client-project-and-deposit-link-1-min">3. Create a client, project, and deposit link (~1 min)</h2>
+<pre class="codeblock" data-lang="bash"><code>invoiceguard client add --name "Acme Corp" --email "billing@acme.com"
+
+invoiceguard project create --client "Acme Corp" --title "Website redesign" \
+  --amount 2000 --deposit-pct 50 --late-fee-pct 1.5 --ack
+</code></pre>
+<p>This generates the contract markdown (with the late-fee clause) and — with <code>--ack</code> — records the client's acknowledgment. Then:</p>
+<pre class="codeblock" data-lang="bash"><code>invoiceguard invoice create --project 1 --kind deposit
+# =&gt; invoice #1 (deposit): $1,000.00
+#    pay link: https://buy.stripe.com/...
+#    due: 2026-10-07   status: sent
+</code></pre>
+<p>Send the pay link to the client. That's the whole pre-work flow.</p>
+<h2 id="4-let-collections-run-themselves">4. Let collections run themselves</h2>
+<p>Add the dunning scan to your crontab (every morning at 9:00):</p>
+<pre class="codeblock" data-lang="cron"><code>0 9 * * * /path/to/venv/bin/invoiceguard check-due &gt;&gt; ~/.invoiceguard/check-due.log 2&gt;&amp;1
+</code></pre>
+<p><code>check-due</code> scans invoices past their due date and sends the next escalation stage (day1 → day7 → day15) using the editable markdown templates in <code>~/.invoiceguard/templates/</code>. It's idempotent — a stage is never sent twice for the same invoice.</p>
+<h2 id="5-stripe-webhook-so-payments-mark-invoices-paid">5. Stripe webhook (so payments mark invoices paid)</h2>
+<ol>
+<li>In the Stripe dashboard: <strong>Developers → Webhooks → Add endpoint</strong>.
+</li>
+<li>URL: <code>https://YOUR-HOST/webhooks/stripe</code> (served by the dashboard app; see <a href="dashboard.html">Dashboard</a>).
+</li>
+<li>Select event: <code>checkout.session.completed</code>.
+</li>
+<li>Copy the <strong>Signing secret</strong> (<code>whsec_...</code>) into <code>stripe_webhook_secret</code> in the config, or export <code>INVOICEGUARD_STRIPE_WEBHOOK_SECRET</code>.
+</li>
+</ol>
+<p>The dashboard resolves the secret in this order: <code>INVOICEGUARD_STRIPE_WEBHOOK_SECRET</code> env → <code>stripe_webhook_secret</code> in the config file → legacy <code>STRIPE_WEBHOOK_SECRET</code> env. Full detail in <a href="webhooks.html">Webhooks</a>.</p>
+<h2 id="next">Next</h2>
+<ul>
+<li><a href="configuration.html">Configuration</a> — every setting, env var, and override
+</li>
+<li><a href="cli.html">CLI reference</a> — the full command list
+</li>
+<li><a href="dashboard.html">Dashboard</a> — the web UI
+</li>
+</ul>
+      <nav class="prev-next" aria-label="Previous and next pages">
+        <a class="page-prev" href="install.html"><span class="prev-next-label">Previous</span><span class="prev-next-title">&larr; Installation</span></a>
+        <a class="page-next" href="configuration.html"><span class="prev-next-label">Next</span><span class="prev-next-title">Configuration &rarr;</span></a>
+      </nav>
+    </article>
+    <footer class="doc-footer">
+      <p>InvoiceGuard is open source (Apache-2.0).
+      <a href="https://github.com/Bilal-Junaid-Jiwani/invoiceguard">GitHub</a> ·
+      <a href="https://pypi.org/project/invoiceguard/">PyPI</a> ·
+      <a href="site/index.html">Marketing site</a></p>
+    </footer>
+  </main>
+
+  <aside class="toc-side" aria-label="Table of contents">
+    <p class="toc-label">On this page</p>
+    <ul class="toc-list">
+<li><a href="#0-install-and-init">0. Install and init</a>
+</li>
+<li><a href="#1-add-your-stripe-test-key-2-min">1. Add your Stripe test key (~2 min)</a>
+</li>
+<li><a href="#2-add-your-smtp-details-2-min">2. Add your SMTP details (~2 min)</a>
+</li>
+<li><a href="#3-create-a-client-project-and-deposit-link-1-min">3. Create a client, project, and deposit link (~1 min)</a>
+</li>
+<li><a href="#4-let-collections-run-themselves">4. Let collections run themselves</a>
+</li>
+<li><a href="#5-stripe-webhook-so-payments-mark-invoices-paid">5. Stripe webhook (so payments mark invoices paid)</a>
+</li>
+<li><a href="#next">Next</a>
+</li>
+</ul>
+  </aside>
+</div>
+
+<script src="assets/js/docs.js"></script>
+<script src="assets/js/search.js"></script>
+</body>
+</html>

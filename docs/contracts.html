@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Contracts — invoiceguard docs</title>
+  <meta name="description" content="The InvoiceGuard contract generator — late-fee clause, deposit acknowledgment model, and the honest limits of v1.">
+  <meta property="og:title" content="Contracts — invoiceguard docs">
+  <meta property="og:description" content="The InvoiceGuard contract generator — late-fee clause, deposit acknowledgment model, and the honest limits of v1.">
+  <meta property="og:type" content="article">
+  <meta property="og:url" content="https://bilal-junaid-jiwani.github.io/invoiceguard/contracts.html">
+  <meta property="og:site_name" content="invoiceguard docs">
+  <meta name="twitter:card" content="summary">
+  <meta name="twitter:title" content="Contracts — invoiceguard docs">
+  <meta name="twitter:description" content="The InvoiceGuard contract generator — late-fee clause, deposit acknowledgment model, and the honest limits of v1.">
+  <link rel="canonical" href="https://bilal-junaid-jiwani.github.io/invoiceguard/contracts.html">
+  <link rel="icon" href="assets/img/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="assets/css/docs.css">
+  <script type="application/ld+json">
+[
+  {
+    "@context": "https://schema.org",
+    "@type": "WebSite",
+    "name": "invoiceguard docs",
+    "url": "https://bilal-junaid-jiwani.github.io/invoiceguard/"
+  },
+  {
+    "@context": "https://schema.org",
+    "@type": "TechArticle",
+    "headline": "Contracts",
+    "description": "The InvoiceGuard contract generator — late-fee clause, deposit acknowledgment model, and the honest limits of v1.",
+    "inLanguage": "en",
+    "isPartOf": {
+      "@type": "WebSite",
+      "name": "invoiceguard docs",
+      "url": "https://bilal-junaid-jiwani.github.io/invoiceguard/"
+    },
+    "mainEntityOfPage": "https://bilal-junaid-jiwani.github.io/invoiceguard/contracts.html"
+  }
+]
+  </script>
+</head>
+<body data-page="contracts">
+<header class="site-header">
+  <div class="header-inner">
+    <a class="brand" href="install.html">
+      <img class="brand-mark" src="assets/img/logo.svg" alt="" width="30" height="30">
+      <span class="brand-word">InvoiceGuard <em>docs</em></span>
+    </a>
+    <nav class="top-links" aria-label="Project links">
+      <a href="https://github.com/Bilal-Junaid-Jiwani/invoiceguard">GitHub</a>
+      <a href="https://pypi.org/project/invoiceguard/">PyPI</a>
+      <a href="site/index.html" class="site-link">Website</a>
+    </nav>
+    <div class="search-wrap">
+      <input id="search-input" type="search" placeholder="Search docs…" aria-label="Search docs" autocomplete="off">
+      <div id="search-results" class="search-results" hidden></div>
+    </div>
+    <button class="nav-toggle" id="nav-toggle" aria-label="Toggle navigation" aria-expanded="false">
+      <span></span><span></span><span></span>
+    </button>
+  </div>
+  <nav class="tabs" aria-label="Documentation sections">
+    <ul class="tab-list">
+      <li class="tab-item"><a class="tab-link" href="install.html">Getting started</a></li>
+<li class="tab-item"><a class="tab-link" href="cli.html" data-active="true" aria-current="page">User guide</a></li>
+<li class="tab-item"><a class="tab-link" href="troubleshooting.html">Reference</a></li>
+    </ul>
+  </nav>
+</header>
+
+<div class="layout">
+  <aside class="sidebar" id="sidebar" aria-label="Page navigation">
+    <div class="nav-group">
+<p class="nav-group-label">Workflows</p>
+<ul class="nav-list">
+<li><a class="nav-item" href="cli.html">CLI reference</a></li>
+<li><a class="nav-item" href="dashboard.html">Dashboard</a></li>
+<li><a class="nav-item" href="dunning.html">Dunning engine</a></li>
+<li><a class="nav-item" href="webhooks.html">Webhooks</a></li>
+</ul></div>
+<div class="nav-group">
+<p class="nav-group-label">Data</p>
+<ul class="nav-list">
+<li><a class="nav-item" href="contracts.html" data-active="true" aria-current="page">Contracts</a></li>
+<li><a class="nav-item" href="database.html">Database</a></li>
+<li><a class="nav-item" href="docker.html">Docker</a></li>
+</ul></div>
+    <div class="sidebar-foot">
+      <a href="https://github.com/Bilal-Junaid-Jiwani/invoiceguard">GitHub</a>
+      <span aria-hidden="true">·</span>
+      <a href="https://pypi.org/project/invoiceguard/">PyPI</a>
+      <span aria-hidden="true">·</span>
+      <a href="changelog.html">v0.1.0</a>
+    </div>
+  </aside>
+
+  <main class="content">
+    <article class="doc">
+      <p class="eyebrow">User guide</p>
+      <h1 class="doc-title">Contracts</h1>
+      <div class="toc-mobile">
+        <details>
+          <summary>On this page</summary>
+          <ul class="toc-list">
+<li><a href="#whats-in-the-contract">What's in the contract</a>
+</li>
+<li><a href="#the-acknowledgment-model">The acknowledgment model</a>
+</li>
+<li><a href="#honest-limits">Honest limits</a>
+</li>
+</ul>
+        </details>
+      </div>
+      <p><code>invoiceguard project create</code> generates a contract as markdown and stores it with the project. The contract is the legal backbone of the whole flow: it contains the late-fee clause that the day-15 dunning email quotes.</p>
+<h2 id="whats-in-the-contract">What's in the contract</h2>
+<ul>
+<li><strong>Parties and scope</strong> — client name/email, project title, date.
+</li>
+<li><strong>Fee and deposit</strong> — total fee, deposit percentage and amount. The deposit is collected through a Stripe payment link, and <em>paying the deposit link is the client's acknowledgment of the agreement</em>.
+</li>
+<li><strong>Late-fee clause</strong> — if an invoice is unpaid after the grace period, a late fee of <code>late_fee_pct</code>% per month applies on the overdue balance, compounding monthly until paid.
+</li>
+<li><strong>Sign-off (v1)</strong> — records <code>contract_ack</code>: <code>1</code> once the deposit link is paid.
+</li>
+</ul>
+<p>Defaults: 50% deposit, 1.5%/month late fee, 15-day grace — all adjustable per project with <code>--deposit-pct</code>, <code>--late-fee-pct</code>, <code>--late-fee-grace-days</code>.</p>
+<h2 id="the-acknowledgment-model">The acknowledgment model</h2>
+<p>v1's "signature" is a client-acknowledgment checkbox, recorded as <code>contract_ack = 1</code> with a timestamp (<code>contract_ack_at</code>):</p>
+<ul>
+<li>Pass <code>--ack</code> to <code>project create</code> when the client has already accepted the deposit link.
+</li>
+<li>Or record it later: <code>invoiceguard project ack &lt;id&gt;</code>.
+</li>
+</ul>
+<p><code>project list</code> shows <code>ack</code> / <code>no-ack</code> per project so you can see at a glance which contracts are acknowledged.</p>
+<h2 id="honest-limits">Honest limits</h2>
+<ul>
+<li>The acknowledgment is <strong>not a legal e-signature</strong> — it's a record that the client paid the deposit link, which the contract text defines as acceptance. Real e-signature (typed name / drawn signature) is on the <a href="roadmap.html">roadmap</a>.
+</li>
+<li>Late-fee enforceability varies by jurisdiction. The clause is a contractual starting point, not legal advice. Adjust the percentage and grace days per project.
+</li>
+</ul>
+      <nav class="prev-next" aria-label="Previous and next pages">
+        <a class="page-prev" href="webhooks.html"><span class="prev-next-label">Previous</span><span class="prev-next-title">&larr; Webhooks</span></a>
+        <a class="page-next" href="database.html"><span class="prev-next-label">Next</span><span class="prev-next-title">Database &rarr;</span></a>
+      </nav>
+    </article>
+    <footer class="doc-footer">
+      <p>InvoiceGuard is open source (Apache-2.0).
+      <a href="https://github.com/Bilal-Junaid-Jiwani/invoiceguard">GitHub</a> ·
+      <a href="https://pypi.org/project/invoiceguard/">PyPI</a> ·
+      <a href="site/index.html">Marketing site</a></p>
+    </footer>
+  </main>
+
+  <aside class="toc-side" aria-label="Table of contents">
+    <p class="toc-label">On this page</p>
+    <ul class="toc-list">
+<li><a href="#whats-in-the-contract">What's in the contract</a>
+</li>
+<li><a href="#the-acknowledgment-model">The acknowledgment model</a>
+</li>
+<li><a href="#honest-limits">Honest limits</a>
+</li>
+</ul>
+  </aside>
+</div>
+
+<script src="assets/js/docs.js"></script>
+<script src="assets/js/search.js"></script>
+</body>
+</html>

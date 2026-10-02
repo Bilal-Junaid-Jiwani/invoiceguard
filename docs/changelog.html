@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Changelog — invoiceguard docs</title>
+  <meta name="description" content="InvoiceGuard release history — newest first, no fluff.">
+  <meta property="og:title" content="Changelog — invoiceguard docs">
+  <meta property="og:description" content="InvoiceGuard release history — newest first, no fluff.">
+  <meta property="og:type" content="article">
+  <meta property="og:url" content="https://bilal-junaid-jiwani.github.io/invoiceguard/changelog.html">
+  <meta property="og:site_name" content="invoiceguard docs">
+  <meta name="twitter:card" content="summary">
+  <meta name="twitter:title" content="Changelog — invoiceguard docs">
+  <meta name="twitter:description" content="InvoiceGuard release history — newest first, no fluff.">
+  <link rel="canonical" href="https://bilal-junaid-jiwani.github.io/invoiceguard/changelog.html">
+  <link rel="icon" href="assets/img/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="assets/css/docs.css">
+  <script type="application/ld+json">
+[
+  {
+    "@context": "https://schema.org",
+    "@type": "WebSite",
+    "name": "invoiceguard docs",
+    "url": "https://bilal-junaid-jiwani.github.io/invoiceguard/"
+  },
+  {
+    "@context": "https://schema.org",
+    "@type": "TechArticle",
+    "headline": "Changelog",
+    "description": "InvoiceGuard release history — newest first, no fluff.",
+    "inLanguage": "en",
+    "isPartOf": {
+      "@type": "WebSite",
+      "name": "invoiceguard docs",
+      "url": "https://bilal-junaid-jiwani.github.io/invoiceguard/"
+    },
+    "mainEntityOfPage": "https://bilal-junaid-jiwani.github.io/invoiceguard/changelog.html"
+  }
+]
+  </script>
+</head>
+<body data-page="changelog">
+<header class="site-header">
+  <div class="header-inner">
+    <a class="brand" href="install.html">
+      <img class="brand-mark" src="assets/img/logo.svg" alt="" width="30" height="30">
+      <span class="brand-word">InvoiceGuard <em>docs</em></span>
+    </a>
+    <nav class="top-links" aria-label="Project links">
+      <a href="https://github.com/Bilal-Junaid-Jiwani/invoiceguard">GitHub</a>
+      <a href="https://pypi.org/project/invoiceguard/">PyPI</a>
+      <a href="site/index.html" class="site-link">Website</a>
+    </nav>
+    <div class="search-wrap">
+      <input id="search-input" type="search" placeholder="Search docs…" aria-label="Search docs" autocomplete="off">
+      <div id="search-results" class="search-results" hidden></div>
+    </div>
+    <button class="nav-toggle" id="nav-toggle" aria-label="Toggle navigation" aria-expanded="false">
+      <span></span><span></span><span></span>
+    </button>
+  </div>
+  <nav class="tabs" aria-label="Documentation sections">
+    <ul class="tab-list">
+      <li class="tab-item"><a class="tab-link" href="install.html">Getting started</a></li>
+<li class="tab-item"><a class="tab-link" href="cli.html">User guide</a></li>
+<li class="tab-item"><a class="tab-link" href="troubleshooting.html" data-active="true" aria-current="page">Reference</a></li>
+    </ul>
+  </nav>
+</header>
+
+<div class="layout">
+  <aside class="sidebar" id="sidebar" aria-label="Page navigation">
+    <div class="nav-group">
+<p class="nav-group-label">Help</p>
+<ul class="nav-list">
+<li><a class="nav-item" href="troubleshooting.html">Troubleshooting</a></li>
+<li><a class="nav-item" href="changelog.html" data-active="true" aria-current="page">Changelog</a></li>
+<li><a class="nav-item" href="roadmap.html">Roadmap</a></li>
+</ul></div>
+    <div class="sidebar-foot">
+      <a href="https://github.com/Bilal-Junaid-Jiwani/invoiceguard">GitHub</a>
+      <span aria-hidden="true">·</span>
+      <a href="https://pypi.org/project/invoiceguard/">PyPI</a>
+      <span aria-hidden="true">·</span>
+      <a href="changelog.html">v0.1.0</a>
+    </div>
+  </aside>
+
+  <main class="content">
+    <article class="doc">
+      <p class="eyebrow">Reference</p>
+      <h1 class="doc-title">Changelog</h1>
+      <div class="toc-mobile">
+        <details>
+          <summary>On this page</summary>
+          <ul class="toc-list">
+<li><a href="#010---2026-10-02">[0.1.0] - 2026-10-02</a>
+<ul class="toc-sub">
+<li><a href="#added">Added</a></li>
+<li><a href="#fixed">Fixed</a></li>
+<li><a href="#honest-scope-v1">Honest scope (v1)</a></li>
+</ul>
+</li>
+</ul>
+        </details>
+      </div>
+      <p>InvoiceGuard follows semver. Newest first.</p>
+<h2 id="010---2026-10-02">[0.1.0] - 2026-10-02</h2>
+<p>First release on PyPI (<code>pip install invoiceguard</code>) and GitHub.</p>
+<h3 id="added">Added</h3>
+<ul>
+<li>CLI: <code>init</code>, <code>client add/list</code>, <code>project create/list/ack</code>, <code>invoice create/list/mark-paid/void</code>, <code>check-due</code>, <code>dashboard</code>
+</li>
+<li>Stripe deposit payment links per project (test-mode friendly), with <code>invoiceguard_invoice_id</code> metadata so webhook payments map back to invoices
+</li>
+<li>Late-fee contract generator: deposit + late-fee clause markdown, client acknowledgment recorded when the deposit link is accepted
+</li>
+<li>Automated 3-stage dunning: day-1 polite nudge → day-7 firm reminder → day-15 formal notice quoting the late-fee clause; idempotent, cron-friendly (<code>check-due</code>), editable markdown templates
+</li>
+<li>Localhost web dashboard: invoice list with status filters and escalation stages, per-invoice detail with chronological timeline, totals/outstanding/overdue/collected, Stripe webhook receiver that marks invoices paid
+</li>
+<li>SQLite persistence (shared schema between CLI and dashboard), Docker Compose setup
+</li>
+</ul>
+<h3 id="fixed">Fixed</h3>
+<ul>
+<li><strong>Dashboard Stripe webhook secret resolution.</strong> The README told users to set <code>stripe_webhook_secret</code> in the config (or <code>INVOICEGUARD_STRIPE_WEBHOOK_SECRET</code>), but the dashboard only honored the bare <code>STRIPE_WEBHOOK_SECRET</code> env var — webhooks returned 500 for anyone following the docs. The endpoint now resolves, in order: <code>INVOICEGUARD_STRIPE_WEBHOOK_SECRET</code> env → <code>stripe_webhook_secret</code> in the config file → legacy <code>STRIPE_WEBHOOK_SECRET</code> env (still supported). Placeholder values (<code>whsec_...</code>) count as unconfigured. Regression tests cover all four cases.
+</li>
+</ul>
+<h3 id="honest-scope-v1">Honest scope (v1)</h3>
+<ul>
+<li>The "signature" is a client-acknowledgment checkbox (deposit-link acceptance), not a legal e-signature — real e-signature is on the roadmap.
+</li>
+<li>Email deliverability is the user's own SMTP; late-fee enforceability varies by jurisdiction.
+</li>
+</ul>
+      <nav class="prev-next" aria-label="Previous and next pages">
+        <a class="page-prev" href="troubleshooting.html"><span class="prev-next-label">Previous</span><span class="prev-next-title">&larr; Troubleshooting</span></a>
+        <a class="page-next" href="roadmap.html"><span class="prev-next-label">Next</span><span class="prev-next-title">Roadmap &rarr;</span></a>
+      </nav>
+    </article>
+    <footer class="doc-footer">
+      <p>InvoiceGuard is open source (Apache-2.0).
+      <a href="https://github.com/Bilal-Junaid-Jiwani/invoiceguard">GitHub</a> ·
+      <a href="https://pypi.org/project/invoiceguard/">PyPI</a> ·
+      <a href="site/index.html">Marketing site</a></p>
+    </footer>
+  </main>
+
+  <aside class="toc-side" aria-label="Table of contents">
+    <p class="toc-label">On this page</p>
+    <ul class="toc-list">
+<li><a href="#010---2026-10-02">[0.1.0] - 2026-10-02</a>
+<ul class="toc-sub">
+<li><a href="#added">Added</a></li>
+<li><a href="#fixed">Fixed</a></li>
+<li><a href="#honest-scope-v1">Honest scope (v1)</a></li>
+</ul>
+</li>
+</ul>
+  </aside>
+</div>
+
+<script src="assets/js/docs.js"></script>
+<script src="assets/js/search.js"></script>
+</body>
+</html>
