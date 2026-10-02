@@ -38,6 +38,8 @@
       </div>
       <p style="color: var(--muted)">Initial release. The full loop works: contract → deposit → invoice → automatic escalation.</p>
       <ul>
+        <li><strong>2026-10-02 — published to PyPI</strong> as <code>invoiceguard</code> 0.1.0: <code>pip install invoiceguard</code></li>
+        <li><strong>Fixed:</strong> the dashboard Stripe webhook now reads the signing secret from the config file (<code>stripe_webhook_secret</code>) or the <code>INVOICEGUARD_STRIPE_WEBHOOK_SECRET</code> env var — previously only the undocumented bare <code>STRIPE_WEBHOOK_SECRET</code> env var worked, so webhooks returned 500 for anyone following the setup docs</li>
         <li>CLI: <code>init</code>, <code>dashboard</code>, <code>check-due</code>, <code>client add</code>, <code>project create</code>, <code>invoice create</code></li>
         <li>Stripe deposit payment links per project, test-mode friendly</li>
         <li>Late-fee contract with client acknowledgment checkbox before deposit</li>
