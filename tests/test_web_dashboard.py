@@ -191,6 +191,12 @@ def test_webhook_no_secret_configured(tmp_path, monkeypatch):
     db = str(tmp_path / "web2.db")
     monkeypatch.setenv("INVOICEGUARD_DB", db)
     monkeypatch.delenv("STRIPE_WEBHOOK_SECRET", raising=False)
+    monkeypatch.delenv("INVOICEGUARD_STRIPE_WEBHOOK_SECRET", raising=False)
+    # point at an empty config dir so a stray ~/.invoiceguard/config.yaml
+    # on the dev machine cannot leak a secret into this check
+    cfg_dir = tmp_path / "empty_cfg"
+    cfg_dir.mkdir()
+    monkeypatch.setenv("INVOICEGUARD_CONFIG", str(cfg_dir / "config.yaml"))
     from invoiceguard.web.main import app
     with TestClient(app) as tc:
         body, header = _signed("whsec_x", _event("cs_x"))
@@ -199,3 +205,89 @@ def test_webhook_no_secret_configured(tmp_path, monkeypatch):
                              "Stripe-Signature": header})
     assert r.status_code == 500
     assert "not configured" in r.text
+
+
+# -- webhook secret resolution: INVOICEGUARD_* env + config file ---------
+# Regression for the bug where the dashboard only honored the bare
+# STRIPE_WEBHOOK_SECRET env var while the README told users to set
+# stripe_webhook_secret in the config (or INVOICEGUARD_STRIPE_WEBHOOK_SECRET).
+
+
+def _webhook_client(tmp_path, monkeypatch, seeded_db=True):
+    """TestClient for /webhooks/stripe with NO secret configured.
+
+    Returns (test_client, db_path). Caller sets the secret source."""
+    db = str(tmp_path / "web_secret.db")
+    monkeypatch.setenv("INVOICEGUARD_DB", db)
+    monkeypatch.delenv("STRIPE_WEBHOOK_SECRET", raising=False)
+    monkeypatch.delenv("INVOICEGUARD_STRIPE_WEBHOOK_SECRET", raising=False)
+    from invoiceguard.web import db as wdb
+    from invoiceguard.web.main import app
+    wdb.init_db()
+    seeded = _seed(db) if seeded_db else {}
+    tc = TestClient(app)
+    tc.__enter__()
+    return tc, seeded, db
+
+
+def test_webhook_env_secret_honored(tmp_path, monkeypatch):
+    tc, seeded, db = _webhook_client(tmp_path, monkeypatch)
+    try:
+        monkeypatch.setenv("INVOICEGUARD_STRIPE_WEBHOOK_SECRET", TEST_SECRET)
+        iid = seeded["sent_id"]
+        r = post(tc, _event("cs_test_meta_canonical",
+                            metadata={"invoiceguard_invoice_id": str(iid)}))
+        assert r.status_code == 200
+        assert r.json()["marked_invoice_id"] == iid
+        assert _status(db, iid)[0] == "paid"
+    finally:
+        tc.__exit__(None, None, None)
+
+
+def test_webhook_config_file_secret_honored(tmp_path, monkeypatch):
+    cfg_dir = tmp_path / "cfg"
+    cfg_dir.mkdir()
+    (cfg_dir / "config.yaml").write_text(
+        "stripe_webhook_secret: whsec_test_config_file\n", encoding="utf-8")
+    monkeypatch.setenv("INVOICEGUARD_CONFIG", str(cfg_dir / "config.yaml"))
+    tc, seeded, db = _webhook_client(tmp_path, monkeypatch)
+    try:
+        iid = seeded["sent_id"]
+        body, header = _signed("whsec_test_config_file",
+                               _event("cs_test_meta_canonical",
+                                      metadata={"invoiceguard_invoice_id": str(iid)}))
+        r = tc.post("/webhooks/stripe", content=body,
+                    headers={"Content-Type": "application/json",
+                             "Stripe-Signature": header})
+        assert r.status_code == 200
+        assert r.json()["marked_invoice_id"] == iid
+        assert _status(db, iid)[0] == "paid"
+    finally:
+        tc.__exit__(None, None, None)
+
+
+def test_webhook_prefers_invoicguard_env_over_legacy(tmp_path, monkeypatch):
+    tc, seeded, db = _webhook_client(tmp_path, monkeypatch)
+    try:
+        monkeypatch.setenv("INVOICEGUARD_STRIPE_WEBHOOK_SECRET", TEST_SECRET)
+        monkeypatch.setenv("STRIPE_WEBHOOK_SECRET", "whsec_wrong_legacy")
+        iid = seeded["sent_id"]
+        r = post(tc, _event("cs_test_meta_canonical",
+                            metadata={"invoiceguard_invoice_id": str(iid)}))
+        assert r.status_code == 200  # 400 would mean the legacy key won
+        assert _status(db, iid)[0] == "paid"
+    finally:
+        tc.__exit__(None, None, None)
+
+
+def test_webhook_placeholder_secret_counts_as_unconfigured(tmp_path, monkeypatch):
+    tc, _, _ = _webhook_client(tmp_path, monkeypatch, seeded_db=False)
+    try:
+        monkeypatch.setenv("INVOICEGUARD_STRIPE_WEBHOOK_SECRET", "whsec_...")
+        body, header = _signed("whsec_...", _event("cs_x"))
+        r = tc.post("/webhooks/stripe", content=body,
+                    headers={"Content-Type": "application/json",
+                             "Stripe-Signature": header})
+        assert r.status_code == 500
+    finally:
+        tc.__exit__(None, None, None)

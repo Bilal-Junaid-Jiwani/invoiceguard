@@ -4,8 +4,11 @@ Run:
     uvicorn invoiceguard.web.main:app --port 8000   (or: invoiceguard dashboard)
 
 Env:
-    INVOICEGUARD_DB        SQLite path (default ~/.invoiceguard/invoiceguard.db)
-    STRIPE_WEBHOOK_SECRET  Stripe webhook signing secret (webhook endpoint only)
+    INVOICEGUARD_DB                    SQLite path (default ~/.invoiceguard/invoiceguard.db)
+    INVOICEGUARD_STRIPE_WEBHOOK_SECRET Stripe webhook signing secret (webhook endpoint only)
+    STRIPE_WEBHOOK_SECRET              legacy alias for the webhook secret
+The config file (~/.invoiceguard/config.yaml, key stripe_webhook_secret)
+is also honored when neither env var is set.
 
 Routes:
     GET  /                 invoice list + totals + status filter
@@ -25,6 +28,27 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
 from . import db
+from ..config import is_placeholder, load_config
+
+
+def webhook_secret() -> str | None:
+    """Resolve the Stripe webhook signing secret.
+
+    Priority: INVOICEGUARD_STRIPE_WEBHOOK_SECRET env var, then the
+    stripe_webhook_secret key from the config file (both documented in
+    the README), then the legacy bare STRIPE_WEBHOOK_SECRET env var for
+    backward compatibility. Placeholders (e.g. "whsec_...") are treated
+    as unconfigured. Returns None when no real secret is set.
+    """
+    candidates = [
+        os.environ.get("INVOICEGUARD_STRIPE_WEBHOOK_SECRET"),
+        (load_config().get("stripe_webhook_secret") or None),
+        os.environ.get("STRIPE_WEBHOOK_SECRET"),
+    ]
+    for c in candidates:
+        if not is_placeholder(c):
+            return c.strip()
+    return None
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 templates = Jinja2Templates(directory=os.path.join(BASE_DIR, "templates"))
@@ -83,14 +107,19 @@ def healthz():
 async def stripe_webhook(request: Request):
     """Stripe webhook receiver.
 
-    Verifies the Stripe-Signature header against STRIPE_WEBHOOK_SECRET.
-    On checkout.session.completed, marks the matching invoice paid.
+    Verifies the Stripe-Signature header against the signing secret
+    resolved by webhook_secret() (INVOICEGUARD_STRIPE_WEBHOOK_SECRET env,
+    config file, or legacy STRIPE_WEBHOOK_SECRET env). On
+    checkout.session.completed, marks the matching invoice paid.
     Returns 400 on bad signature, 500 when no secret is configured.
     """
-    secret = os.environ.get("STRIPE_WEBHOOK_SECRET")
+    secret = webhook_secret()
     if not secret:
         raise HTTPException(
-            status_code=500, detail="STRIPE_WEBHOOK_SECRET is not configured"
+            status_code=500,
+            detail="Stripe webhook secret is not configured — set "
+            "stripe_webhook_secret in ~/.invoiceguard/config.yaml or "
+            "export INVOICEGUARD_STRIPE_WEBHOOK_SECRET",
         )
     payload = await request.body()
     sig_header = request.headers.get("stripe-signature", "")

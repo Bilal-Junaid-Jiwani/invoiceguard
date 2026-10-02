@@ -15,10 +15,10 @@ Local-first (SQLite), open-source (Apache-2.0), works alongside your existing in
 
 ## 5-minute quickstart
 
-**0. Install** (InvoiceGuard isn't on PyPI yet — install straight from the repo)
+**0. Install**
 
 ```bash
-pip install git+https://github.com/Bilal-Junaid-Jiwani/invoiceguard.git
+pip install invoiceguard
 # or, from a local clone:  pip install -r requirements.txt && pip install -e .
 invoiceguard init               # creates ~/.invoiceguard (config template, DB, email templates)
 ```
@@ -78,7 +78,7 @@ Send the pay link to the client. That's the whole pre-work flow.
 1. In the Stripe dashboard: **Developers → Webhooks → Add endpoint**.
 2. URL: `https://YOUR-HOST/webhooks/stripe` (the dashboard app serves this; see below).
 3. Select event: `checkout.session.completed`.
-4. Copy the **Signing secret** (`whsec_...`) into `stripe_webhook_secret` in the config (or `INVOICEGUARD_STRIPE_WEBHOOK_SECRET`).
+4. Copy the **Signing secret** (`whsec_...`) into `stripe_webhook_secret` in the config (or export `INVOICEGUARD_STRIPE_WEBHOOK_SECRET`). The dashboard webhook reads the secret from the env var first, then the config file, then the legacy `STRIPE_WEBHOOK_SECRET` env var.
 
 ---
 
@@ -155,7 +155,7 @@ Quick webhook smoke test (no network — the payload is signed locally):
 
 ```bash
 INVOICEGUARD_DB=/tmp/ig-demo.db .venv/bin/python seed_demo.py --fresh
-INVOICEGUARD_DB=/tmp/ig-demo.db STRIPE_WEBHOOK_SECRET=whsec_test_x \
+INVOICEGUARD_DB=/tmp/ig-demo.db INVOICEGUARD_STRIPE_WEBHOOK_SECRET=whsec_test_x \
   .venv/bin/invoiceguard dashboard
 # -> http://127.0.0.1:8000/  (Ctrl-C to stop)
 ```
@@ -176,7 +176,7 @@ python -m venv .venv && .venv/bin/pip install -r requirements.txt && .venv/bin/p
 .venv/bin/python -m pytest tests/ -q
 ```
 
-50 tests, all green (2026-09-30): contract clause rendering, dunning stage selection + idempotency, template rendering, webhook signature verification (real HMAC check, offline), Stripe link creation (mocked SDK, params asserted), CLI flows, dashboard integration (page rendering + offline webhook checks incl. the `invoiceguard_invoice_id` metadata-key regression), and a full end-to-end (init → client → project → invoice → `check-due` against a real local SMTP server → assert email captured + `dunning_events` row written).
+54 tests, all green (2026-10-02): contract clause rendering, dunning stage selection + idempotency, template rendering, webhook signature verification (real HMAC check, offline), Stripe link creation (mocked SDK, params asserted), CLI flows, dashboard integration (page rendering + offline webhook checks incl. the `invoiceguard_invoice_id` metadata-key regression and the webhook-secret resolution regression: `INVOICEGUARD_STRIPE_WEBHOOK_SECRET` env / config-file secret honored, placeholder rejected), and a full end-to-end (init → client → project → invoice → `check-due` against a real local SMTP server → assert email captured + `dunning_events` row written).
 
 ## Limits of v1
 
@@ -192,6 +192,10 @@ python -m venv .venv && .venv/bin/pip install -r requirements.txt && .venv/bin/p
 - **Agency mode** — multi-freelancer workspaces, per-client dunning policies.
 - Late-fee accrual calculator + ledger on the dashboard.
 - Partial payments / payment plans.
+
+## Changelog
+
+Release history lives in [CHANGELOG.md](CHANGELOG.md) — newest first, no fluff.
 
 ## License
 

@@ -1,4 +1,5 @@
 LICENSE
+README.md
 pyproject.toml
 src/invoiceguard/__init__.py
 src/invoiceguard/cli.py
@@ -15,3 +16,20 @@ src/invoiceguard.egg-info/dependency_links.txt
 src/invoiceguard.egg-info/entry_points.txt
 src/invoiceguard.egg-info/requires.txt
 src/invoiceguard.egg-info/top_level.txt
+src/invoiceguard/email_templates/day1.md
+src/invoiceguard/email_templates/day15.md
+src/invoiceguard/email_templates/day7.md
+src/invoiceguard/web/__init__.py
+src/invoiceguard/web/db.py
+src/invoiceguard/web/main.py
+src/invoiceguard/web/static/style.css
+src/invoiceguard/web/templates/base.html
+src/invoiceguard/web/templates/detail.html
+src/invoiceguard/web/templates/index.html
+tests/test_cli.py
+tests/test_contract.py
+tests/test_dunning.py
+tests/test_e2e.py
+tests/test_stripe.py
+tests/test_web_dashboard.py
+tests/test_webhook.py
