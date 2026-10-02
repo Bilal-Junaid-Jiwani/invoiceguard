@@ -1,0 +1,25 @@
+# invoiceguard docs
+
+> okfsmith is an open-source command-line tool (pip install okfsmith) that
+> turns messy documentation — Markdown files, PDFs, Office docs, whole
+> folders — into a knowledge bundle following the Open Knowledge Format
+> (OKF). This is the documentation index.
+
+Canonical base: https://bilal-junaid-jiwani.github.io/invoiceguard/
+Source: https://github.com/Bilal-Junaid-Jiwani/okfsmith
+
+## Pages
+
+- [Installation](https://bilal-junaid-jiwani.github.io/invoiceguard/install.html): Install InvoiceGuard with pip install invoiceguard, or from source. Requirements and verification.
+- [Quickstart](https://bilal-junaid-jiwani.github.io/invoiceguard/quickstart.html): The 5-minute InvoiceGuard flow — init, Stripe test key, SMTP, first client, first deposit link, automated collections.
+- [Configuration](https://bilal-junaid-jiwani.github.io/invoiceguard/configuration.html): Every InvoiceGuard setting — config.yaml, environment variables, secret resolution order, and path overrides.
+- [CLI reference](https://bilal-junaid-jiwani.github.io/invoiceguard/cli.html): Every InvoiceGuard command and option — init, client, project, invoice, check-due, dashboard.
+- [Dashboard](https://bilal-junaid-jiwani.github.io/invoiceguard/dashboard.html): The InvoiceGuard localhost web dashboard — invoice list, status filters, per-invoice timelines, and the Stripe webhook receiver.
+- [Dunning engine](https://bilal-junaid-jiwani.github.io/invoiceguard/dunning.html): The automated 3-stage collections engine — day1/day7/day15 escalation, idempotency, editable templates, cron setup.
+- [Webhooks](https://bilal-junaid-jiwani.github.io/invoiceguard/webhooks.html): Stripe webhook setup for InvoiceGuard — endpoint, signing-secret resolution order, verified events, offline testing.
+- [Contracts](https://bilal-junaid-jiwani.github.io/invoiceguard/contracts.html): The InvoiceGuard contract generator — late-fee clause, deposit acknowledgment model, and the honest limits of v1.
+- [Database](https://bilal-junaid-jiwani.github.io/invoiceguard/database.html): The InvoiceGuard SQLite schema — the frozen contract shared between the CLI and the dashboard.
+- [Docker](https://bilal-junaid-jiwani.github.io/invoiceguard/docker.html): Run InvoiceGuard with Docker Compose — CLI container, persistent data volume, dashboard port, one-off dunning scans.
+- [Troubleshooting](https://bilal-junaid-jiwani.github.io/invoiceguard/troubleshooting.html): Fix common InvoiceGuard problems — config, Stripe, SMTP, webhooks, templates — plus the honest limits of v1.
+- [Changelog](https://bilal-junaid-jiwani.github.io/invoiceguard/changelog.html): InvoiceGuard release history — newest first, no fluff.
+- [Roadmap](https://bilal-junaid-jiwani.github.io/invoiceguard/roadmap.html): What's planned for InvoiceGuard — honestly labeled as plans, not shipped features.

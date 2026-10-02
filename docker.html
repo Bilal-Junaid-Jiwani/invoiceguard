@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Docker — invoiceguard docs</title>
+  <meta name="description" content="Run InvoiceGuard with Docker Compose — CLI container, persistent data volume, dashboard port, one-off dunning scans.">
+  <meta property="og:title" content="Docker — invoiceguard docs">
+  <meta property="og:description" content="Run InvoiceGuard with Docker Compose — CLI container, persistent data volume, dashboard port, one-off dunning scans.">
+  <meta property="og:type" content="article">
+  <meta property="og:url" content="https://bilal-junaid-jiwani.github.io/invoiceguard/docker.html">
+  <meta property="og:site_name" content="invoiceguard docs">
+  <meta name="twitter:card" content="summary">
+  <meta name="twitter:title" content="Docker — invoiceguard docs">
+  <meta name="twitter:description" content="Run InvoiceGuard with Docker Compose — CLI container, persistent data volume, dashboard port, one-off dunning scans.">
+  <link rel="canonical" href="https://bilal-junaid-jiwani.github.io/invoiceguard/docker.html">
+  <link rel="icon" href="assets/img/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="assets/css/docs.css">
+  <script type="application/ld+json">
+[
+  {
+    "@context": "https://schema.org",
+    "@type": "WebSite",
+    "name": "invoiceguard docs",
+    "url": "https://bilal-junaid-jiwani.github.io/invoiceguard/"
+  },
+  {
+    "@context": "https://schema.org",
+    "@type": "TechArticle",
+    "headline": "Docker",
+    "description": "Run InvoiceGuard with Docker Compose — CLI container, persistent data volume, dashboard port, one-off dunning scans.",
+    "inLanguage": "en",
+    "isPartOf": {
+      "@type": "WebSite",
+      "name": "invoiceguard docs",
+      "url": "https://bilal-junaid-jiwani.github.io/invoiceguard/"
+    },
+    "mainEntityOfPage": "https://bilal-junaid-jiwani.github.io/invoiceguard/docker.html"
+  }
+]
+  </script>
+</head>
+<body data-page="docker">
+<header class="site-header">
+  <div class="header-inner">
+    <a class="brand" href="install.html">
+      <img class="brand-mark" src="assets/img/logo.svg" alt="" width="30" height="30">
+      <span class="brand-word">InvoiceGuard <em>docs</em></span>
+    </a>
+    <nav class="top-links" aria-label="Project links">
+      <a href="https://github.com/Bilal-Junaid-Jiwani/invoiceguard">GitHub</a>
+      <a href="https://pypi.org/project/invoiceguard/">PyPI</a>
+      <a href="site/index.html" class="site-link">Website</a>
+    </nav>
+    <div class="search-wrap">
+      <input id="search-input" type="search" placeholder="Search docs…" aria-label="Search docs" autocomplete="off">
+      <div id="search-results" class="search-results" hidden></div>
+    </div>
+    <button class="nav-toggle" id="nav-toggle" aria-label="Toggle navigation" aria-expanded="false">
+      <span></span><span></span><span></span>
+    </button>
+  </div>
+  <nav class="tabs" aria-label="Documentation sections">
+    <ul class="tab-list">
+      <li class="tab-item"><a class="tab-link" href="install.html">Getting started</a></li>
+<li class="tab-item"><a class="tab-link" href="cli.html" data-active="true" aria-current="page">User guide</a></li>
+<li class="tab-item"><a class="tab-link" href="troubleshooting.html">Reference</a></li>
+    </ul>
+  </nav>
+</header>
+
+<div class="layout">
+  <aside class="sidebar" id="sidebar" aria-label="Page navigation">
+    <div class="nav-group">
+<p class="nav-group-label">Workflows</p>
+<ul class="nav-list">
+<li><a class="nav-item" href="cli.html">CLI reference</a></li>
+<li><a class="nav-item" href="dashboard.html">Dashboard</a></li>
+<li><a class="nav-item" href="dunning.html">Dunning engine</a></li>
+<li><a class="nav-item" href="webhooks.html">Webhooks</a></li>
+</ul></div>
+<div class="nav-group">
+<p class="nav-group-label">Data</p>
+<ul class="nav-list">
+<li><a class="nav-item" href="contracts.html">Contracts</a></li>
+<li><a class="nav-item" href="database.html">Database</a></li>
+<li><a class="nav-item" href="docker.html" data-active="true" aria-current="page">Docker</a></li>
+</ul></div>
+    <div class="sidebar-foot">
+      <a href="https://github.com/Bilal-Junaid-Jiwani/invoiceguard">GitHub</a>
+      <span aria-hidden="true">·</span>
+      <a href="https://pypi.org/project/invoiceguard/">PyPI</a>
+      <span aria-hidden="true">·</span>
+      <a href="changelog.html">v0.1.0</a>
+    </div>
+  </aside>
+
+  <main class="content">
+    <article class="doc">
+      <p class="eyebrow">User guide</p>
+      <h1 class="doc-title">Docker</h1>
+      <div class="toc-mobile">
+        <details>
+          <summary>On this page</summary>
+          <ul class="toc-list">
+<li><a href="#up">Up</a>
+</li>
+<li><a href="#one-off-dunning-scan">One-off dunning scan</a>
+</li>
+<li><a href="#secrets">Secrets</a>
+</li>
+<li><a href="#notes">Notes</a>
+</li>
+</ul>
+        </details>
+      </div>
+      <p>The repo ships a <code>Dockerfile</code> and <code>docker-compose.yml</code> for running InvoiceGuard in containers.</p>
+<h2 id="up">Up</h2>
+<pre class="codeblock" data-lang="bash"><code>docker compose up -d
+</code></pre>
+<ul>
+<li>Runs the CLI container; data persists in the <code>invoiceguard-data</code> volume.
+</li>
+<li>Port <strong>8000</strong> is exposed for the dashboard.
+</li>
+</ul>
+<h2 id="one-off-dunning-scan">One-off dunning scan</h2>
+<pre class="codeblock" data-lang="bash"><code>docker compose run --rm app check-due
+</code></pre>
+<p>Any CLI command works the same way: <code>docker compose run --rm app client list</code>, and so on.</p>
+<h2 id="secrets">Secrets</h2>
+<p>Put secrets in a <code>.env</code> file next to <code>docker-compose.yml</code> (<strong>never committed</strong>):</p>
+<pre class="codeblock" data-lang="env"><code>INVOICEGUARD_STRIPE_SECRET_KEY=sk_test_...
+INVOICEGUARD_STRIPE_WEBHOOK_SECRET=whsec_...
+INVOICEGUARD_SMTP_PASSWORD=...
+</code></pre>
+<p>The same <code>INVOICEGUARD_*</code> variables documented in <a href="configuration.html">Configuration</a> apply inside the container.</p>
+<h2 id="notes">Notes</h2>
+<ul>
+<li>The container uses the same SQLite schema as a local install (<a href="database.html">Database</a>); the volume keeps it across restarts.
+</li>
+<li>Cron-style scheduling (<code>check-due</code>) is your host's job — run the one-off command from your system crontab, or schedule the container externally.
+</li>
+</ul>
+      <nav class="prev-next" aria-label="Previous and next pages">
+        <a class="page-prev" href="database.html"><span class="prev-next-label">Previous</span><span class="prev-next-title">&larr; Database</span></a>
+        <a class="page-next" href="troubleshooting.html"><span class="prev-next-label">Next</span><span class="prev-next-title">Troubleshooting &rarr;</span></a>
+      </nav>
+    </article>
+    <footer class="doc-footer">
+      <p>InvoiceGuard is open source (Apache-2.0).
+      <a href="https://github.com/Bilal-Junaid-Jiwani/invoiceguard">GitHub</a> ·
+      <a href="https://pypi.org/project/invoiceguard/">PyPI</a> ·
+      <a href="site/index.html">Marketing site</a></p>
+    </footer>
+  </main>
+
+  <aside class="toc-side" aria-label="Table of contents">
+    <p class="toc-label">On this page</p>
+    <ul class="toc-list">
+<li><a href="#up">Up</a>
+</li>
+<li><a href="#one-off-dunning-scan">One-off dunning scan</a>
+</li>
+<li><a href="#secrets">Secrets</a>
+</li>
+<li><a href="#notes">Notes</a>
+</li>
+</ul>
+  </aside>
+</div>
+
+<script src="assets/js/docs.js"></script>
+<script src="assets/js/search.js"></script>
+</body>
+</html>

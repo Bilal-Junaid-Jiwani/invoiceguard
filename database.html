@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Database — invoiceguard docs</title>
+  <meta name="description" content="The InvoiceGuard SQLite schema — the frozen contract shared between the CLI and the dashboard.">
+  <meta property="og:title" content="Database — invoiceguard docs">
+  <meta property="og:description" content="The InvoiceGuard SQLite schema — the frozen contract shared between the CLI and the dashboard.">
+  <meta property="og:type" content="article">
+  <meta property="og:url" content="https://bilal-junaid-jiwani.github.io/invoiceguard/database.html">
+  <meta property="og:site_name" content="invoiceguard docs">
+  <meta name="twitter:card" content="summary">
+  <meta name="twitter:title" content="Database — invoiceguard docs">
+  <meta name="twitter:description" content="The InvoiceGuard SQLite schema — the frozen contract shared between the CLI and the dashboard.">
+  <link rel="canonical" href="https://bilal-junaid-jiwani.github.io/invoiceguard/database.html">
+  <link rel="icon" href="assets/img/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="assets/css/docs.css">
+  <script type="application/ld+json">
+[
+  {
+    "@context": "https://schema.org",
+    "@type": "WebSite",
+    "name": "invoiceguard docs",
+    "url": "https://bilal-junaid-jiwani.github.io/invoiceguard/"
+  },
+  {
+    "@context": "https://schema.org",
+    "@type": "TechArticle",
+    "headline": "Database",
+    "description": "The InvoiceGuard SQLite schema — the frozen contract shared between the CLI and the dashboard.",
+    "inLanguage": "en",
+    "isPartOf": {
+      "@type": "WebSite",
+      "name": "invoiceguard docs",
+      "url": "https://bilal-junaid-jiwani.github.io/invoiceguard/"
+    },
+    "mainEntityOfPage": "https://bilal-junaid-jiwani.github.io/invoiceguard/database.html"
+  }
+]
+  </script>
+</head>
+<body data-page="database">
+<header class="site-header">
+  <div class="header-inner">
+    <a class="brand" href="install.html">
+      <img class="brand-mark" src="assets/img/logo.svg" alt="" width="30" height="30">
+      <span class="brand-word">InvoiceGuard <em>docs</em></span>
+    </a>
+    <nav class="top-links" aria-label="Project links">
+      <a href="https://github.com/Bilal-Junaid-Jiwani/invoiceguard">GitHub</a>
+      <a href="https://pypi.org/project/invoiceguard/">PyPI</a>
+      <a href="site/index.html" class="site-link">Website</a>
+    </nav>
+    <div class="search-wrap">
+      <input id="search-input" type="search" placeholder="Search docs…" aria-label="Search docs" autocomplete="off">
+      <div id="search-results" class="search-results" hidden></div>
+    </div>
+    <button class="nav-toggle" id="nav-toggle" aria-label="Toggle navigation" aria-expanded="false">
+      <span></span><span></span><span></span>
+    </button>
+  </div>
+  <nav class="tabs" aria-label="Documentation sections">
+    <ul class="tab-list">
+      <li class="tab-item"><a class="tab-link" href="install.html">Getting started</a></li>
+<li class="tab-item"><a class="tab-link" href="cli.html" data-active="true" aria-current="page">User guide</a></li>
+<li class="tab-item"><a class="tab-link" href="troubleshooting.html">Reference</a></li>
+    </ul>
+  </nav>
+</header>
+
+<div class="layout">
+  <aside class="sidebar" id="sidebar" aria-label="Page navigation">
+    <div class="nav-group">
+<p class="nav-group-label">Workflows</p>
+<ul class="nav-list">
+<li><a class="nav-item" href="cli.html">CLI reference</a></li>
+<li><a class="nav-item" href="dashboard.html">Dashboard</a></li>
+<li><a class="nav-item" href="dunning.html">Dunning engine</a></li>
+<li><a class="nav-item" href="webhooks.html">Webhooks</a></li>
+</ul></div>
+<div class="nav-group">
+<p class="nav-group-label">Data</p>
+<ul class="nav-list">
+<li><a class="nav-item" href="contracts.html">Contracts</a></li>
+<li><a class="nav-item" href="database.html" data-active="true" aria-current="page">Database</a></li>
+<li><a class="nav-item" href="docker.html">Docker</a></li>
+</ul></div>
+    <div class="sidebar-foot">
+      <a href="https://github.com/Bilal-Junaid-Jiwani/invoiceguard">GitHub</a>
+      <span aria-hidden="true">·</span>
+      <a href="https://pypi.org/project/invoiceguard/">PyPI</a>
+      <span aria-hidden="true">·</span>
+      <a href="changelog.html">v0.1.0</a>
+    </div>
+  </aside>
+
+  <main class="content">
+    <article class="doc">
+      <p class="eyebrow">User guide</p>
+      <h1 class="doc-title">Database</h1>
+      <div class="toc-mobile">
+        <details>
+          <summary>On this page</summary>
+          <ul class="toc-list">
+<li><a href="#enumerations">Enumerations</a>
+</li>
+<li><a href="#notes">Notes</a>
+</li>
+</ul>
+        </details>
+      </div>
+      <p>SQLite, default <code>~/.invoiceguard/invoiceguard.db</code> (override with <code>$INVOICEGUARD_DB</code>). Both the CLI and the dashboard read and write these tables — <strong>column names and types are frozen; additive migrations only.</strong></p>
+<pre class="codeblock" data-lang="sql"><code>CREATE TABLE clients(
+  id INTEGER PRIMARY KEY,
+  name TEXT NOT NULL,
+  email TEXT,
+  created_at TEXT NOT NULL
+);
+
+CREATE TABLE projects(
+  id INTEGER PRIMARY KEY,
+  client_id INTEGER NOT NULL REFERENCES clients(id),
+  title TEXT NOT NULL,
+  amount_cents INTEGER NOT NULL,
+  currency TEXT NOT NULL DEFAULT 'USD',
+  deposit_pct REAL NOT NULL DEFAULT 50.0,
+  late_fee_pct REAL NOT NULL DEFAULT 1.5,
+  late_fee_grace_days INTEGER NOT NULL DEFAULT 15,
+  contract_md TEXT NOT NULL,
+  contract_ack INTEGER NOT NULL DEFAULT 0,
+  contract_ack_at TEXT,
+  created_at TEXT NOT NULL
+);
+
+CREATE TABLE invoices(
+  id INTEGER PRIMARY KEY,
+  project_id INTEGER NOT NULL REFERENCES projects(id),
+  kind TEXT NOT NULL,
+  amount_cents INTEGER NOT NULL,
+  currency TEXT NOT NULL DEFAULT 'USD',
+  status TEXT NOT NULL DEFAULT 'draft',
+  stripe_url TEXT,
+  stripe_session_id TEXT,
+  due_date TEXT,
+  sent_at TEXT,
+  paid_at TEXT,
+  created_at TEXT NOT NULL
+);
+
+CREATE TABLE dunning_events(
+  id INTEGER PRIMARY KEY,
+  invoice_id INTEGER NOT NULL REFERENCES invoices(id),
+  stage TEXT NOT NULL,
+  sent_at TEXT NOT NULL
+);
+</code></pre>
+<h2 id="enumerations">Enumerations</h2>
+<ul>
+<li>Invoice <strong>kinds</strong>: <code>deposit | milestone | final</code>
+</li>
+<li>Invoice <strong>statuses</strong>: <code>draft | sent | paid | overdue | void</code>
+</li>
+<li>Dunning <strong>stages</strong>: <code>day1 | day7 | day15</code>
+</li>
+</ul>
+<h2 id="notes">Notes</h2>
+<ul>
+<li>Money is stored as integer <strong>cents</strong> (<code>amount_cents</code>) — no float rounding bugs.
+</li>
+<li>Timestamps are ISO-8601 UTC strings.
+</li>
+<li>The dashboard's <code>web/db.py</code> module is the second implementation of this schema used by the web app; both follow the same frozen contract.
+</li>
+<li><code>seed_demo.py</code> (in the repo) seeds a demo database where every sample name carries a <code>(demo)</code> suffix so demo data can never be mistaken for real clients.
+</li>
+</ul>
+      <nav class="prev-next" aria-label="Previous and next pages">
+        <a class="page-prev" href="contracts.html"><span class="prev-next-label">Previous</span><span class="prev-next-title">&larr; Contracts</span></a>
+        <a class="page-next" href="docker.html"><span class="prev-next-label">Next</span><span class="prev-next-title">Docker &rarr;</span></a>
+      </nav>
+    </article>
+    <footer class="doc-footer">
+      <p>InvoiceGuard is open source (Apache-2.0).
+      <a href="https://github.com/Bilal-Junaid-Jiwani/invoiceguard">GitHub</a> ·
+      <a href="https://pypi.org/project/invoiceguard/">PyPI</a> ·
+      <a href="site/index.html">Marketing site</a></p>
+    </footer>
+  </main>
+
+  <aside class="toc-side" aria-label="Table of contents">
+    <p class="toc-label">On this page</p>
+    <ul class="toc-list">
+<li><a href="#enumerations">Enumerations</a>
+</li>
+<li><a href="#notes">Notes</a>
+</li>
+</ul>
+  </aside>
+</div>
+
+<script src="assets/js/docs.js"></script>
+<script src="assets/js/search.js"></script>
+</body>
+</html>

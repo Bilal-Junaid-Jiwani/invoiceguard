@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Dashboard — invoiceguard docs</title>
+  <meta name="description" content="The InvoiceGuard localhost web dashboard — invoice list, status filters, per-invoice timelines, and the Stripe webhook receiver.">
+  <meta property="og:title" content="Dashboard — invoiceguard docs">
+  <meta property="og:description" content="The InvoiceGuard localhost web dashboard — invoice list, status filters, per-invoice timelines, and the Stripe webhook receiver.">
+  <meta property="og:type" content="article">
+  <meta property="og:url" content="https://bilal-junaid-jiwani.github.io/invoiceguard/dashboard.html">
+  <meta property="og:site_name" content="invoiceguard docs">
+  <meta name="twitter:card" content="summary">
+  <meta name="twitter:title" content="Dashboard — invoiceguard docs">
+  <meta name="twitter:description" content="The InvoiceGuard localhost web dashboard — invoice list, status filters, per-invoice timelines, and the Stripe webhook receiver.">
+  <link rel="canonical" href="https://bilal-junaid-jiwani.github.io/invoiceguard/dashboard.html">
+  <link rel="icon" href="assets/img/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="assets/css/docs.css">
+  <script type="application/ld+json">
+[
+  {
+    "@context": "https://schema.org",
+    "@type": "WebSite",
+    "name": "invoiceguard docs",
+    "url": "https://bilal-junaid-jiwani.github.io/invoiceguard/"
+  },
+  {
+    "@context": "https://schema.org",
+    "@type": "TechArticle",
+    "headline": "Dashboard",
+    "description": "The InvoiceGuard localhost web dashboard — invoice list, status filters, per-invoice timelines, and the Stripe webhook receiver.",
+    "inLanguage": "en",
+    "isPartOf": {
+      "@type": "WebSite",
+      "name": "invoiceguard docs",
+      "url": "https://bilal-junaid-jiwani.github.io/invoiceguard/"
+    },
+    "mainEntityOfPage": "https://bilal-junaid-jiwani.github.io/invoiceguard/dashboard.html"
+  }
+]
+  </script>
+</head>
+<body data-page="dashboard">
+<header class="site-header">
+  <div class="header-inner">
+    <a class="brand" href="install.html">
+      <img class="brand-mark" src="assets/img/logo.svg" alt="" width="30" height="30">
+      <span class="brand-word">InvoiceGuard <em>docs</em></span>
+    </a>
+    <nav class="top-links" aria-label="Project links">
+      <a href="https://github.com/Bilal-Junaid-Jiwani/invoiceguard">GitHub</a>
+      <a href="https://pypi.org/project/invoiceguard/">PyPI</a>
+      <a href="site/index.html" class="site-link">Website</a>
+    </nav>
+    <div class="search-wrap">
+      <input id="search-input" type="search" placeholder="Search docs…" aria-label="Search docs" autocomplete="off">
+      <div id="search-results" class="search-results" hidden></div>
+    </div>
+    <button class="nav-toggle" id="nav-toggle" aria-label="Toggle navigation" aria-expanded="false">
+      <span></span><span></span><span></span>
+    </button>
+  </div>
+  <nav class="tabs" aria-label="Documentation sections">
+    <ul class="tab-list">
+      <li class="tab-item"><a class="tab-link" href="install.html">Getting started</a></li>
+<li class="tab-item"><a class="tab-link" href="cli.html" data-active="true" aria-current="page">User guide</a></li>
+<li class="tab-item"><a class="tab-link" href="troubleshooting.html">Reference</a></li>
+    </ul>
+  </nav>
+</header>
+
+<div class="layout">
+  <aside class="sidebar" id="sidebar" aria-label="Page navigation">
+    <div class="nav-group">
+<p class="nav-group-label">Workflows</p>
+<ul class="nav-list">
+<li><a class="nav-item" href="cli.html">CLI reference</a></li>
+<li><a class="nav-item" href="dashboard.html" data-active="true" aria-current="page">Dashboard</a></li>
+<li><a class="nav-item" href="dunning.html">Dunning engine</a></li>
+<li><a class="nav-item" href="webhooks.html">Webhooks</a></li>
+</ul></div>
+<div class="nav-group">
+<p class="nav-group-label">Data</p>
+<ul class="nav-list">
+<li><a class="nav-item" href="contracts.html">Contracts</a></li>
+<li><a class="nav-item" href="database.html">Database</a></li>
+<li><a class="nav-item" href="docker.html">Docker</a></li>
+</ul></div>
+    <div class="sidebar-foot">
+      <a href="https://github.com/Bilal-Junaid-Jiwani/invoiceguard">GitHub</a>
+      <span aria-hidden="true">·</span>
+      <a href="https://pypi.org/project/invoiceguard/">PyPI</a>
+      <span aria-hidden="true">·</span>
+      <a href="changelog.html">v0.1.0</a>
+    </div>
+  </aside>
+
+  <main class="content">
+    <article class="doc">
+      <p class="eyebrow">User guide</p>
+      <h1 class="doc-title">Dashboard</h1>
+      <div class="toc-mobile">
+        <details>
+          <summary>On this page</summary>
+          <ul class="toc-list">
+<li><a href="#pages">Pages</a>
+</li>
+<li><a href="#screenshots">Screenshots</a>
+</li>
+<li><a href="#notes">Notes</a>
+</li>
+</ul>
+        </details>
+      </div>
+      <pre class="codeblock" data-lang="bash"><code>invoiceguard dashboard            # http://127.0.0.1:8000/
+invoiceguard dashboard --port 8080
+</code></pre>
+<p>A small FastAPI + Jinja2 web UI that shares the CLI's SQLite database. Binds to <code>127.0.0.1</code> by default (localhost only). The API docs (<code>/docs</code>, <code>/redoc</code>) are disabled.</p>
+<h2 id="pages">Pages</h2>
+<ul>
+<li><strong><code>GET /</code></strong> — invoice list with status filters (<code>draft</code>, <code>sent</code>, <code>paid</code>, <code>overdue</code>, <code>void</code>), totals (outstanding / overdue / collected), and per-status counts. Each row shows the invoice kind, amount, project, due date, and current escalation stage.
+</li>
+<li><strong><code>GET /invoices/{id}</code></strong> — invoice detail: amount, status, Stripe payment link, due date, and a chronological timeline of dunning events.
+</li>
+<li><strong><code>GET /healthz</code></strong> — <code>{"ok": true}</code>, for uptime checks.
+</li>
+<li><strong><code>POST /webhooks/stripe</code></strong> — the Stripe webhook receiver (see <a href="webhooks.html">Webhooks</a>).
+</li>
+</ul>
+<p>Unknown status filters and missing invoices return a 404 page.</p>
+<h2 id="screenshots">Screenshots</h2>
+<p>Captured from the real dashboard running locally against seeded demo data (every sample name is labeled <code>(demo)</code>):</p>
+<p><img src="assets/img/dashboard-list.png" alt="Invoice list" loading="lazy"></p>
+<p><em>Invoice list — status filters, totals, and escalation stages.</em></p>
+<p><img src="assets/img/dashboard-detail.png" alt="Invoice detail" loading="lazy"></p>
+<p><em>Invoice detail — timeline of dunning events.</em></p>
+<h2 id="notes">Notes</h2>
+<ul>
+<li>The dashboard never inserts data on startup — it creates empty tables if the DB is fresh, nothing more.
+</li>
+<li>It reads and writes the same tables as the CLI; column names and types are frozen (additive migrations only). See <a href="database.html">Database</a>.
+</li>
+<li>Webhook verification needs the signing secret — resolution order is documented in <a href="webhooks.html">Webhooks</a>. Without a real secret, <code>POST /webhooks/stripe</code> returns HTTP 500.
+</li>
+</ul>
+      <nav class="prev-next" aria-label="Previous and next pages">
+        <a class="page-prev" href="cli.html"><span class="prev-next-label">Previous</span><span class="prev-next-title">&larr; CLI reference</span></a>
+        <a class="page-next" href="dunning.html"><span class="prev-next-label">Next</span><span class="prev-next-title">Dunning engine &rarr;</span></a>
+      </nav>
+    </article>
+    <footer class="doc-footer">
+      <p>InvoiceGuard is open source (Apache-2.0).
+      <a href="https://github.com/Bilal-Junaid-Jiwani/invoiceguard">GitHub</a> ·
+      <a href="https://pypi.org/project/invoiceguard/">PyPI</a> ·
+      <a href="site/index.html">Marketing site</a></p>
+    </footer>
+  </main>
+
+  <aside class="toc-side" aria-label="Table of contents">
+    <p class="toc-label">On this page</p>
+    <ul class="toc-list">
+<li><a href="#pages">Pages</a>
+</li>
+<li><a href="#screenshots">Screenshots</a>
+</li>
+<li><a href="#notes">Notes</a>
+</li>
+</ul>
+  </aside>
+</div>
+
+<script src="assets/js/docs.js"></script>
+<script src="assets/js/search.js"></script>
+</body>
+</html>

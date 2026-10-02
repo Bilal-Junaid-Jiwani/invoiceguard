@@ -1,0 +1,350 @@
+[
+ {
+  "url": "install.html",
+  "title": "Installation",
+  "eyebrow": "Getting started",
+  "description": "Install InvoiceGuard with pip install invoiceguard, or from source. Requirements and verification.",
+  "headings": [
+   {
+    "id": "from-pypi-recommended",
+    "text": "From PyPI (recommended)"
+   },
+   {
+    "id": "from-source",
+    "text": "From source"
+   },
+   {
+    "id": "dependencies",
+    "text": "Dependencies"
+   },
+   {
+    "id": "first-step-after-install",
+    "text": "First step after install"
+   },
+   {
+    "id": "upgrading",
+    "text": "Upgrading"
+   }
+  ],
+  "text": "From PyPI (recommended) pip install invoiceguard Requires Python 3.10 or newer. Verify: invoiceguard --version # invoiceguard, version 0.1.0 From source git clone https://github.com/Bilal-Junaid-Jiwani/invoiceguard cd invoiceguard python -m venv .venv && .venv/bin/pip install -r requirements.txt .venv/bin/pip install -e . Dependencies Installed automatically from PyPI: Package Used for stripe>=12,<16 payment links, webhook signature verification click>=8 the CLI fastapi>=0.110 , uvicorn[standard]>=0.29 , python-multipart>=0.0.18 , jinja2>=3.1 the dashboard web UI PyYAML>=6 config file parsing Test-only: pytest>=8 , httpx>=0.27 . First step after install invoiceguard init This creates ~/.invoiceguard/ — a config template ( config.yaml ), an empty SQLite database, and the three dunning email templates. Then continue to the Quickstart . Upgrading pip install --upgrade invoiceguard Check the Changelog for what changed between versions."
+ },
+ {
+  "url": "quickstart.html",
+  "title": "Quickstart",
+  "eyebrow": "Getting started",
+  "description": "The 5-minute InvoiceGuard flow — init, Stripe test key, SMTP, first client, first deposit link, automated collections.",
+  "headings": [
+   {
+    "id": "0-install-and-init",
+    "text": "0. Install and init"
+   },
+   {
+    "id": "1-add-your-stripe-test-key-2-min",
+    "text": "1. Add your Stripe test key (~2 min)"
+   },
+   {
+    "id": "2-add-your-smtp-details-2-min",
+    "text": "2. Add your SMTP details (~2 min)"
+   },
+   {
+    "id": "3-create-a-client-project-and-deposit-link-1-min",
+    "text": "3. Create a client, project, and deposit link (~1 min)"
+   },
+   {
+    "id": "4-let-collections-run-themselves",
+    "text": "4. Let collections run themselves"
+   },
+   {
+    "id": "5-stripe-webhook-so-payments-mark-invoices-paid",
+    "text": "5. Stripe webhook (so payments mark invoices paid)"
+   },
+   {
+    "id": "next",
+    "text": "Next"
+   }
+  ],
+  "text": "Five minutes, five steps. Nothing here touches real money until you decide it should. 0. Install and init pip install invoiceguard invoiceguard init # creates ~/.invoiceguard (config template, DB, email templates) 1. Add your Stripe test key (~2 min) Go to <https://dashboard.stripe.com/test/apikeys> (toggle Test mode on). Developers → API keys → Create secret key , copy the sk_test_... value. Paste it into ~/.invoiceguard/config.yaml as stripe_secret_key , or export it: export INVOICEGUARD_STRIPE_SECRET_KEY=\"sk_test_...\" 2. Add your SMTP details (~2 min) Dunning emails are sent through your SMTP. In ~/.invoiceguard/config.yaml : smtp: host: \"smtp.gmail.com\" port: 587 username: \"you@example.com\" password: \"YOUR_GMAIL_APP_PASSWORD\" # or export INVOICEGUARD_SMTP_PASSWORD from_addr: \"you@example.com\" use_tls: true (Gmail: create an App Password at Google Account → Security → 2-Step Verification → App passwords. Any SMTP provider works.) 3. Create a client, project, and deposit link (~1 min) invoiceguard client add --name \"Acme Corp\" --email \"billing@acme.com\" invoiceguard project create --client \"Acme Corp\" --title \"Website redesign\" \\ --amount 2000 --deposit-pct 50 --late-fee-pct 1.5 --ack This generates the contract markdown (with the late-fee clause) and — with --ack — records the client's acknowledgment. Then: invoiceguard invoice create --project 1 --kind deposit # => invoice #1 (deposit): $1,000.00 # pay link: https://buy.stripe.com/... # due: 2026-10-07 status: sent Send the pay link to the client. That's the whole pre-work flow. 4. Let collections run themselves Add the dunning scan to your crontab (every morning at 9:00): 0 9 * * * /path/to/venv/bin/invoiceguard check-due >> ~/.invoiceguard/check-due.log 2>&1 check-due scans invoices past their due date and sends the next escalation stage (day1 → day7 → day15) using the editable markdown templates in ~/.invoiceguard/templates/ . It's idempotent — a stage is never sent twice for the same invoice. 5. Stripe webhook (so payments mark invoices paid) In the Stripe dashboard: Developers → Webhooks → Add endpoint . URL: https://YOUR-HOST/webhooks/stripe (served by the dashboard app; see Dashboard ). Select event: checkout.session.completed . Copy the Signing secret ( whsec_... ) into stripe_webhook_secret in the config, or export INVOICEGUARD_STRIPE_WEBHOOK_SECRET . The dashboard resolves the secret in this order: INVOICEGUARD_STRIPE_WEBHOOK_SECRET env → stripe_webhook_secret in the config file → legacy STRIPE_WEBHOOK_SECRET env. Full detail in Webhooks . Next Configuration — every setting, env var, and override CLI reference — the full command list Dashboard — the web UI"
+ },
+ {
+  "url": "configuration.html",
+  "title": "Configuration",
+  "eyebrow": "Getting started",
+  "description": "Every InvoiceGuard setting — config.yaml, environment variables, secret resolution order, and path overrides.",
+  "headings": [
+   {
+    "id": "the-config-file",
+    "text": "The config file"
+   },
+   {
+    "id": "environment-variables",
+    "text": "Environment variables"
+   },
+   {
+    "id": "webhook-secret-resolution-order",
+    "text": "Webhook secret resolution order"
+   },
+   {
+    "id": "templates",
+    "text": "Templates"
+   }
+  ],
+  "text": "All settings live in ~/.invoiceguard/config.yaml (written by invoiceguard init ). Secrets can also come from environment variables — env always wins over the YAML file, never the reverse. The config file # Stripe — get test keys at https://dashboard.stripe.com/test/apikeys stripe_secret_key: \"sk_test_...\" # or env INVOICEGUARD_STRIPE_SECRET_KEY stripe_webhook_secret: \"whsec_...\" # or env INVOICEGUARD_STRIPE_WEBHOOK_SECRET # SMTP — how dunning emails are sent smtp: host: \"smtp.gmail.com\" port: 587 username: \"you@example.com\" password: \"APP_PASSWORD\" # or env INVOICEGUARD_SMTP_PASSWORD from_addr: \"you@example.com\" use_tls: true # Web-facing base URL (used to point the Stripe webhook at this app) app: base_url: \"http://localhost:8000\" Never commit this file with real secrets. The repo's .gitignore covers config.yaml , .env , *.key , and the local DB. Environment variables Variable Overrides INVOICEGUARD_STRIPE_SECRET_KEY stripe_secret_key INVOICEGUARD_STRIPE_WEBHOOK_SECRET stripe_webhook_secret (webhook endpoint) INVOICEGUARD_SMTP_PASSWORD smtp.password STRIPE_WEBHOOK_SECRET legacy alias for the webhook secret (lowest priority) INVOICEGUARD_CONFIG path of the config file itself (default ~/.invoiceguard/config.yaml ) INVOICEGUARD_DB path of the SQLite database (default ~/.invoiceguard/invoiceguard.db ) Webhook secret resolution order The dashboard's POST /webhooks/stripe endpoint resolves its signing secret like this: INVOICEGUARD_STRIPE_WEBHOOK_SECRET environment variable stripe_webhook_secret in the config file Legacy STRIPE_WEBHOOK_SECRET environment variable (kept for backward compatibility) Placeholder values ( whsec_... , sk_test_... , APP_PASSWORD , anything ending in ... ) count as unconfigured . If no real secret is found, the endpoint returns HTTP 500 with a message telling you exactly what to set. See Webhooks . Templates ~/.invoiceguard/templates/ holds day1.md , day7.md , day15.md — plain markdown with {variables} . templates_dir() resolves next to the config file, so a custom INVOICEGUARD_CONFIG keeps its templates alongside it. See Dunning engine . Warning invoiceguard check-due refuses to run until smtp.host is set to something real — the template default ( smtp.example.com ) is rejected with an error telling you to edit the config first."
+ },
+ {
+  "url": "cli.html",
+  "title": "CLI reference",
+  "eyebrow": "User guide",
+  "description": "Every InvoiceGuard command and option — init, client, project, invoice, check-due, dashboard.",
+  "headings": [
+   {
+    "id": "init",
+    "text": "init"
+   },
+   {
+    "id": "client",
+    "text": "client"
+   },
+   {
+    "id": "project",
+    "text": "project"
+   },
+   {
+    "id": "invoice",
+    "text": "invoice"
+   },
+   {
+    "id": "check-due",
+    "text": "check-due"
+   },
+   {
+    "id": "dashboard",
+    "text": "dashboard"
+   },
+   {
+    "id": "exit-behavior",
+    "text": "Exit behavior"
+   }
+  ],
+  "text": "The CLI entry point is invoiceguard (installed by pip). All commands below are from v0.1.0 — run invoiceguard --help or invoiceguard <group> --help for the same text locally. init invoiceguard init Creates ~/.invoiceguard/ : the config template, an empty SQLite database, and the three dunning email templates. Idempotent — existing files are left alone. client invoiceguard client add --name \"Acme Corp\" --email \"billing@acme.com\" invoiceguard client list add requires --name ; --email is optional (needed later for dunning emails). list prints #id name email rows. project invoiceguard project create --client \"Acme Corp\" --title \"Website redesign\" \\ --amount 2000 --currency USD --deposit-pct 50 \\ --late-fee-pct 1.5 --late-fee-grace-days 15 [--ack] invoiceguard project list invoiceguard project ack 1 create requires an existing client (matched by exact --client name) and --title and --amount (in currency units, e.g. 2000 ). Defaults: --currency USD , --deposit-pct 50 , --late-fee-pct 1.5 , --late-fee-grace-days 15 . Prints the generated contract (with the late-fee clause) as a preview. --ack records the contract as acknowledged by the client at creation time; without it, the contract shows no-ack until you run project ack ID after the client accepts the deposit link. list shows #id title client amount [ack|no-ack] . See Contracts for what the contract contains. invoice invoiceguard invoice create --project 1 --kind deposit [--amount 1000] [--due-days 7] invoiceguard invoice list invoiceguard invoice mark-paid 1 invoiceguard invoice void 1 create requires --project (id) and --kind : one of deposit , milestone , final . Amount defaults by kind: deposit = deposit_pct % of the project total; final = the remainder after the deposit; milestone = the full project amount. --amount overrides in currency units. --due-days defaults to 7; 0 or negative means \"due today\". On success it creates a real Stripe payment link (test mode friendly), stores the URL, and sets status to sent . If the Stripe secret key is missing or still the placeholder, the command fails with a clear error — no invoice is left half-created. list shows #id kind status amount project due-date . mark-paid manually marks an invoice paid (records paid_at ); void voids it. check-due invoiceguard check-due Scans for overdue invoices ( sent / overdue status, due date in the past) and sends the next dunning stage. Refuses to run until SMTP is configured. Meant for cron — see Dunning engine . dashboard invoiceguard dashboard [--port 8000] [--host 127.0.0.1] Launches the localhost web UI (uvicorn serving the FastAPI app). Binds to 127.0.0.1 by default — keep it that way unless you know what you're doing. See Dashboard . Exit behavior Errors print a one-line message ( Error: ... ) and exit non-zero. Destructive operations ( void , mark-paid ) act on explicit ids only — there is no bulk mode in v0.1.0."
+ },
+ {
+  "url": "dashboard.html",
+  "title": "Dashboard",
+  "eyebrow": "User guide",
+  "description": "The InvoiceGuard localhost web dashboard — invoice list, status filters, per-invoice timelines, and the Stripe webhook receiver.",
+  "headings": [
+   {
+    "id": "pages",
+    "text": "Pages"
+   },
+   {
+    "id": "screenshots",
+    "text": "Screenshots"
+   },
+   {
+    "id": "notes",
+    "text": "Notes"
+   }
+  ],
+  "text": "invoiceguard dashboard # http://127.0.0.1:8000/ invoiceguard dashboard --port 8080 A small FastAPI + Jinja2 web UI that shares the CLI's SQLite database. Binds to 127.0.0.1 by default (localhost only). The API docs ( /docs , /redoc ) are disabled. Pages GET / — invoice list with status filters ( draft , sent , paid , overdue , void ), totals (outstanding / overdue / collected), and per-status counts. Each row shows the invoice kind, amount, project, due date, and current escalation stage. GET /invoices/{id} — invoice detail: amount, status, Stripe payment link, due date, and a chronological timeline of dunning events. GET /healthz — {\"ok\": true} , for uptime checks. POST /webhooks/stripe — the Stripe webhook receiver (see Webhooks ). Unknown status filters and missing invoices return a 404 page. Screenshots Captured from the real dashboard running locally against seeded demo data (every sample name is labeled (demo) ): Invoice list — status filters, totals, and escalation stages. Invoice detail — timeline of dunning events. Notes The dashboard never inserts data on startup — it creates empty tables if the DB is fresh, nothing more. It reads and writes the same tables as the CLI; column names and types are frozen (additive migrations only). See Database . Webhook verification needs the signing secret — resolution order is documented in Webhooks . Without a real secret, POST /webhooks/stripe returns HTTP 500."
+ },
+ {
+  "url": "dunning.html",
+  "title": "Dunning engine",
+  "eyebrow": "User guide",
+  "description": "The automated 3-stage collections engine — day1/day7/day15 escalation, idempotency, editable templates, cron setup.",
+  "headings": [
+   {
+    "id": "the-three-stages",
+    "text": "The three stages"
+   },
+   {
+    "id": "idempotency",
+    "text": "Idempotency"
+   },
+   {
+    "id": "cron-setup",
+    "text": "Cron setup"
+   },
+   {
+    "id": "email-templates",
+    "text": "Email templates"
+   },
+   {
+    "id": "requirements",
+    "text": "Requirements"
+   }
+  ],
+  "text": "invoiceguard check-due scans for overdue invoices and sends the next escalation stage. It is designed to run unattended from cron. The three stages Stage Fires at Tone day1 ≥ 1 day overdue polite nudge day7 ≥ 7 days overdue firm reminder day15 ≥ 15 days overdue formal notice quoting the late-fee clause The earliest stage whose threshold is met and that hasn't been sent yet is sent — escalation always goes day1 → day7 → day15, and exactly one email is sent per invoice per run. Idempotency Each stage is recorded in the dunning_events table and sent at most once per invoice . Re-running check-due never double-sends. Only invoices with status sent or overdue and a due date in the past are considered; a sent invoice flips to overdue on its first dunning email. Cron setup 0 9 * * * /path/to/venv/bin/invoiceguard check-due >> ~/.invoiceguard/check-due.log 2>&1 check-due prints nothing due — no emails sent when there's nothing to do, or one line per email sent ( sent day7 to billing@acme.com (invoice #3) ). Email templates ~/.invoiceguard/templates/day1.md , day7.md , day15.md — plain markdown with {variables} , rendered with stdlib string formatting only: {client_name} {project_title} {amount} {due_date} {days_overdue} {late_fee_pct} {pay_url} Edit them freely; check-due picks up changes on the next run. If a template references an unknown variable, the run fails loudly instead of sending a broken email. If a template file is missing, the command tells you to re-run invoiceguard init . Default subjects: day1: Quick nudge: invoice for {project_title} is due day7: Reminder: invoice for {project_title} is 7 days overdue day15: Final notice: {project_title} invoice {days_overdue} days overdue Requirements check-due refuses to run until SMTP is configured — the template default host ( smtp.example.com ) is rejected with an error pointing at your config file. Email is sent through your SMTP provider; deliverability is yours (see Troubleshooting ). Note v1 escalation is email-only. SMS/WhatsApp escalation is on the roadmap ."
+ },
+ {
+  "url": "webhooks.html",
+  "title": "Webhooks",
+  "eyebrow": "User guide",
+  "description": "Stripe webhook setup for InvoiceGuard — endpoint, signing-secret resolution order, verified events, offline testing.",
+  "headings": [
+   {
+    "id": "setup",
+    "text": "Setup"
+   },
+   {
+    "id": "signing-secret-resolution-order",
+    "text": "Signing-secret resolution order"
+   },
+   {
+    "id": "events-handled",
+    "text": "Events handled"
+   },
+   {
+    "id": "offline-smoke-test",
+    "text": "Offline smoke test"
+   }
+  ],
+  "text": "POST /webhooks/stripe (served by the dashboard ) lets Stripe tell InvoiceGuard when a client pays. On a verified checkout.session.completed event, the matching invoice is marked paid automatically. Setup Stripe dashboard → Developers → Webhooks → Add endpoint . URL: https://YOUR-HOST/webhooks/stripe . Select the event checkout.session.completed . Copy the Signing secret ( whsec_... ) and configure it (below). Signing-secret resolution order The endpoint resolves the secret like this — first hit wins: INVOICEGUARD_STRIPE_WEBHOOK_SECRET environment variable stripe_webhook_secret in ~/.invoiceguard/config.yaml Legacy STRIPE_WEBHOOK_SECRET environment variable (backward compatibility) Placeholder values ( whsec_... , anything ending in ... ) count as unconfigured . With no real secret, the endpoint returns HTTP 500 with a message telling you exactly what to set. Bad signatures return HTTP 400 . Note This resolution order is a v0.1.0 fix. Previously the endpoint only honored the undocumented bare STRIPE_WEBHOOK_SECRET env var, so anyone following the README got 500s. See the changelog . Events handled Stripe event Result checkout.session.completed invoice marked paid (matched by the invoiceguard_invoice_id metadata on the payment link; invoice_id is a tolerated legacy alias; falls back to matching stripe_session_id ) payment_link.expired ignored — nothing is auto-voided in v1; void from the CLI or dashboard anything else ignored Already-paid invoices are left alone ( ignored:already_paid ); events without invoice metadata are ignored. Offline smoke test Signature verification uses real stripe.Webhook.construct_event HMAC checks and works with no network: INVOICEGUARD_DB=/tmp/ig-demo.db python seed_demo.py --fresh INVOICEGUARD_DB=/tmp/ig-demo.db INVOICEGUARD_STRIPE_WEBHOOK_SECRET=whsec_test_x \\ invoiceguard dashboard # POST a locally-signed test payload to http://127.0.0.1:8000/webhooks/stripe The test suite covers this path end to end, including the metadata-key regression ( invoiceguard_invoice_id vs invoice_id ) and the secret-resolution regression."
+ },
+ {
+  "url": "contracts.html",
+  "title": "Contracts",
+  "eyebrow": "User guide",
+  "description": "The InvoiceGuard contract generator — late-fee clause, deposit acknowledgment model, and the honest limits of v1.",
+  "headings": [
+   {
+    "id": "whats-in-the-contract",
+    "text": "What's in the contract"
+   },
+   {
+    "id": "the-acknowledgment-model",
+    "text": "The acknowledgment model"
+   },
+   {
+    "id": "honest-limits",
+    "text": "Honest limits"
+   }
+  ],
+  "text": "invoiceguard project create generates a contract as markdown and stores it with the project. The contract is the legal backbone of the whole flow: it contains the late-fee clause that the day-15 dunning email quotes. What's in the contract Parties and scope — client name/email, project title, date. Fee and deposit — total fee, deposit percentage and amount. The deposit is collected through a Stripe payment link, and paying the deposit link is the client's acknowledgment of the agreement . Late-fee clause — if an invoice is unpaid after the grace period, a late fee of late_fee_pct % per month applies on the overdue balance, compounding monthly until paid. Sign-off (v1) — records contract_ack : 1 once the deposit link is paid. Defaults: 50% deposit, 1.5%/month late fee, 15-day grace — all adjustable per project with --deposit-pct , --late-fee-pct , --late-fee-grace-days . The acknowledgment model v1's \"signature\" is a client-acknowledgment checkbox, recorded as contract_ack = 1 with a timestamp ( contract_ack_at ): Pass --ack to project create when the client has already accepted the deposit link. Or record it later: invoiceguard project ack <id> . project list shows ack / no-ack per project so you can see at a glance which contracts are acknowledged. Honest limits The acknowledgment is not a legal e-signature — it's a record that the client paid the deposit link, which the contract text defines as acceptance. Real e-signature (typed name / drawn signature) is on the roadmap . Late-fee enforceability varies by jurisdiction. The clause is a contractual starting point, not legal advice. Adjust the percentage and grace days per project."
+ },
+ {
+  "url": "database.html",
+  "title": "Database",
+  "eyebrow": "User guide",
+  "description": "The InvoiceGuard SQLite schema — the frozen contract shared between the CLI and the dashboard.",
+  "headings": [
+   {
+    "id": "enumerations",
+    "text": "Enumerations"
+   },
+   {
+    "id": "notes",
+    "text": "Notes"
+   }
+  ],
+  "text": "SQLite, default ~/.invoiceguard/invoiceguard.db (override with $INVOICEGUARD_DB ). Both the CLI and the dashboard read and write these tables — column names and types are frozen; additive migrations only. CREATE TABLE clients( id INTEGER PRIMARY KEY, name TEXT NOT NULL, email TEXT, created_at TEXT NOT NULL ); CREATE TABLE projects( id INTEGER PRIMARY KEY, client_id INTEGER NOT NULL REFERENCES clients(id), title TEXT NOT NULL, amount_cents INTEGER NOT NULL, currency TEXT NOT NULL DEFAULT 'USD', deposit_pct REAL NOT NULL DEFAULT 50.0, late_fee_pct REAL NOT NULL DEFAULT 1.5, late_fee_grace_days INTEGER NOT NULL DEFAULT 15, contract_md TEXT NOT NULL, contract_ack INTEGER NOT NULL DEFAULT 0, contract_ack_at TEXT, created_at TEXT NOT NULL ); CREATE TABLE invoices( id INTEGER PRIMARY KEY, project_id INTEGER NOT NULL REFERENCES projects(id), kind TEXT NOT NULL, amount_cents INTEGER NOT NULL, currency TEXT NOT NULL DEFAULT 'USD', status TEXT NOT NULL DEFAULT 'draft', stripe_url TEXT, stripe_session_id TEXT, due_date TEXT, sent_at TEXT, paid_at TEXT, created_at TEXT NOT NULL ); CREATE TABLE dunning_events( id INTEGER PRIMARY KEY, invoice_id INTEGER NOT NULL REFERENCES invoices(id), stage TEXT NOT NULL, sent_at TEXT NOT NULL ); Enumerations Invoice kinds : deposit | milestone | final Invoice statuses : draft | sent | paid | overdue | void Dunning stages : day1 | day7 | day15 Notes Money is stored as integer cents ( amount_cents ) — no float rounding bugs. Timestamps are ISO-8601 UTC strings. The dashboard's web/db.py module is the second implementation of this schema used by the web app; both follow the same frozen contract. seed_demo.py (in the repo) seeds a demo database where every sample name carries a (demo) suffix so demo data can never be mistaken for real clients."
+ },
+ {
+  "url": "docker.html",
+  "title": "Docker",
+  "eyebrow": "User guide",
+  "description": "Run InvoiceGuard with Docker Compose — CLI container, persistent data volume, dashboard port, one-off dunning scans.",
+  "headings": [
+   {
+    "id": "up",
+    "text": "Up"
+   },
+   {
+    "id": "one-off-dunning-scan",
+    "text": "One-off dunning scan"
+   },
+   {
+    "id": "secrets",
+    "text": "Secrets"
+   },
+   {
+    "id": "notes",
+    "text": "Notes"
+   }
+  ],
+  "text": "The repo ships a Dockerfile and docker-compose.yml for running InvoiceGuard in containers. Up docker compose up -d Runs the CLI container; data persists in the invoiceguard-data volume. Port 8000 is exposed for the dashboard. One-off dunning scan docker compose run --rm app check-due Any CLI command works the same way: docker compose run --rm app client list , and so on. Secrets Put secrets in a .env file next to docker-compose.yml ( never committed ): INVOICEGUARD_STRIPE_SECRET_KEY=sk_test_... INVOICEGUARD_STRIPE_WEBHOOK_SECRET=whsec_... INVOICEGUARD_SMTP_PASSWORD=... The same INVOICEGUARD_* variables documented in Configuration apply inside the container. Notes The container uses the same SQLite schema as a local install ( Database ); the volume keeps it across restarts. Cron-style scheduling ( check-due ) is your host's job — run the one-off command from your system crontab, or schedule the container externally."
+ },
+ {
+  "url": "troubleshooting.html",
+  "title": "Troubleshooting",
+  "eyebrow": "Reference",
+  "description": "Fix common InvoiceGuard problems — config, Stripe, SMTP, webhooks, templates — plus the honest limits of v1.",
+  "headings": [
+   {
+    "id": "invoice-create-fails-stripe-secret-key-is-not-configured",
+    "text": "invoice create fails: \"Stripe secret key is not configured\""
+   },
+   {
+    "id": "webhook-returns-500-stripe-webhook-secret-is-not-configured",
+    "text": "Webhook returns 500: \"Stripe webhook secret is not configured\""
+   },
+   {
+    "id": "webhook-returns-400-invalid-signature",
+    "text": "Webhook returns 400: \"invalid signature\""
+   },
+   {
+    "id": "check-due-refuses-to-run-smtp-not-configured",
+    "text": "check-due refuses to run: SMTP not configured"
+   },
+   {
+    "id": "emails-land-in-spam",
+    "text": "Emails land in spam"
+   },
+   {
+    "id": "dunning-template-missing-re-run-invoiceguard-init",
+    "text": "\"dunning template missing ... (re-run invoiceguard init)\""
+   },
+   {
+    "id": "template-renders-a-broken-email",
+    "text": "Template renders a broken email"
+   },
+   {
+    "id": "dashboard-shows-an-empty-invoice-list",
+    "text": "Dashboard shows an empty invoice list"
+   },
+   {
+    "id": "paid-invoice-still-shows-as-sent",
+    "text": "Paid invoice still shows as \"sent\""
+   },
+   {
+    "id": "limits-of-v1",
+    "text": "Limits of v1"
+   }
+  ],
+  "text": "invoice create fails: \"Stripe secret key is not configured\" Set stripe_secret_key in ~/.invoiceguard/config.yaml or export INVOICEGUARD_STRIPE_SECRET_KEY . Values that still look like the template placeholder ( sk_test_... ) are rejected on purpose. Use a real test key from <https://dashboard.stripe.com/test/apikeys>. Webhook returns 500: \"Stripe webhook secret is not configured\" The dashboard couldn't find a real signing secret. Check the resolution order in Webhooks : INVOICEGUARD_STRIPE_WEBHOOK_SECRET env → stripe_webhook_secret in the config → legacy STRIPE_WEBHOOK_SECRET env. A whsec_... placeholder counts as unconfigured — paste the real signing secret from Stripe dashboard → Developers → Webhooks. Webhook returns 400: \"invalid signature\" The payload's Stripe-Signature header doesn't match your secret. Common causes: the secret belongs to a different webhook endpoint, or a proxy/load balancer modified the raw request body. The endpoint must receive the exact bytes Stripe sent. check-due refuses to run: SMTP not configured Set smtp.host (and the rest of smtp.* ) in the config — the smtp.example.com template default is rejected deliberately. Gmail users need an App Password, not the account password. Emails land in spam Email is sent through your SMTP provider — deliverability is yours. Use a reputable provider, warm up new sending addresses, and check spam folders during testing. InvoiceGuard can't fix a provider's reputation for you. \"dunning template missing ... (re-run invoiceguard init )\" A ~/.invoiceguard/templates/dayN.md file was deleted. Re-run invoiceguard init to restore the defaults (existing files are left alone), or recreate the file yourself. Template renders a broken email If a template references an unknown {variable} , check-due fails loudly instead of sending. The valid variables are listed in Dunning engine : {client_name} {project_title} {amount} {due_date} {days_overdue} {late_fee_pct} {pay_url} . Dashboard shows an empty invoice list It's reading a different database than your CLI. Check INVOICEGUARD_DB in the dashboard's environment — the default is ~/.invoiceguard/invoiceguard.db for both. Paid invoice still shows as \"sent\" Either the webhook isn't configured (see above), the event wasn't checkout.session.completed , or the payment link's metadata doesn't carry the invoice id (links created by v0.1.0 always do). Use invoiceguard invoice mark-paid <id> as the manual fallback. Limits of v1 Honest boundaries, not bugs: No live Stripe call was verified in this build environment. Payment-link creation was verified with a mocked Stripe SDK (exact API params asserted); webhook handling was verified with real stripe.Webhook.construct_event signature checks offline. You add your own test key; the live path is the standard Stripe API. The \"signature\" is an acknowledgment checkbox , not a legal e-signature. Paying the deposit link = accepting the terms; contract_ack=1 records it. Email deliverability is yours (your SMTP, your reputation). Late-fee enforceability varies by jurisdiction — the clause is a starting point, not legal advice."
+ },
+ {
+  "url": "changelog.html",
+  "title": "Changelog",
+  "eyebrow": "Reference",
+  "description": "InvoiceGuard release history — newest first, no fluff.",
+  "headings": [
+   {
+    "id": "010---2026-10-02",
+    "text": "[0.1.0] - 2026-10-02"
+   },
+   {
+    "id": "added",
+    "text": "Added"
+   },
+   {
+    "id": "fixed",
+    "text": "Fixed"
+   },
+   {
+    "id": "honest-scope-v1",
+    "text": "Honest scope (v1)"
+   }
+  ],
+  "text": "InvoiceGuard follows semver. Newest first. [0.1.0] - 2026-10-02 First release on PyPI ( pip install invoiceguard ) and GitHub. Added CLI: init , client add/list , project create/list/ack , invoice create/list/mark-paid/void , check-due , dashboard Stripe deposit payment links per project (test-mode friendly), with invoiceguard_invoice_id metadata so webhook payments map back to invoices Late-fee contract generator: deposit + late-fee clause markdown, client acknowledgment recorded when the deposit link is accepted Automated 3-stage dunning: day-1 polite nudge → day-7 firm reminder → day-15 formal notice quoting the late-fee clause; idempotent, cron-friendly ( check-due ), editable markdown templates Localhost web dashboard: invoice list with status filters and escalation stages, per-invoice detail with chronological timeline, totals/outstanding/overdue/collected, Stripe webhook receiver that marks invoices paid SQLite persistence (shared schema between CLI and dashboard), Docker Compose setup Fixed Dashboard Stripe webhook secret resolution. The README told users to set stripe_webhook_secret in the config (or INVOICEGUARD_STRIPE_WEBHOOK_SECRET ), but the dashboard only honored the bare STRIPE_WEBHOOK_SECRET env var — webhooks returned 500 for anyone following the docs. The endpoint now resolves, in order: INVOICEGUARD_STRIPE_WEBHOOK_SECRET env → stripe_webhook_secret in the config file → legacy STRIPE_WEBHOOK_SECRET env (still supported). Placeholder values ( whsec_... ) count as unconfigured. Regression tests cover all four cases. Honest scope (v1) The \"signature\" is a client-acknowledgment checkbox (deposit-link acceptance), not a legal e-signature — real e-signature is on the roadmap. Email deliverability is the user's own SMTP; late-fee enforceability varies by jurisdiction."
+ },
+ {
+  "url": "roadmap.html",
+  "title": "Roadmap",
+  "eyebrow": "Reference",
+  "description": "What's planned for InvoiceGuard — honestly labeled as plans, not shipped features.",
+  "headings": [],
+  "text": "These are plans, not promises — nothing below is shipped in v0.1.0. Real e-signature — typed-name / drawn-signature capture on the contract, stored with the project. (v1's acknowledgment is a checkbox: paying the deposit link.) SMS / WhatsApp escalation — day-15 via message, not just email. Agency mode — multi-freelancer workspaces, per-client dunning policies. Late-fee ledger — accrual calculator and ledger view on the dashboard. Partial payments / payment plans — record partial payments against an invoice. Priorities follow real user feedback. If a roadmap item matters to you, open an issue on GitHub describing your workflow."
+ }
+]

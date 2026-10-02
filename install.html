@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Installation — invoiceguard docs</title>
+  <meta name="description" content="Install InvoiceGuard with pip install invoiceguard, or from source. Requirements and verification.">
+  <meta property="og:title" content="Installation — invoiceguard docs">
+  <meta property="og:description" content="Install InvoiceGuard with pip install invoiceguard, or from source. Requirements and verification.">
+  <meta property="og:type" content="article">
+  <meta property="og:url" content="https://bilal-junaid-jiwani.github.io/invoiceguard/install.html">
+  <meta property="og:site_name" content="invoiceguard docs">
+  <meta name="twitter:card" content="summary">
+  <meta name="twitter:title" content="Installation — invoiceguard docs">
+  <meta name="twitter:description" content="Install InvoiceGuard with pip install invoiceguard, or from source. Requirements and verification.">
+  <link rel="canonical" href="https://bilal-junaid-jiwani.github.io/invoiceguard/install.html">
+  <link rel="icon" href="assets/img/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="assets/css/docs.css">
+  <script type="application/ld+json">
+[
+  {
+    "@context": "https://schema.org",
+    "@type": "WebSite",
+    "name": "invoiceguard docs",
+    "url": "https://bilal-junaid-jiwani.github.io/invoiceguard/"
+  },
+  {
+    "@context": "https://schema.org",
+    "@type": "TechArticle",
+    "headline": "Installation",
+    "description": "Install InvoiceGuard with pip install invoiceguard, or from source. Requirements and verification.",
+    "inLanguage": "en",
+    "isPartOf": {
+      "@type": "WebSite",
+      "name": "invoiceguard docs",
+      "url": "https://bilal-junaid-jiwani.github.io/invoiceguard/"
+    },
+    "mainEntityOfPage": "https://bilal-junaid-jiwani.github.io/invoiceguard/install.html"
+  }
+]
+  </script>
+</head>
+<body data-page="install">
+<header class="site-header">
+  <div class="header-inner">
+    <a class="brand" href="install.html">
+      <img class="brand-mark" src="assets/img/logo.svg" alt="" width="30" height="30">
+      <span class="brand-word">InvoiceGuard <em>docs</em></span>
+    </a>
+    <nav class="top-links" aria-label="Project links">
+      <a href="https://github.com/Bilal-Junaid-Jiwani/invoiceguard">GitHub</a>
+      <a href="https://pypi.org/project/invoiceguard/">PyPI</a>
+      <a href="site/index.html" class="site-link">Website</a>
+    </nav>
+    <div class="search-wrap">
+      <input id="search-input" type="search" placeholder="Search docs…" aria-label="Search docs" autocomplete="off">
+      <div id="search-results" class="search-results" hidden></div>
+    </div>
+    <button class="nav-toggle" id="nav-toggle" aria-label="Toggle navigation" aria-expanded="false">
+      <span></span><span></span><span></span>
+    </button>
+  </div>
+  <nav class="tabs" aria-label="Documentation sections">
+    <ul class="tab-list">
+      <li class="tab-item"><a class="tab-link" href="install.html" data-active="true" aria-current="page">Getting started</a></li>
+<li class="tab-item"><a class="tab-link" href="cli.html">User guide</a></li>
+<li class="tab-item"><a class="tab-link" href="troubleshooting.html">Reference</a></li>
+    </ul>
+  </nav>
+</header>
+
+<div class="layout">
+  <aside class="sidebar" id="sidebar" aria-label="Page navigation">
+    <div class="nav-group">
+<p class="nav-group-label">Start here</p>
+<ul class="nav-list">
+<li><a class="nav-item" href="install.html" data-active="true" aria-current="page">Installation</a></li>
+<li><a class="nav-item" href="quickstart.html">Quickstart</a></li>
+<li><a class="nav-item" href="configuration.html">Configuration</a></li>
+</ul></div>
+    <div class="sidebar-foot">
+      <a href="https://github.com/Bilal-Junaid-Jiwani/invoiceguard">GitHub</a>
+      <span aria-hidden="true">·</span>
+      <a href="https://pypi.org/project/invoiceguard/">PyPI</a>
+      <span aria-hidden="true">·</span>
+      <a href="changelog.html">v0.1.0</a>
+    </div>
+  </aside>
+
+  <main class="content">
+    <article class="doc">
+      <p class="eyebrow">Getting started</p>
+      <h1 class="doc-title">Installation</h1>
+      <div class="toc-mobile">
+        <details>
+          <summary>On this page</summary>
+          <ul class="toc-list">
+<li><a href="#from-pypi-recommended">From PyPI (recommended)</a>
+</li>
+<li><a href="#from-source">From source</a>
+</li>
+<li><a href="#dependencies">Dependencies</a>
+</li>
+<li><a href="#first-step-after-install">First step after install</a>
+</li>
+<li><a href="#upgrading">Upgrading</a>
+</li>
+</ul>
+        </details>
+      </div>
+      <h2 id="from-pypi-recommended">From PyPI (recommended)</h2>
+<pre class="codeblock" data-lang="bash"><code>pip install invoiceguard
+</code></pre>
+<p>Requires Python 3.10 or newer. Verify:</p>
+<pre class="codeblock" data-lang="bash"><code>invoiceguard --version
+# invoiceguard, version 0.1.0
+</code></pre>
+<h2 id="from-source">From source</h2>
+<pre class="codeblock" data-lang="bash"><code>git clone https://github.com/Bilal-Junaid-Jiwani/invoiceguard
+cd invoiceguard
+python -m venv .venv &amp;&amp; .venv/bin/pip install -r requirements.txt
+.venv/bin/pip install -e .
+</code></pre>
+<h2 id="dependencies">Dependencies</h2>
+<p>Installed automatically from PyPI:</p>
+<div class="table-wrap"><table><thead><tr><th>Package</th><th>Used for</th></tr></thead><tbody><tr><td><code>stripe&gt;=12,&lt;16</code></td><td>payment links, webhook signature verification</td></tr><tr><td><code>click&gt;=8</code></td><td>the CLI</td></tr><tr><td><code>fastapi&gt;=0.110</code>, <code>uvicorn[standard]&gt;=0.29</code>, <code>python-multipart&gt;=0.0.18</code>, <code>jinja2&gt;=3.1</code></td><td>the dashboard web UI</td></tr><tr><td><code>PyYAML&gt;=6</code></td><td>config file parsing</td></tr></tbody></table></div>
+<p>Test-only: <code>pytest&gt;=8</code>, <code>httpx&gt;=0.27</code>.</p>
+<h2 id="first-step-after-install">First step after install</h2>
+<pre class="codeblock" data-lang="bash"><code>invoiceguard init
+</code></pre>
+<p>This creates <code>~/.invoiceguard/</code> — a config template (<code>config.yaml</code>), an empty SQLite database, and the three dunning email templates. Then continue to the <a href="quickstart.html">Quickstart</a>.</p>
+<h2 id="upgrading">Upgrading</h2>
+<pre class="codeblock" data-lang="bash"><code>pip install --upgrade invoiceguard
+</code></pre>
+<p>Check the <a href="changelog.html">Changelog</a> for what changed between versions.</p>
+      <nav class="prev-next" aria-label="Previous and next pages">
+        
+        <a class="page-next" href="quickstart.html"><span class="prev-next-label">Next</span><span class="prev-next-title">Quickstart &rarr;</span></a>
+      </nav>
+    </article>
+    <footer class="doc-footer">
+      <p>InvoiceGuard is open source (Apache-2.0).
+      <a href="https://github.com/Bilal-Junaid-Jiwani/invoiceguard">GitHub</a> ·
+      <a href="https://pypi.org/project/invoiceguard/">PyPI</a> ·
+      <a href="site/index.html">Marketing site</a></p>
+    </footer>
+  </main>
+
+  <aside class="toc-side" aria-label="Table of contents">
+    <p class="toc-label">On this page</p>
+    <ul class="toc-list">
+<li><a href="#from-pypi-recommended">From PyPI (recommended)</a>
+</li>
+<li><a href="#from-source">From source</a>
+</li>
+<li><a href="#dependencies">Dependencies</a>
+</li>
+<li><a href="#first-step-after-install">First step after install</a>
+</li>
+<li><a href="#upgrading">Upgrading</a>
+</li>
+</ul>
+  </aside>
+</div>
+
+<script src="assets/js/docs.js"></script>
+<script src="assets/js/search.js"></script>
+</body>
+</html>
