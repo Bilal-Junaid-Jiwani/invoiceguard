@@ -52,15 +52,48 @@ CREATE TABLE IF NOT EXISTS dunning_events(
     stage TEXT NOT NULL,
     sent_at TEXT NOT NULL
 );
+CREATE TABLE IF NOT EXISTS payments(
+    id INTEGER PRIMARY KEY,
+    invoice_id INTEGER NOT NULL REFERENCES invoices(id),
+    amount_cents INTEGER NOT NULL CHECK (amount_cents > 0),
+    method TEXT NOT NULL DEFAULT 'manual',
+    note TEXT,
+    paid_at TEXT NOT NULL
+);
 CREATE INDEX IF NOT EXISTS idx_invoices_status_due
     ON invoices(status, due_date);
 CREATE INDEX IF NOT EXISTS idx_dunning_invoice_stage
     ON dunning_events(invoice_id, stage);
+CREATE INDEX IF NOT EXISTS idx_payments_invoice
+    ON payments(invoice_id);
 """
 
 
 def now_iso() -> str:
     return datetime.now(timezone.utc).isoformat()
+
+
+def backfill_paid_ledger(conn: sqlite3.Connection) -> None:
+    """Ledger backfill for invoices marked paid before payments existed.
+
+    Inserts one 'manual' payment row per paid invoice that has no payment
+    rows yet, for the full invoice amount dated at paid_at. Idempotent —
+    the NOT EXISTS guard means it only ever fills gaps, so it is safe to
+    call on every connect.
+    """
+    conn.execute(
+        """
+        INSERT INTO payments(invoice_id, amount_cents, method, note, paid_at)
+        SELECT i.id, i.amount_cents, 'manual',
+               'backfill: invoice was already paid before the ledger existed',
+               COALESCE(i.paid_at, i.created_at)
+          FROM invoices i
+         WHERE i.status = 'paid'
+           AND NOT EXISTS (SELECT 1 FROM payments p
+                            WHERE p.invoice_id = i.id)
+        """
+    )
+    conn.commit()
 
 
 class DB:
@@ -71,6 +104,7 @@ class DB:
         self.conn.row_factory = sqlite3.Row
         self.conn.execute("PRAGMA foreign_keys = ON")
         self.conn.executescript(SCHEMA)
+        backfill_paid_ledger(self.conn)
 
     # -- clients -----------------------------------------------------
     def add_client(self, name: str, email: str | None = None) -> int:
@@ -164,7 +198,11 @@ class DB:
         self.conn.commit()
 
     def invoice_full(self, invoice_id: int) -> dict | None:
-        """Invoice joined with project + client, as a plain dict."""
+        """Invoice joined with project + client, as a plain dict.
+
+        Includes the payment ledger summary: paid_cents, outstanding_cents,
+        and the list of payments.
+        """
         row = self.conn.execute(
             """SELECT i.*, p.title AS project_title, p.late_fee_pct,
                       p.late_fee_grace_days, p.contract_ack,
@@ -175,7 +213,91 @@ class DB:
                WHERE i.id = ?""",
             (invoice_id,),
         ).fetchone()
-        return dict(row) if row else None
+        if not row:
+            return None
+        d = dict(row)
+        d["paid_cents"] = self.paid_cents(invoice_id)
+        d["outstanding_cents"] = d["amount_cents"] - d["paid_cents"]
+        d["payments"] = self.payments(invoice_id)
+        return d
+
+    # -- payments ----------------------------------------------------
+    def payments(self, invoice_id: int) -> list[dict]:
+        """Payment ledger rows for an invoice, oldest first."""
+        rows = self.conn.execute(
+            "SELECT * FROM payments WHERE invoice_id = ? "
+            "ORDER BY paid_at ASC, id ASC",
+            (invoice_id,),
+        ).fetchall()
+        return [dict(r) for r in rows]
+
+    def paid_cents(self, invoice_id: int) -> int:
+        row = self.conn.execute(
+            "SELECT COALESCE(SUM(amount_cents), 0) FROM payments "
+            "WHERE invoice_id = ?",
+            (invoice_id,),
+        ).fetchone()
+        return int(row[0])
+
+    def outstanding_cents(self, invoice_id: int) -> int:
+        inv = self.get_invoice(invoice_id)
+        if not inv:
+            raise ValueError(f"no invoice #{invoice_id}")
+        return inv["amount_cents"] - self.paid_cents(invoice_id)
+
+    def record_payment(self, invoice_id: int, amount_cents: int,
+                       method: str = "manual", note: str | None = None,
+                       paid_at: str | None = None) -> dict:
+        """Record a payment (partial or full) against an invoice.
+
+        Partial payments move the invoice to status 'partially-paid';
+        a payment that clears the balance marks it 'paid' (paid_at set).
+        Raises ValueError when the invoice does not exist, is void or
+        already fully paid, or when the amount is not positive / exceeds
+        the outstanding balance.
+        """
+        inv = self.get_invoice(invoice_id)
+        if not inv:
+            raise ValueError(f"no invoice #{invoice_id}")
+        if inv["status"] == "void":
+            raise ValueError(f"invoice #{invoice_id} is void")
+        if inv["status"] == "paid":
+            raise ValueError(f"invoice #{invoice_id} is already paid in full")
+        if amount_cents <= 0:
+            raise ValueError("payment amount must be positive")
+        outstanding = inv["amount_cents"] - self.paid_cents(invoice_id)
+        if amount_cents > outstanding:
+            raise ValueError(
+                f"payment of {amount_cents / 100:.2f} exceeds the outstanding "
+                f"balance of {outstanding / 100:.2f}"
+            )
+        paid_at = paid_at or now_iso()
+        self.conn.execute(
+            "INSERT INTO payments(invoice_id, amount_cents, method, note, "
+            "paid_at) VALUES (?, ?, ?, ?, ?)",
+            (invoice_id, amount_cents, method, note, paid_at),
+        )
+        remaining = outstanding - amount_cents
+        if remaining == 0:
+            self.conn.execute(
+                "UPDATE invoices SET status = 'paid', paid_at = ? "
+                "WHERE id = ?",
+                (paid_at, invoice_id),
+            )
+            status = "paid"
+        else:
+            self.conn.execute(
+                "UPDATE invoices SET status = 'partially-paid' WHERE id = ?",
+                (invoice_id,),
+            )
+            status = "partially-paid"
+        self.conn.commit()
+        return {
+            "invoice_id": invoice_id,
+            "paid_cents": amount_cents,
+            "outstanding_cents": remaining,
+            "status": status,
+        }
 
     # -- dunning -----------------------------------------------------
     def record_dunning(self, invoice_id: int, stage: str) -> None:
@@ -194,20 +316,29 @@ class DB:
         return {r["stage"] for r in rows}
 
     def overdue_invoices(self) -> list[dict]:
-        """Invoices still (sent|overdue) and past due_date."""
+        """Invoices still unpaid (sent|overdue|partially-paid), past due_date,
+        with an outstanding balance > 0."""
         rows = self.conn.execute(
             """SELECT i.*, p.title AS project_title, p.late_fee_pct,
                       p.late_fee_grace_days, c.name AS client_name,
-                      c.email AS client_email
+                      c.email AS client_email,
+                      COALESCE((SELECT SUM(p2.amount_cents) FROM payments p2
+                                WHERE p2.invoice_id = i.id), 0) AS paid_cents
                FROM invoices i
                JOIN projects p ON p.id = i.project_id
                JOIN clients c ON c.id = p.client_id
-               WHERE i.status IN ('sent', 'overdue')
+               WHERE i.status IN ('sent', 'overdue', 'partially-paid')
                  AND i.due_date IS NOT NULL
                  AND date(i.due_date) <= date('now')
                ORDER BY i.due_date"""
         ).fetchall()
-        return [dict(r) for r in rows]
+        out = []
+        for r in rows:
+            d = dict(r)
+            d["outstanding_cents"] = d["amount_cents"] - d["paid_cents"]
+            if d["outstanding_cents"] > 0:
+                out.append(d)
+        return out
 
     def close(self) -> None:
         self.conn.close()

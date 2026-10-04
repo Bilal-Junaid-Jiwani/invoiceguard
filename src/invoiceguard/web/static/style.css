@@ -76,6 +76,7 @@ code { font-family: var(--mono); font-size: 0.85em; color: var(--muted); }
 .inv-sub { font-size: 13px; color: var(--muted); display: flex; gap: 8px; align-items: center;
   flex-wrap: wrap; margin-top: 2px; }
 .inv-amount { font-weight: 600; }
+.paid-sub { font-family: var(--sans); font-weight: 500; font-size: 12px; color: var(--muted); margin-top: 2px; }
 .inv-due, .inv-stage { font-size: 13.5px; }
 .inv-actions { display: flex; gap: 8px; justify-content: flex-end; }
 
@@ -91,6 +92,7 @@ code { font-family: var(--mono); font-size: 0.85em; color: var(--muted); }
 .chip-sent { color: var(--blue); background: rgba(106,165,255,.12); border: 1px solid rgba(106,165,255,.35); }
 .chip-paid { color: var(--green); background: rgba(61,220,151,.12); border: 1px solid rgba(61,220,151,.35); }
 .chip-overdue { color: var(--red); background: rgba(242,112,122,.12); border: 1px solid rgba(242,112,122,.4); }
+.chip-partially-paid { color: var(--amber); background: rgba(242,181,68,.12); border: 1px solid rgba(242,181,68,.4); }
 .chip-void { color: var(--faint); background: transparent; border: 1px dashed var(--border); }
 
 .overdue-tag { display: inline-block; margin-left: 6px; font-size: 11.5px; font-weight: 600;
@@ -129,6 +131,13 @@ code { font-family: var(--mono); font-size: 0.85em; color: var(--muted); }
 .ack-yes { color: var(--green); font-weight: 600; }
 .ack-no { color: var(--red); font-weight: 600; }
 .timeline-card { margin-bottom: 40px; }
+.payments-card { margin-bottom: 14px; }
+.ledger { width: 100%; border-collapse: collapse; font-size: 14px; }
+.ledger th, .ledger td { text-align: left; padding: 8px 10px; border-top: 1px solid var(--border-soft); }
+.ledger thead th { border-top: none; color: var(--muted); font-size: 12px; text-transform: uppercase;
+  letter-spacing: .06em; font-weight: 600; }
+.ledger .num { text-align: right; }
+.ledger th.num { text-align: right; }
 .timeline { list-style: none; margin: 0; padding: 0; }
 .timeline li { display: grid; grid-template-columns: 18px 1fr auto; gap: 10px; align-items: center;
   padding: 10px 0; border-top: 1px solid var(--border-soft); }

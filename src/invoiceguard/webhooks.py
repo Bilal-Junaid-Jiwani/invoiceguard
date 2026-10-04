@@ -1,4 +1,5 @@
-"""Stripe webhook handling (payment confirmations mark invoices paid).
+"""Stripe webhook handling (payment confirmations are recorded in the payment
+ledger; a payment that clears the balance marks the invoice paid).
 
 Used by the FastAPI dashboard app (POST /webhooks/stripe) and testable
 offline: stripe.Webhook.construct_event does real signature verification
@@ -10,7 +11,7 @@ from __future__ import annotations
 import stripe
 
 from .config import is_placeholder
-from .db import DB, now_iso
+from .db import DB
 
 
 def verify_event(payload: bytes, sig_header: str, webhook_secret: str) -> dict:
@@ -43,11 +44,21 @@ def handle_event(db: DB, event: dict) -> str:
         if invoice_id:
             inv = db.get_invoice(int(invoice_id))
             if inv and inv["status"] != "paid":
-                db.update_invoice(
+                session_amount = obj.get("amount_total")
+                amount_cents = (
+                    int(session_amount)
+                    if session_amount is not None
+                    else db.outstanding_cents(int(invoice_id))
+                )
+                amount_cents = min(amount_cents, db.outstanding_cents(int(invoice_id)))
+                db.record_payment(
                     int(invoice_id),
-                    status="paid",
-                    paid_at=now_iso(),
-                    stripe_session_id=obj.get("id"),
+                    amount_cents,
+                    method="stripe",
+                    note=f"stripe session {obj.get('id')}",
+                )
+                db.update_invoice(
+                    int(invoice_id), stripe_session_id=obj.get("id")
                 )
                 return "invoice_paid"
             return "ignored:already_paid"

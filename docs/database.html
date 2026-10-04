@@ -154,12 +154,21 @@ CREATE TABLE dunning_events(
   stage TEXT NOT NULL,
   sent_at TEXT NOT NULL
 );
+
+CREATE TABLE payments(
+  id INTEGER PRIMARY KEY,
+  invoice_id INTEGER NOT NULL REFERENCES invoices(id),
+  amount_cents INTEGER NOT NULL CHECK (amount_cents &gt; 0),
+  method TEXT NOT NULL DEFAULT 'manual',
+  note TEXT,
+  paid_at TEXT NOT NULL
+);
 </code></pre>
 <h2 id="enumerations">Enumerations</h2>
 <ul>
 <li>Invoice <strong>kinds</strong>: <code>deposit | milestone | final</code>
 </li>
-<li>Invoice <strong>statuses</strong>: <code>draft | sent | paid | overdue | void</code>
+<li>Invoice <strong>statuses</strong>: <code>draft | sent | partially-paid | paid | overdue | void</code> (<code>partially-paid</code> added in v0.2.0)
 </li>
 <li>Dunning <strong>stages</strong>: <code>day1 | day7 | day15</code>
 </li>
@@ -173,6 +182,8 @@ CREATE TABLE dunning_events(
 <li>The dashboard's <code>web/db.py</code> module is the second implementation of this schema used by the web app; both follow the same frozen contract.
 </li>
 <li><code>seed_demo.py</code> (in the repo) seeds a demo database where every sample name carries a <code>(demo)</code> suffix so demo data can never be mistaken for real clients.
+</li>
+<li>The <code>payments</code> table (v0.2.0) is the ledger: every <code>record-payment</code>, <code>mark-paid</code>, and Stripe webhook writes rows here. Databases created before v0.2.0 get a labeled backfill row for invoices already marked <code>paid</code>, so outstanding balances stay truthful without any manual migration.
 </li>
 </ul>
       <nav class="prev-next" aria-label="Previous and next pages">

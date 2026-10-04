@@ -95,9 +95,15 @@
         <details>
           <summary>On this page</summary>
           <ul class="toc-list">
-<li><a href="#010---2026-10-02">[0.1.0] - 2026-10-02</a>
+<li><a href="#020---2026-10-04">[0.2.0] - 2026-10-04</a>
 <ul class="toc-sub">
 <li><a href="#added">Added</a></li>
+<li><a href="#changed">Changed</a></li>
+</ul>
+</li>
+<li><a href="#010---2026-10-02">[0.1.0] - 2026-10-02</a>
+<ul class="toc-sub">
+<li><a href="#added-2">Added</a></li>
 <li><a href="#fixed">Fixed</a></li>
 <li><a href="#honest-scope-v1">Honest scope (v1)</a></li>
 </ul>
@@ -106,9 +112,31 @@
         </details>
       </div>
       <p>InvoiceGuard follows semver. Newest first.</p>
+<h2 id="020---2026-10-04">[0.2.0] - 2026-10-04</h2>
+<p>Partial payments: invoices no longer have to be all-or-nothing.</p>
+<h3 id="added">Added</h3>
+<ul>
+<li>Payment ledger: new <code>payments</code> table (additive migration; pre-0.2.0 paid invoices get a labeled backfill row on first open, so old databases keep working)
+</li>
+<li><code>invoice record-payment &lt;id&gt; --amount &lt;dollars&gt; [--note ...] [--method ...]</code> — record a partial payment; a payment that clears the balance marks the invoice <code>paid</code>, otherwise the invoice becomes <code>partially-paid</code>
+</li>
+<li>Dashboard: per-invoice Paid/Outstanding amounts, a payments ledger on the invoice detail page, payment events in the timeline, a new <code>partially-paid</code> status filter chip, and totals computed from outstanding balances
+</li>
+<li>Dunning emails now show paid-so-far and the remaining balance (<code>{paid}</code> / <code>{outstanding}</code> template variables; the three built-in templates use them)
+</li>
+</ul>
+<h3 id="changed">Changed</h3>
+<ul>
+<li><code>invoice mark-paid</code> now records the full outstanding balance in the ledger (was: status flip with no payment record); it errors instead of silently re-marking an already-paid or void invoice
+</li>
+<li>Stripe webhooks record the session amount in the ledger (method <code>stripe</code>); a session for less than the balance leaves the invoice <code>partially-paid</code> instead of <code>paid</code>
+</li>
+<li>Dashboard totals: <em>Collected</em> is now the sum of recorded payments, <em>Outstanding</em>/<em>Overdue</em> are sums of outstanding balances (identical numbers for pre-0.2.0 databases thanks to the backfill)
+</li>
+</ul>
 <h2 id="010---2026-10-02">[0.1.0] - 2026-10-02</h2>
 <p>First release on PyPI (<code>pip install invoiceguard</code>) and GitHub.</p>
-<h3 id="added">Added</h3>
+<h3 id="added-2">Added</h3>
 <ul>
 <li>CLI: <code>init</code>, <code>client add/list</code>, <code>project create/list/ack</code>, <code>invoice create/list/mark-paid/void</code>, <code>check-due</code>, <code>dashboard</code>
 </li>
@@ -151,9 +179,15 @@
   <aside class="toc-side" aria-label="Table of contents">
     <p class="toc-label">On this page</p>
     <ul class="toc-list">
-<li><a href="#010---2026-10-02">[0.1.0] - 2026-10-02</a>
+<li><a href="#020---2026-10-04">[0.2.0] - 2026-10-04</a>
 <ul class="toc-sub">
 <li><a href="#added">Added</a></li>
+<li><a href="#changed">Changed</a></li>
+</ul>
+</li>
+<li><a href="#010---2026-10-02">[0.1.0] - 2026-10-02</a>
+<ul class="toc-sub">
+<li><a href="#added-2">Added</a></li>
 <li><a href="#fixed">Fixed</a></li>
 <li><a href="#honest-scope-v1">Honest scope (v1)</a></li>
 </ul>

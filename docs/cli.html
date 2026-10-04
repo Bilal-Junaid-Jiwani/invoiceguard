@@ -158,6 +158,7 @@ invoiceguard project ack 1
 <h2 id="invoice"><code>invoice</code></h2>
 <pre class="codeblock" data-lang="bash"><code>invoiceguard invoice create --project 1 --kind deposit [--amount 1000] [--due-days 7]
 invoiceguard invoice list
+invoiceguard invoice record-payment 1 --amount 250 [--note "check #1"] [--method bank]
 invoiceguard invoice mark-paid 1
 invoiceguard invoice void 1
 </code></pre>
@@ -172,7 +173,9 @@ invoiceguard invoice void 1
 </li>
 <li><code>list</code> shows <code>#id  kind  status  amount  project  due-date</code>.
 </li>
-<li><code>mark-paid</code> manually marks an invoice paid (records <code>paid_at</code>); <code>void</code> voids it.
+<li><code>record-payment</code> records a (partial) payment in the ledger. A payment that clears the outstanding balance marks the invoice <code>paid</code>; otherwise the invoice becomes <code>partially-paid</code> and keeps dunning against the remaining balance. Overpaying is rejected.
+</li>
+<li><code>mark-paid</code> manually marks an invoice paid — since v0.2.0 it records the full outstanding balance in the ledger, and it errors on already-paid or void invoices. <code>void</code> voids it.
 </li>
 </ul>
 <h2 id="check-due"><code>check-due</code></h2>

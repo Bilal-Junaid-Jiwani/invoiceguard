@@ -5,6 +5,8 @@ Hi {client_name},
 This is a firm reminder that your invoice of **{amount}** for
 "{project_title}" is now {days_overdue} days overdue (due {due_date}).
 
+Paid so far: {paid}. Remaining balance: **{outstanding}**.
+
 Please pay at your earliest convenience: {pay_url}
 
 Late fees of {late_fee_pct}% per month apply to balances unpaid more than

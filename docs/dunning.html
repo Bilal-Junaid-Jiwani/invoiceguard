@@ -121,14 +121,15 @@
 <div class="table-wrap"><table><thead><tr><th>Stage</th><th>Fires at</th><th>Tone</th></tr></thead><tbody><tr><td><code>day1</code></td><td>≥ 1 day overdue</td><td>polite nudge</td></tr><tr><td><code>day7</code></td><td>≥ 7 days overdue</td><td>firm reminder</td></tr><tr><td><code>day15</code></td><td>≥ 15 days overdue</td><td>formal notice quoting the late-fee clause</td></tr></tbody></table></div>
 <p>The earliest stage whose threshold is met <strong>and that hasn't been sent yet</strong> is sent — escalation always goes day1 → day7 → day15, and exactly one email is sent per invoice per run.</p>
 <h2 id="idempotency">Idempotency</h2>
-<p>Each stage is recorded in the <code>dunning_events</code> table and sent <strong>at most once per invoice</strong>. Re-running <code>check-due</code> never double-sends. Only invoices with status <code>sent</code> or <code>overdue</code> and a due date in the past are considered; a sent invoice flips to <code>overdue</code> on its first dunning email.</p>
+<p>Each stage is recorded in the <code>dunning_events</code> table and sent <strong>at most once per invoice</strong>. Re-running <code>check-due</code> never double-sends. Only invoices with status <code>sent</code>, <code>overdue</code>, or <code>partially-paid</code>, a due date in the past, and an outstanding balance above zero are considered; a sent invoice flips to <code>overdue</code> on its first dunning email. Partially-paid invoices keep escalating until the balance is zero — the emails show the paid-so-far and remaining balance (see template variables).</p>
 <h2 id="cron-setup">Cron setup</h2>
 <pre class="codeblock" data-lang="cron"><code>0 9 * * * /path/to/venv/bin/invoiceguard check-due &gt;&gt; ~/.invoiceguard/check-due.log 2&gt;&amp;1
 </code></pre>
 <p><code>check-due</code> prints <code>nothing due — no emails sent</code> when there's nothing to do, or one line per email sent (<code>sent day7 to billing@acme.com (invoice #3)</code>).</p>
 <h2 id="email-templates">Email templates</h2>
 <p><code>~/.invoiceguard/templates/day1.md</code>, <code>day7.md</code>, <code>day15.md</code> — plain markdown with <code>{variables}</code>, rendered with stdlib string formatting only:</p>
-<p><code>{client_name}</code> <code>{project_title}</code> <code>{amount}</code> <code>{due_date}</code> <code>{days_overdue}</code> <code>{late_fee_pct}</code> <code>{pay_url}</code></p>
+<p><code>{client_name}</code> <code>{project_title}</code> <code>{amount}</code> <code>{paid}</code> <code>{outstanding}</code> <code>{due_date}</code> <code>{days_overdue}</code> <code>{late_fee_pct}</code> <code>{pay_url}</code></p>
+<p><code>{amount}</code> is the original invoice amount; <code>{paid}</code> and <code>{outstanding}</code> come from the payment ledger (v0.2.0).</p>
 <p>Edit them freely; <code>check-due</code> picks up changes on the next run. If a template references an unknown variable, the run fails loudly instead of sending a broken email. If a template file is missing, the command tells you to re-run <code>invoiceguard init</code>.</p>
 <p>Default subjects:</p>
 <ul>

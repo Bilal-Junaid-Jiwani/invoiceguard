@@ -46,6 +46,7 @@ See [Contracts](contracts.html) for what the contract contains.
 ```bash
 invoiceguard invoice create --project 1 --kind deposit [--amount 1000] [--due-days 7]
 invoiceguard invoice list
+invoiceguard invoice record-payment 1 --amount 250 [--note "check #1"] [--method bank]
 invoiceguard invoice mark-paid 1
 invoiceguard invoice void 1
 ```
@@ -55,7 +56,8 @@ invoiceguard invoice void 1
 - `--due-days` defaults to 7; `0` or negative means "due today".
 - On success it creates a real Stripe payment link (test mode friendly), stores the URL, and sets status to `sent`. If the Stripe secret key is missing or still the placeholder, the command fails with a clear error — no invoice is left half-created.
 - `list` shows `#id  kind  status  amount  project  due-date`.
-- `mark-paid` manually marks an invoice paid (records `paid_at`); `void` voids it.
+- `record-payment` records a (partial) payment in the ledger. A payment that clears the outstanding balance marks the invoice `paid`; otherwise the invoice becomes `partially-paid` and keeps dunning against the remaining balance. Overpaying is rejected.
+- `mark-paid` manually marks an invoice paid — since v0.2.0 it records the full outstanding balance in the ledger, and it errors on already-paid or void invoices. `void` voids it.
 
 ## `check-due`
 

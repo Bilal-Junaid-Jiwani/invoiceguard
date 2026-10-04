@@ -49,12 +49,21 @@ CREATE TABLE dunning_events(
   stage TEXT NOT NULL,
   sent_at TEXT NOT NULL
 );
+
+CREATE TABLE payments(
+  id INTEGER PRIMARY KEY,
+  invoice_id INTEGER NOT NULL REFERENCES invoices(id),
+  amount_cents INTEGER NOT NULL CHECK (amount_cents > 0),
+  method TEXT NOT NULL DEFAULT 'manual',
+  note TEXT,
+  paid_at TEXT NOT NULL
+);
 ```
 
 ## Enumerations
 
 - Invoice **kinds**: `deposit | milestone | final`
-- Invoice **statuses**: `draft | sent | paid | overdue | void`
+- Invoice **statuses**: `draft | sent | partially-paid | paid | overdue | void` (`partially-paid` added in v0.2.0)
 - Dunning **stages**: `day1 | day7 | day15`
 
 ## Notes
@@ -63,3 +72,4 @@ CREATE TABLE dunning_events(
 - Timestamps are ISO-8601 UTC strings.
 - The dashboard's `web/db.py` module is the second implementation of this schema used by the web app; both follow the same frozen contract.
 - `seed_demo.py` (in the repo) seeds a demo database where every sample name carries a `(demo)` suffix so demo data can never be mistaken for real clients.
+- The `payments` table (v0.2.0) is the ledger: every `record-payment`, `mark-paid`, and Stripe webhook writes rows here. Databases created before v0.2.0 get a labeled backfill row for invoices already marked `paid`, so outstanding balances stay truthful without any manual migration.

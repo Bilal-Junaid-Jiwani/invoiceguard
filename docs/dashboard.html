@@ -118,9 +118,9 @@ invoiceguard dashboard --port 8080
 <p>A small FastAPI + Jinja2 web UI that shares the CLI's SQLite database. Binds to <code>127.0.0.1</code> by default (localhost only). The API docs (<code>/docs</code>, <code>/redoc</code>) are disabled.</p>
 <h2 id="pages">Pages</h2>
 <ul>
-<li><strong><code>GET /</code></strong> — invoice list with status filters (<code>draft</code>, <code>sent</code>, <code>paid</code>, <code>overdue</code>, <code>void</code>), totals (outstanding / overdue / collected), and per-status counts. Each row shows the invoice kind, amount, project, due date, and current escalation stage.
+<li><strong><code>GET /</code></strong> — invoice list with status filters (<code>draft</code>, <code>sent</code>, <code>partially-paid</code>, <code>paid</code>, <code>overdue</code>, <code>void</code>), totals (outstanding / overdue / collected), and per-status counts. Each row shows the invoice kind, amount, project, due date, current escalation stage — and, for partially-paid invoices, how much has been paid and what is left.
 </li>
-<li><strong><code>GET /invoices/{id}</code></strong> — invoice detail: amount, status, Stripe payment link, due date, and a chronological timeline of dunning events.
+<li><strong><code>GET /invoices/{id}</code></strong> — invoice detail: amount, paid and outstanding balances, status, Stripe payment link, due date, a <strong>payments ledger</strong> (every recorded payment with date, method, and note), and a chronological timeline of dunning events and payments.
 </li>
 <li><strong><code>GET /healthz</code></strong> — <code>{"ok": true}</code>, for uptime checks.
 </li>
@@ -134,6 +134,8 @@ invoiceguard dashboard --port 8080
 <p><em>Invoice list — status filters, totals, and escalation stages.</em></p>
 <p><img src="assets/img/dashboard-detail.png" alt="Invoice detail" loading="lazy"></p>
 <p><em>Invoice detail — timeline of dunning events.</em></p>
+<p><img src="assets/img/dashboard-partial-payment.png" alt="Invoice detail with partial payment" loading="lazy"></p>
+<p><em>Invoice detail — a partially-paid invoice: Paid/Outstanding amounts, the payments ledger, and payment events in the timeline.</em></p>
 <h2 id="notes">Notes</h2>
 <ul>
 <li>The dashboard never inserts data on startup — it creates empty tables if the DB is fresh, nothing more.
@@ -141,6 +143,8 @@ invoiceguard dashboard --port 8080
 <li>It reads and writes the same tables as the CLI; column names and types are frozen (additive migrations only). See <a href="database.html">Database</a>.
 </li>
 <li>Webhook verification needs the signing secret — resolution order is documented in <a href="webhooks.html">Webhooks</a>. Without a real secret, <code>POST /webhooks/stripe</code> returns HTTP 500.
+</li>
+<li><strong>Totals, defined:</strong> <em>Outstanding</em> = sum of outstanding balances over <code>sent</code>/<code>overdue</code>/<code>partially-paid</code> invoices; <em>Overdue</em> = the same over <code>overdue</code> invoices only; <em>Collected</em> = sum of all rows in the payment ledger. (Since v0.2.0; for older databases the ledger backfill makes the numbers identical to the old definitions.)
 </li>
 </ul>
       <nav class="prev-next" aria-label="Previous and next pages">

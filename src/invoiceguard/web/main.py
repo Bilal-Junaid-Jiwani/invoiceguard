@@ -93,8 +93,14 @@ def invoice_detail(request: Request, invoice_id: int):
     if inv is None:
         raise HTTPException(status_code=404, detail="invoice not found")
     events = db.dunning_events(invoice_id)
+    invoice_payments = db.payments(invoice_id)
     ctx = _base_ctx()
-    ctx.update(invoice=inv, events=events, timeline=db.build_timeline(inv, events))
+    ctx.update(
+        invoice=inv,
+        events=events,
+        payments=invoice_payments,
+        timeline=db.build_timeline(inv, events, invoice_payments),
+    )
     return templates.TemplateResponse(request, "detail.html", ctx)
 
 
@@ -110,7 +116,9 @@ async def stripe_webhook(request: Request):
     Verifies the Stripe-Signature header against the signing secret
     resolved by webhook_secret() (INVOICEGUARD_STRIPE_WEBHOOK_SECRET env,
     config file, or legacy STRIPE_WEBHOOK_SECRET env). On
-    checkout.session.completed, marks the matching invoice paid.
+    checkout.session.completed, records the payment in the ledger and marks the
+    matching invoice paid (or partially-paid when the session amount is less
+    than the outstanding balance).
     Returns 400 on bad signature, 500 when no secret is configured.
     """
     secret = webhook_secret()
@@ -145,8 +153,11 @@ async def stripe_webhook(request: Request):
                 hint = int(raw) if raw is not None else None
             except (TypeError, ValueError):
                 hint = None
+        session_amount = getattr(session, "amount_total", None)
         marked = db.mark_invoice_paid(
-            stripe_session_id=getattr(session, "id", ""), invoice_id_hint=hint
+            stripe_session_id=getattr(session, "id", ""),
+            invoice_id_hint=hint,
+            amount_cents=int(session_amount) if session_amount is not None else None,
         )
 
     return JSONResponse({"received": True, "marked_invoice_id": marked})

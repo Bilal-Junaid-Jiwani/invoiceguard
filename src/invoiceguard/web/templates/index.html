@@ -6,7 +6,7 @@
   <div class="stat">
     <div class="stat-label">Outstanding</div>
     <div class="stat-value">{{ fmt(totals.outstanding) }}</div>
-    <div class="stat-sub">sent + overdue invoices</div>
+    <div class="stat-sub">sent + overdue + partially-paid invoices</div>
   </div>
   <div class="stat stat-warn">
     <div class="stat-label">Overdue</div>
@@ -45,7 +45,9 @@
         <span class="muted">#{{ inv.id }}</span>
       </div>
     </div>
-    <div class="inv-amount mono">{{ fmt(inv.amount_cents, inv.currency) }}</div>
+    <div class="inv-amount mono">{{ fmt(inv.amount_cents, inv.currency) }}
+      {% if inv.paid_cents %}<div class="paid-sub">{{ fmt(inv.paid_cents, inv.currency) }} paid · {{ fmt(inv.outstanding_cents, inv.currency) }} left</div>{% endif %}
+    </div>
     <div class="inv-status">
       <span class="chip chip-{{ inv.status }}">{{ inv.status }}{% if inv.paid_late %} · late{% endif %}</span>
     </div>
@@ -56,13 +58,13 @@
       {% else %}<span class="muted">—</span>{% endif %}
     </div>
     <div class="inv-stage">
-      {% if inv.status in ('sent', 'overdue') %}
+      {% if inv.status in ('sent', 'overdue', 'partially-paid') %}
         {% if inv.stage %}<span class="stage stage-{{ inv.stage }}">{{ stage_display[inv.stage] }}</span>
         {% else %}<span class="muted">none</span>{% endif %}
       {% else %}<span class="muted">—</span>{% endif %}
     </div>
     <div class="inv-actions">
-      {% if inv.stripe_url and inv.status in ('sent', 'overdue') %}
+      {% if inv.stripe_url and inv.status in ('sent', 'overdue', 'partially-paid') %}
       <a class="btn-pay" href="{{ inv.stripe_url }}" target="_blank" rel="noopener">Pay</a>
       {% endif %}
       <a class="btn-ghost" href="/invoices/{{ inv.id }}">Details</a>

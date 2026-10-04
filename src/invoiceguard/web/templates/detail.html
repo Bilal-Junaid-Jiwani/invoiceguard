@@ -14,11 +14,13 @@
       <div><dt>Project</dt><dd>{{ invoice.project_title }}</dd></div>
       <div><dt>Kind</dt><dd><span class="kind kind-{{ invoice.kind }}">{{ invoice.kind }}</span></dd></div>
       <div><dt>Amount</dt><dd class="mono big">{{ fmt(invoice.amount_cents, invoice.currency) }}</dd></div>
+      <div><dt>Paid so far</dt><dd class="mono">{{ fmt(invoice.paid_cents, invoice.currency) }}</dd></div>
+      <div><dt>Outstanding</dt><dd class="mono big">{{ fmt(invoice.outstanding_cents, invoice.currency) }}</dd></div>
       <div><dt>Due date</dt><dd class="mono">{{ invoice.due_date[:10] if invoice.due_date else "—" }}{% if invoice.days_overdue %} <span class="overdue-tag">{{ invoice.days_overdue }}d overdue</span>{% endif %}</dd></div>
       <div><dt>Sent</dt><dd class="mono">{{ invoice.sent_at[:10] if invoice.sent_at else "—" }}</dd></div>
-      <div><dt>Paid</dt><dd class="mono">{{ invoice.paid_at[:10] if invoice.paid_at else "—" }}</dd></div>
+      <div><dt>Paid in full on</dt><dd class="mono">{{ invoice.paid_at[:10] if invoice.paid_at else "—" }}</dd></div>
       <div><dt>Escalation stage</dt><dd>{% if invoice.stage %}<span class="stage stage-{{ invoice.stage }}">{{ stage_display[invoice.stage] }}</span>{% else %}<span class="muted">none</span>{% endif %}</dd></div>
-      {% if invoice.stripe_url and invoice.status in ('sent', 'overdue') %}
+      {% if invoice.stripe_url and invoice.status in ('sent', 'overdue', 'partially-paid') %}
       <div><dt>Payment link</dt><dd><a class="btn-pay" href="{{ invoice.stripe_url }}" target="_blank" rel="noopener">Open Stripe checkout</a></dd></div>
       {% endif %}
     </dl>
@@ -37,6 +39,28 @@
     </dl>
   </section>
 </div>
+
+<section class="card payments-card">
+  <div class="card-head"><h2>Payments</h2></div>
+  {% if payments %}
+  <table class="ledger">
+    <thead><tr><th>Date</th><th class="num">Amount</th><th>Method</th><th>Note</th></tr></thead>
+    <tbody>
+      {% for p in payments %}
+      <tr>
+        <td class="mono">{{ p.paid_at[:10] }}</td>
+        <td class="mono num">{{ fmt(p.amount_cents, invoice.currency) }}</td>
+        <td>{{ p.method }}</td>
+        <td class="muted">{{ p.note or "—" }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  <p class="muted">Recorded from the CLI (`invoiceguard invoice record-payment {{ invoice.id }} --amount …`), `mark-paid`, or the Stripe webhook.</p>
+  {% else %}
+  <p class="muted">No payments recorded yet.</p>
+  {% endif %}
+</section>
 
 <section class="card timeline-card">
   <div class="card-head"><h2>Timeline</h2></div>

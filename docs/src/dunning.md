@@ -17,7 +17,7 @@ The earliest stage whose threshold is met **and that hasn't been sent yet** is s
 
 ## Idempotency
 
-Each stage is recorded in the `dunning_events` table and sent **at most once per invoice**. Re-running `check-due` never double-sends. Only invoices with status `sent` or `overdue` and a due date in the past are considered; a sent invoice flips to `overdue` on its first dunning email.
+Each stage is recorded in the `dunning_events` table and sent **at most once per invoice**. Re-running `check-due` never double-sends. Only invoices with status `sent`, `overdue`, or `partially-paid`, a due date in the past, and an outstanding balance above zero are considered; a sent invoice flips to `overdue` on its first dunning email. Partially-paid invoices keep escalating until the balance is zero — the emails show the paid-so-far and remaining balance (see template variables).
 
 ## Cron setup
 
@@ -31,7 +31,9 @@ Each stage is recorded in the `dunning_events` table and sent **at most once per
 
 `~/.invoiceguard/templates/day1.md`, `day7.md`, `day15.md` — plain markdown with `{variables}`, rendered with stdlib string formatting only:
 
-`{client_name}` `{project_title}` `{amount}` `{due_date}` `{days_overdue}` `{late_fee_pct}` `{pay_url}`
+`{client_name}` `{project_title}` `{amount}` `{paid}` `{outstanding}` `{due_date}` `{days_overdue}` `{late_fee_pct}` `{pay_url}`
+
+`{amount}` is the original invoice amount; `{paid}` and `{outstanding}` come from the payment ledger (v0.2.0).
 
 Edit them freely; `check-due` picks up changes on the next run. If a template references an unknown variable, the run fails loudly instead of sending a broken email. If a template file is missing, the command tells you to re-run `invoiceguard init`.
 

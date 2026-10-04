@@ -41,7 +41,8 @@ class TestRenderTemplate:
         path = home / "templates" / "day1.md"
         body = render_template(path, {
             "client_name": "Acme", "project_title": "Site",
-            "amount": "$1,000.00", "due_date": "2026-09-20",
+            "amount": "$1,000.00", "paid": "$0.00", "outstanding": "$1,000.00",
+            "due_date": "2026-09-20",
             "days_overdue": 1, "late_fee_pct": 1.5,
             "pay_url": "https://pay.stripe.test/x",
         })

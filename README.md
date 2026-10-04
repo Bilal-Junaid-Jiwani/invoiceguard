@@ -108,7 +108,8 @@ Send the pay link to the client. That's the whole pre-work flow.
 | `invoiceguard project list` | List projects |
 | `invoiceguard invoice create --project ID --kind deposit\|milestone\|final [--amount X] [--due-days 7]` | Create a Stripe payment link (status → `sent`) |
 | `invoiceguard invoice list` | List invoices |
-| `invoiceguard invoice mark-paid ID` | Manually mark paid |
+| `invoiceguard invoice record-payment ID --amount 250 [--note "check #1"] [--method bank]` | Record a (partial) payment; clearing the balance marks the invoice `paid`, otherwise it becomes `partially-paid` |
+| `invoiceguard invoice mark-paid ID` | Manually mark paid (records the full outstanding balance in the payment ledger) |
 | `invoiceguard invoice void ID` | Void an invoice |
 | `invoiceguard check-due` | Run the dunning scan (cron target) |
 | `invoiceguard dashboard [--port 8000]` | Launch the local web dashboard (`http://127.0.0.1:8000`) — invoice list, detail with escalation timeline, Stripe webhook receiver |
@@ -139,9 +140,9 @@ Keys come **only** from config/env — never hardcoded, never committed (`.gitig
 
 `~/.invoiceguard/templates/day1.md`, `day7.md`, `day15.md` — plain markdown with `{variables}`:
 
-`{client_name}` `{project_title}` `{amount}` `{due_date}` `{days_overdue}` `{late_fee_pct}` `{pay_url}`
+`{client_name}` `{project_title}` `{amount}` `{paid}` `{outstanding}` `{due_date}` `{days_overdue}` `{late_fee_pct}` `{pay_url}`
 
-Edit them freely; `check-due` picks them up on the next run. Stage timing: day1 fires at ≥1 day overdue, day7 at ≥7, day15 at ≥15 — earliest unsent due stage wins, one email per invoice per run.
+`{amount}` is the original invoice amount; `{paid}` / `{outstanding}` track the payment ledger so a client who already paid part of the bill sees their remaining balance. Edit them freely; `check-due` picks them up on the next run. Stage timing: day1 fires at ≥1 day overdue, day7 at ≥7, day15 at ≥15 — earliest unsent due stage wins, one email per invoice per run. Invoices stay in dunning until the outstanding balance is zero (`sent`/`overdue`/`partially-paid` with `due_date` in the past).
 
 ## Database schema (contract with the dashboard app)
 
@@ -152,18 +153,23 @@ CREATE TABLE clients(id INTEGER PRIMARY KEY, name TEXT NOT NULL, email TEXT, cre
 CREATE TABLE projects(id INTEGER PRIMARY KEY, client_id INTEGER NOT NULL REFERENCES clients(id), title TEXT NOT NULL, amount_cents INTEGER NOT NULL, currency TEXT NOT NULL DEFAULT 'USD', deposit_pct REAL NOT NULL DEFAULT 50.0, late_fee_pct REAL NOT NULL DEFAULT 1.5, late_fee_grace_days INTEGER NOT NULL DEFAULT 15, contract_md TEXT NOT NULL, contract_ack INTEGER NOT NULL DEFAULT 0, contract_ack_at TEXT, created_at TEXT NOT NULL);
 CREATE TABLE invoices(id INTEGER PRIMARY KEY, project_id INTEGER NOT NULL REFERENCES projects(id), kind TEXT NOT NULL, amount_cents INTEGER NOT NULL, currency TEXT NOT NULL DEFAULT 'USD', status TEXT NOT NULL DEFAULT 'draft', stripe_url TEXT, stripe_session_id TEXT, due_date TEXT, sent_at TEXT, paid_at TEXT, created_at TEXT NOT NULL);
 CREATE TABLE dunning_events(id INTEGER PRIMARY KEY, invoice_id INTEGER NOT NULL REFERENCES invoices(id), stage TEXT NOT NULL, sent_at TEXT NOT NULL);
+CREATE TABLE payments(id INTEGER PRIMARY KEY, invoice_id INTEGER NOT NULL REFERENCES invoices(id), amount_cents INTEGER NOT NULL CHECK (amount_cents > 0), method TEXT NOT NULL DEFAULT 'manual', note TEXT, paid_at TEXT NOT NULL);
 ```
 
-kinds: `deposit | milestone | final`. statuses: `draft | sent | paid | overdue | void`. stages: `day1 | day7 | day15`.
+kinds: `deposit | milestone | final`. statuses: `draft | sent | partially-paid | paid | overdue | void`. stages: `day1 | day7 | day15`.
+
+The `payments` ledger (added in v0.2.0) records every payment — `record-payment`, `mark-paid`, and Stripe webhooks all write rows here, so outstanding balances are always derivable. Databases created before v0.2.0 get an automatic, labeled backfill row for invoices already marked paid.
 
 ## Web dashboard
 
 `invoiceguard dashboard` launches the web dashboard for real — uvicorn serving
 `invoiceguard.web.main:app` (default `http://127.0.0.1:8000`, `--port` to
 change it). It shares this SQLite database: invoice list with status filters
-and escalation stages, per-invoice detail with a chronological timeline, and
-the `POST /webhooks/stripe` endpoint that marks invoices paid when Stripe
-reports a completed checkout session.
+(including `partially-paid`) and escalation stages, per-invoice detail with
+paid/outstanding amounts, a payments ledger, a chronological timeline, and
+the `POST /webhooks/stripe` endpoint that records the payment when Stripe
+reports a completed checkout session (a session for less than the balance
+leaves the invoice `partially-paid`).
 
 Quick webhook smoke test (no network — the payload is signed locally):
 
@@ -205,7 +211,7 @@ python -m venv .venv && .venv/bin/pip install -r requirements.txt && .venv/bin/p
 - **SMS / WhatsApp escalation** — day-15 via message, not just email.
 - **Agency mode** — multi-freelancer workspaces, per-client dunning policies.
 - Late-fee accrual calculator + ledger on the dashboard.
-- Partial payments / payment plans.
+- ~~Partial payments / payment plans~~ — shipped in v0.2.0.
 
 ## Changelog
 

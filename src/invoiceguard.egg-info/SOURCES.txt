@@ -30,6 +30,7 @@ tests/test_cli.py
 tests/test_contract.py
 tests/test_dunning.py
 tests/test_e2e.py
+tests/test_partial_payments.py
 tests/test_stripe.py
 tests/test_web_dashboard.py
 tests/test_webhook.py

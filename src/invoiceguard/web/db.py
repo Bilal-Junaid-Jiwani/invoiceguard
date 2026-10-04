@@ -15,6 +15,8 @@ import sqlite3
 from datetime import date, datetime, timezone
 from pathlib import Path
 
+from ..db import backfill_paid_ledger
+
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS clients(
   id INTEGER PRIMARY KEY,
@@ -56,14 +58,24 @@ CREATE TABLE IF NOT EXISTS dunning_events(
   stage TEXT NOT NULL,
   sent_at TEXT NOT NULL
 );
+CREATE TABLE IF NOT EXISTS payments(
+  id INTEGER PRIMARY KEY,
+  invoice_id INTEGER NOT NULL REFERENCES invoices(id),
+  amount_cents INTEGER NOT NULL CHECK (amount_cents > 0),
+  method TEXT NOT NULL DEFAULT 'manual',
+  note TEXT,
+  paid_at TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_payments_invoice
+  ON payments(invoice_id);
 """
 
 STAGE_ORDER = {"day1": 1, "day7": 2, "day15": 3}
 STAGE_RANK_TO_LABEL = {v: k for k, v in STAGE_ORDER.items()}
 STAGE_DISPLAY = {"day1": "Day 1", "day7": "Day 7", "day15": "Day 15"}
 
-STATUSES = ("draft", "sent", "paid", "overdue", "void")
-UNPAID = ("sent", "overdue")
+STATUSES = ("draft", "sent", "partially-paid", "paid", "overdue", "void")
+UNPAID = ("sent", "overdue", "partially-paid")
 
 
 def db_path() -> Path:
@@ -85,6 +97,7 @@ def init_db() -> None:
     conn = get_conn()
     try:
         conn.executescript(SCHEMA)
+        backfill_paid_ledger(conn)
         conn.commit()
     finally:
         conn.close()
@@ -140,6 +153,8 @@ def list_invoices(status: str | None = None) -> list[dict]:
         q = """
         SELECT i.id, i.kind, i.amount_cents, i.currency, i.status,
                i.stripe_url, i.due_date, i.sent_at, i.paid_at, i.created_at,
+               COALESCE((SELECT SUM(p.amount_cents) FROM payments p
+                          WHERE p.invoice_id = i.id), 0) AS paid_cents,
                p.title AS project_title,
                c.name AS client_name,
                (SELECT MAX(CASE de.stage
@@ -167,6 +182,7 @@ def list_invoices(status: str | None = None) -> list[dict]:
         d["stage"] = STAGE_RANK_TO_LABEL.get(rank)  # None when no escalation yet
         d["days_overdue"] = days_overdue(d["due_date"], d["status"])
         d["paid_late"] = d["status"] == "paid" and paid_late(d["due_date"], d["paid_at"])
+        d["outstanding_cents"] = d["amount_cents"] - d["paid_cents"]
         out.append(d)
     return out
 
@@ -192,11 +208,16 @@ def totals() -> dict:
         row = conn.execute(
             """
             SELECT
-              COALESCE(SUM(CASE WHEN status IN ('sent','overdue') THEN amount_cents END), 0) AS outstanding,
-              COALESCE(SUM(CASE WHEN status = 'overdue' THEN amount_cents END), 0) AS overdue,
-              COALESCE(SUM(CASE WHEN status = 'paid' THEN amount_cents END), 0) AS collected,
-              COUNT(DISTINCT currency) AS currencies
-              FROM invoices
+              COALESCE(SUM(CASE WHEN i.status IN ('sent','overdue','partially-paid')
+                                THEN i.amount_cents - COALESCE(p.paid, 0) END), 0) AS outstanding,
+              COALESCE(SUM(CASE WHEN i.status = 'overdue'
+                                THEN i.amount_cents - COALESCE(p.paid, 0) END), 0) AS overdue,
+              COALESCE((SELECT SUM(amount_cents) FROM payments), 0) AS collected,
+              COUNT(DISTINCT i.currency) AS currencies
+              FROM invoices i
+              LEFT JOIN (SELECT invoice_id, SUM(amount_cents) AS paid
+                           FROM payments GROUP BY invoice_id) p
+                     ON p.invoice_id = i.id
             """
         ).fetchone()
     finally:
@@ -210,6 +231,8 @@ def get_invoice(invoice_id: int) -> dict | None:
         row = conn.execute(
             """
             SELECT i.*,
+                   COALESCE((SELECT SUM(p.amount_cents) FROM payments p
+                              WHERE p.invoice_id = i.id), 0) AS paid_cents,
                    p.title AS project_title, p.amount_cents AS project_amount_cents,
                    p.currency AS project_currency, p.deposit_pct, p.late_fee_pct,
                    p.late_fee_grace_days, p.contract_ack, p.contract_ack_at,
@@ -236,6 +259,7 @@ def get_invoice(invoice_id: int) -> dict | None:
     d["stage"] = STAGE_RANK_TO_LABEL.get(rank)
     d["days_overdue"] = days_overdue(d["due_date"], d["status"])
     d["paid_late"] = d["status"] == "paid" and paid_late(d["due_date"], d["paid_at"])
+    d["outstanding_cents"] = d["amount_cents"] - d["paid_cents"]
     return d
 
 
@@ -251,13 +275,36 @@ def dunning_events(invoice_id: int) -> list[dict]:
     return [dict(r) for r in rows]
 
 
-def build_timeline(inv: dict, events: list[dict]) -> list[dict]:
-    """Chronological timeline: contract ack → sent → dunning stages → paid."""
+def payments(invoice_id: int) -> list[dict]:
+    """Payment ledger for one invoice, oldest first."""
+    conn = get_conn()
+    try:
+        rows = conn.execute(
+            "SELECT amount_cents, method, note, paid_at FROM payments "
+            "WHERE invoice_id = ? ORDER BY paid_at ASC, id ASC",
+            (invoice_id,),
+        ).fetchall()
+    finally:
+        conn.close()
+    return [dict(r) for r in rows]
+
+
+def build_timeline(inv: dict, events: list[dict],
+                   payments: list[dict] | tuple = ()) -> list[dict]:
+    """Chronological timeline: contract ack → sent → payments → dunning
+    stages → paid."""
     tl: list[dict] = []
     if inv.get("contract_ack") and inv.get("contract_ack_at"):
         tl.append({"label": "Contract acknowledged", "at": inv["contract_ack_at"]})
     if inv.get("sent_at"):
         tl.append({"label": "Invoice sent", "at": inv["sent_at"]})
+    for p in payments:
+        label = (
+            f"Payment received — {format_money(p['amount_cents'], inv.get('currency', 'USD'))}"
+        )
+        if p.get("method") and p["method"] != "manual":
+            label += f" ({p['method']})"
+        tl.append({"label": label, "at": p["paid_at"]})
     for e in events:
         tl.append(
             {
@@ -271,11 +318,14 @@ def build_timeline(inv: dict, events: list[dict]) -> list[dict]:
     return tl
 
 
-def mark_invoice_paid(stripe_session_id: str, invoice_id_hint: int | None = None) -> int | None:
+def mark_invoice_paid(stripe_session_id: str, invoice_id_hint: int | None = None,
+                      amount_cents: int | None = None) -> int | None:
     """Mark the invoice for a completed checkout session as paid.
 
     Looks up by explicit metadata invoice id first, then by stripe_session_id
-    column. Returns the invoice id marked, or None when nothing matched.
+    column. Records the payment in the ledger (method 'stripe') — the amount
+    defaults to the full outstanding balance when the session does not report
+    one. Returns the invoice id marked, or None when nothing matched.
     """
     conn = get_conn()
     try:
@@ -295,11 +345,41 @@ def mark_invoice_paid(stripe_session_id: str, invoice_id_hint: int | None = None
                 target = row["id"]
         if target is None:
             return None
-        conn.execute(
-            "UPDATE invoices SET status = 'paid', paid_at = ? "
-            "WHERE id = ? AND status != 'paid'",
-            (now_iso(), target),
-        )
+        inv = conn.execute(
+            "SELECT id, amount_cents, status, paid_at FROM invoices WHERE id = ?",
+            (target,),
+        ).fetchone()
+        if inv["status"] == "paid":
+            return target  # idempotent: already fully paid
+        already = conn.execute(
+            "SELECT COALESCE(SUM(amount_cents), 0) FROM payments "
+            "WHERE invoice_id = ?",
+            (target,),
+        ).fetchone()[0]
+        outstanding = inv["amount_cents"] - int(already)
+        if amount_cents is None:
+            amount = outstanding
+        else:
+            amount = max(0, min(amount_cents, outstanding))
+        if amount > 0:
+            conn.execute(
+                "INSERT INTO payments(invoice_id, amount_cents, method, note, "
+                "paid_at) VALUES (?, ?, 'stripe', ?, ?)",
+                (target, amount, f"stripe session {stripe_session_id}",
+                 now_iso()),
+            )
+        if amount >= outstanding:
+            conn.execute(
+                "UPDATE invoices SET status = 'paid', paid_at = ?, "
+                "stripe_session_id = ? WHERE id = ?",
+                (now_iso(), stripe_session_id, target),
+            )
+        else:
+            conn.execute(
+                "UPDATE invoices SET status = 'partially-paid', "
+                "stripe_session_id = ? WHERE id = ?",
+                (stripe_session_id, target),
+            )
         conn.commit()
         return target
     finally:

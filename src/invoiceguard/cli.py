@@ -227,24 +227,68 @@ def invoice_list():
     rows = db.list_invoices()
     db.close()
     for r in rows:
-        click.echo(f"#{r['id']:>3}  {r['kind']:<9} {r['status']:<8} "
+        click.echo(f"#{r['id']:>3}  {r['kind']:<9} {r['status']:<14} "
                    f"{money(r['amount_cents'], r['currency']):>12}  "
                    f"{r['project_title']:<30} due {r['due_date'] or '-'}")
 
 
-@invoice.command("mark-paid")
+@invoice.command("record-payment")
 @click.argument("invoice_id", type=int)
-def invoice_mark_paid(invoice_id):
-    """Manually mark an invoice as paid."""
+@click.option("--amount", type=float, required=True,
+              help="Payment amount in currency units (e.g. 250.00)")
+@click.option("--note", default=None,
+              help="Optional note (check number, bank reference, ...)")
+@click.option("--method", default="manual", show_default=True,
+              help="Payment method label (manual, bank, stripe, ...)")
+def invoice_record_payment(invoice_id, amount, note, method):
+    """Record a (partial) payment against an invoice.
+
+    A payment that clears the outstanding balance marks the invoice paid;
+    otherwise the invoice becomes 'partially-paid' and dunning continues
+    against the remaining balance.
+    """
     db = _db()
     inv = db.get_invoice(invoice_id)
     if not inv:
         db.close()
         raise click.ClickException(f"no invoice #{invoice_id}")
-    db.update_invoice(invoice_id, status="paid",
-                      paid_at=datetime.now(timezone.utc).isoformat())
+    cents = round(amount * 100)
+    try:
+        res = db.record_payment(invoice_id, cents, method=method, note=note)
+    except ValueError as e:
+        db.close()
+        raise click.ClickException(str(e))
     db.close()
-    click.echo(f"invoice #{invoice_id} marked paid")
+    if res["status"] == "paid":
+        click.echo(f"invoice #{invoice_id}: recorded "
+                   f"{money(cents, inv['currency'])} — paid in full")
+    else:
+        click.echo(f"invoice #{invoice_id}: recorded "
+                   f"{money(cents, inv['currency'])} — "
+                   f"{money(res['outstanding_cents'], inv['currency'])} "
+                   f"still outstanding")
+
+
+@invoice.command("mark-paid")
+@click.argument("invoice_id", type=int)
+def invoice_mark_paid(invoice_id):
+    """Manually mark an invoice as paid (records the full outstanding
+    balance in the payment ledger)."""
+    db = _db()
+    inv = db.get_invoice(invoice_id)
+    if not inv:
+        db.close()
+        raise click.ClickException(f"no invoice #{invoice_id}")
+    try:
+        res = db.record_payment(invoice_id,
+                               db.outstanding_cents(invoice_id),
+                               method="manual")
+    except ValueError as e:
+        db.close()
+        raise click.ClickException(str(e))
+    db.close()
+    click.echo(f"invoice #{invoice_id} marked paid "
+               f"({money(res['paid_cents'], inv['currency'])})")
 
 
 @invoice.command("void")
