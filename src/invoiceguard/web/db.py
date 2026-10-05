@@ -1,15 +1,17 @@
 """SQLite access layer for the InvoiceGuard dashboard.
 
 Contract: reads the EXACT schema from the InvoiceGuard brief (shared with the
-backend worker). The dashboard never writes business data — it only reads, and
-creates empty tables (CREATE TABLE IF NOT EXISTS) so empty states render when
-the DB is fresh. The Stripe webhook handler is the sole writer (paid marking).
+backend worker). The dashboard mostly reads; the two writers are the Stripe
+webhook handler (paid marking) and the e-signature endpoint (contract signing).
+Creates empty tables (CREATE TABLE IF NOT EXISTS) so empty states render when
+the DB is fresh.
 
 DB path: $INVOICEGUARD_DB, else ~/.invoiceguard/invoiceguard.db
 Money is stored in cents; display helpers convert to dollars.
 """
 from __future__ import annotations
 
+import hashlib
 import os
 import sqlite3
 from datetime import date, datetime, timezone
@@ -68,6 +70,21 @@ CREATE TABLE IF NOT EXISTS payments(
 );
 CREATE INDEX IF NOT EXISTS idx_payments_invoice
   ON payments(invoice_id);
+CREATE TABLE IF NOT EXISTS signatures(
+  id INTEGER PRIMARY KEY,
+  project_id INTEGER NOT NULL REFERENCES projects(id),
+  token TEXT NOT NULL UNIQUE,
+  status TEXT NOT NULL DEFAULT 'pending',
+  signer_name TEXT,
+  signature_image TEXT,
+  contract_hash TEXT,
+  signed_at TEXT,
+  created_at TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_signatures_token
+  ON signatures(token);
+CREATE INDEX IF NOT EXISTS idx_signatures_project
+  ON signatures(project_id);
 """
 
 STAGE_ORDER = {"day1": 1, "day7": 2, "day15": 3}
@@ -382,5 +399,79 @@ def mark_invoice_paid(stripe_session_id: str, invoice_id_hint: int | None = None
             )
         conn.commit()
         return target
+    finally:
+        conn.close()
+
+
+# -- e-signatures -----------------------------------------------------
+def get_signature_request(token: str) -> dict | None:
+    """Signature request row (with project + client names) by token."""
+    conn = get_conn()
+    try:
+        row = conn.execute(
+            """SELECT s.*, p.title AS project_title,
+                      p.contract_md AS contract_md,
+                      c.name AS client_name, c.email AS client_email
+               FROM signatures s
+               JOIN projects p ON p.id = s.project_id
+               JOIN clients c ON c.id = p.client_id
+               WHERE s.token = ?""",
+            (token,),
+        ).fetchone()
+        return dict(row) if row else None
+    finally:
+        conn.close()
+
+
+def sign_contract(token: str, signer_name: str,
+                  signature_image: str) -> dict:
+    """Record a signature on the web signing page.
+
+    Same semantics as the core DB method: validates the pending request,
+    stores name + drawn image + SHA-256 of the contract text at signing
+    time, and flips the project's contract_ack. Raises ValueError on
+    unknown/used token or invalid input.
+    """
+    signer_name = (signer_name or "").strip()
+    if not signer_name:
+        raise ValueError("signer name is required")
+    if not signature_image or not signature_image.startswith("data:image/"):
+        raise ValueError("a drawn signature is required")
+    if len(signature_image) > 1_000_000:
+        raise ValueError("signature image is too large")
+    conn = get_conn()
+    try:
+        row = conn.execute(
+            "SELECT s.*, p.contract_md FROM signatures s "
+            "JOIN projects p ON p.id = s.project_id "
+            "WHERE s.token = ?",
+            (token,),
+        ).fetchone()
+        if not row:
+            raise ValueError("signature request not found or expired")
+        if row["status"] != "pending":
+            raise ValueError("this signature request was already used")
+        contract_hash = hashlib.sha256(
+            row["contract_md"].encode("utf-8")).hexdigest()
+        signed_at = now_iso()
+        conn.execute(
+            "UPDATE signatures SET status = 'signed', signer_name = ?, "
+            "signature_image = ?, contract_hash = ?, signed_at = ? "
+            "WHERE id = ?",
+            (signer_name, signature_image, contract_hash, signed_at,
+             row["id"]),
+        )
+        conn.execute(
+            "UPDATE projects SET contract_ack = 1, contract_ack_at = ? "
+            "WHERE id = ?",
+            (signed_at, row["project_id"]),
+        )
+        conn.commit()
+        return {
+            "project_id": row["project_id"],
+            "signer_name": signer_name,
+            "contract_hash": contract_hash,
+            "signed_at": signed_at,
+        }
     finally:
         conn.close()

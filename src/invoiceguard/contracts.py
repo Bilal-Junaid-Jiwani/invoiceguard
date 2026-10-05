@@ -1,9 +1,17 @@
 """Contract markdown generator.
 
-v1 contract signature = the client acknowledgment checkbox: the client
-acknowledges the contract by accepting (paying) the deposit link, and the
-freelancer records that with `invoiceguard project ack`.
-Real e-signature (typed name / drawn signature capture) is roadmap.
+v1/v2 contract acknowledgment: the client acknowledged by accepting (paying)
+the deposit link, recorded with `invoiceguard project ack`.
+
+v0.3.0+: real e-signature capture — the client opens a one-time signing link
+(`invoiceguard project sign-request`), reads the contract, types their name
+and draws a signature. The signed text is hashed (SHA-256) at signing time
+and stored with the project as tamper evidence; signing flips
+contract_ack = 1 (a signed contract IS the acknowledgment).
+
+Honest scope: browser-based typed/drawn capture stored locally with a
+tamper-evidence hash — NOT a qualified third-party e-signature service
+(DocuSign/HelloSign). Legal weight varies by jurisdiction.
 """
 
 from __future__ import annotations
@@ -36,9 +44,16 @@ The client acknowledges this clause by accepting the deposit link.
 
 > Late-fee clause: {late_fee_pct}% per month on overdue balances after {grace_days} days, client acknowledges by accepting the deposit link.
 
-## 4. Sign-off (v1)
-Client acknowledgment is recorded when the deposit payment link is paid.
-Recorded in InvoiceGuard as contract_ack = {ack}.
+## 4. Sign-off
+This agreement is signed electronically: the client types their full name
+and draws a signature on the signing page. The exact text signed is hashed
+(SHA-256) and stored with the project as tamper evidence, together with the
+signer's name and the time of signing. Signing this agreement counts as
+the client's acknowledgment (recorded in InvoiceGuard as contract_ack = 1).
+
+> Note: this is a browser-based typed/drawn signature captured by
+> InvoiceGuard, not a qualified third-party e-signature service. Legal
+> weight varies by jurisdiction.
 """
 
 
@@ -57,7 +72,6 @@ def render_contract(client_name: str, client_email: str | None, title: str,
         deposit_amount=_money(deposit_cents, currency),
         late_fee_pct=late_fee_pct,
         grace_days=late_fee_grace_days,
-        ack="1 (client paid the deposit link)",
     )
 
 

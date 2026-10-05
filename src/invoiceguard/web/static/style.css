@@ -159,3 +159,36 @@ code { font-family: var(--mono); font-size: 0.85em; color: var(--muted); }
   .facts > div { grid-template-columns: 120px 1fr; }
   .stat-value { font-size: 22px; }
 }
+
+/* signing page */
+.sign-wrap { max-width: 760px; margin: 0 auto; }
+.contract { background: var(--panel); border: 1px solid var(--border-soft);
+  border-radius: var(--radius); padding: 28px 30px; margin: 20px 0; }
+.contract h1 { font-size: 22px; margin: 0 0 12px; }
+.contract h2 { font-size: 17px; margin: 20px 0 8px; }
+.contract h3 { font-size: 15px; margin: 16px 0 6px; }
+.contract p { margin: 8px 0; }
+.contract blockquote { border-left: 3px solid var(--accent); margin: 12px 0;
+  padding: 6px 14px; color: var(--muted); }
+.sign-form .field { display: block; margin: 16px 0; }
+.sign-form .field > span { display: block; font-size: 13px; color: var(--muted);
+  margin-bottom: 6px; }
+.sign-form input[type="text"] { width: 100%; max-width: 420px; padding: 10px 12px;
+  border-radius: 8px; border: 1px solid var(--border); background: var(--panel-2);
+  color: var(--text); font-size: 15px; }
+#sig-pad { width: 100%; max-width: 520px; height: 160px; border: 1px dashed var(--faint);
+  border-radius: 8px; background: #fff; cursor: crosshair; touch-action: none; display: block; }
+.btn { display: inline-block; font-size: 14px; font-weight: 650; border-radius: 8px;
+  padding: 10px 18px; border: 1px solid transparent; cursor: pointer; }
+.btn.primary { background: var(--green); color: #08130d; }
+.btn.primary:hover { filter: brightness(1.08); }
+.btn.ghost { background: transparent; color: var(--muted); border-color: var(--border);
+  margin-top: 8px; font-weight: 500; padding: 6px 12px; font-size: 13px; }
+.notice { border: 1px solid var(--border); border-radius: var(--radius);
+  padding: 14px 16px; margin: 16px 0; }
+.notice.ok { border-color: var(--green); background: rgba(61,220,151,.08); }
+.kv { display: grid; grid-template-columns: 150px 1fr; gap: 6px 12px; }
+.kv dt { color: var(--muted); font-size: 13px; }
+.kv dd { margin: 0; }
+.sig-preview { max-width: 340px; background: #fff; border-radius: 8px; padding: 8px; }
+.small { font-size: 13px; }

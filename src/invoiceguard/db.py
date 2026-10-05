@@ -10,6 +10,8 @@ from __future__ import annotations
 import sqlite3
 from datetime import datetime, timezone
 from pathlib import Path
+import hashlib
+import secrets
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS clients(
@@ -66,6 +68,21 @@ CREATE INDEX IF NOT EXISTS idx_dunning_invoice_stage
     ON dunning_events(invoice_id, stage);
 CREATE INDEX IF NOT EXISTS idx_payments_invoice
     ON payments(invoice_id);
+CREATE TABLE IF NOT EXISTS signatures(
+    id INTEGER PRIMARY KEY,
+    project_id INTEGER NOT NULL REFERENCES projects(id),
+    token TEXT NOT NULL UNIQUE,
+    status TEXT NOT NULL DEFAULT 'pending',
+    signer_name TEXT,
+    signature_image TEXT,
+    contract_hash TEXT,
+    signed_at TEXT,
+    created_at TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_signatures_token
+    ON signatures(token);
+CREATE INDEX IF NOT EXISTS idx_signatures_project
+    ON signatures(project_id);
 """
 
 
@@ -160,6 +177,96 @@ class DB:
             (now_iso(), project_id),
         )
         self.conn.commit()
+
+    # -- e-signatures ------------------------------------------------
+    def create_signature_request(self, project_id: int) -> str:
+        """Create (or reuse) a pending signature-request token for a project.
+
+        Returns the token. Only one pending request per project: if one
+        already exists its token is returned, so re-running the command
+        doesn't orphan old links.
+        """
+        if not self.get_project(project_id):
+            raise ValueError(f"no project #{project_id}")
+        row = self.conn.execute(
+            "SELECT token FROM signatures WHERE project_id = ? "
+            "AND status = 'pending' ORDER BY id DESC LIMIT 1",
+            (project_id,),
+        ).fetchone()
+        if row:
+            return row["token"]
+        token = secrets.token_urlsafe(32)
+        self.conn.execute(
+            "INSERT INTO signatures(project_id, token, status, created_at) "
+            "VALUES (?, ?, 'pending', ?)",
+            (project_id, token, now_iso()),
+        )
+        self.conn.commit()
+        return token
+
+    def get_signature_by_token(self, token: str) -> dict | None:
+        row = self.conn.execute(
+            "SELECT * FROM signatures WHERE token = ?", (token,)
+        ).fetchone()
+        return dict(row) if row else None
+
+    def get_signature_for_project(self, project_id: int) -> dict | None:
+        """Latest signature record (signed first, then pending) for a project."""
+        row = self.conn.execute(
+            "SELECT * FROM signatures WHERE project_id = ? "
+            "ORDER BY CASE status WHEN 'signed' THEN 0 ELSE 1 END, id DESC "
+            "LIMIT 1",
+            (project_id,),
+        ).fetchone()
+        return dict(row) if row else None
+
+    def sign_contract(self, token: str, signer_name: str,
+                      signature_image: str) -> dict:
+        """Record a signature against the pending request identified by token.
+
+        Stores the signer's typed name, the drawn-signature image (data URL),
+        and the SHA-256 of the project's contract text at the moment of
+        signing (tamper evidence: proves *what* was signed). Also flips the
+        project's contract_ack to 1 — a signed contract IS the acknowledgment.
+
+        Raises ValueError on unknown/used token or invalid input.
+        """
+        req = self.get_signature_by_token(token)
+        if not req:
+            raise ValueError("signature request not found or expired")
+        if req["status"] != "pending":
+            raise ValueError("this signature request was already used")
+        signer_name = (signer_name or "").strip()
+        if not signer_name:
+            raise ValueError("signer name is required")
+        if not signature_image or not signature_image.startswith(
+                "data:image/"):
+            raise ValueError("a drawn signature is required")
+        if len(signature_image) > 1_000_000:
+            raise ValueError("signature image is too large")
+        proj = self.get_project(req["project_id"])
+        contract_hash = hashlib.sha256(
+            proj["contract_md"].encode("utf-8")).hexdigest()
+        signed_at = now_iso()
+        self.conn.execute(
+            "UPDATE signatures SET status = 'signed', signer_name = ?, "
+            "signature_image = ?, contract_hash = ?, signed_at = ? "
+            "WHERE id = ?",
+            (signer_name, signature_image, contract_hash, signed_at,
+             req["id"]),
+        )
+        self.conn.execute(
+            "UPDATE projects SET contract_ack = 1, contract_ack_at = ? "
+            "WHERE id = ?",
+            (signed_at, req["project_id"]),
+        )
+        self.conn.commit()
+        return {
+            "project_id": req["project_id"],
+            "signer_name": signer_name,
+            "contract_hash": contract_hash,
+            "signed_at": signed_at,
+        }
 
     # -- invoices ----------------------------------------------------
     def add_invoice(self, project_id: int, kind: str, amount_cents: int,

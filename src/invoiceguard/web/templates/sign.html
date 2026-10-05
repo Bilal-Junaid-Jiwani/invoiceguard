@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+{% block title %}Sign contract · InvoiceGuard{% endblock %}
+{% block content %}
+<div class="sign-wrap">
+  <h1>Freelance Services Agreement</h1>
+  <p class="muted">Project: <strong>{{ sig.project_title }}</strong>
+  · Client: <strong>{{ sig.client_name }}</strong>{% if sig.client_email %} ({{ sig.client_email }}){% endif %}</p>
+
+  <div class="contract">{{ contract_html | safe }}</div>
+
+  {% if signed %}
+  <div class="notice ok">
+    This contract was already signed by <strong>{{ sig.signer_name }}</strong>
+    on {{ sig.signed_at }}. This link is single-use and no longer accepts
+    signatures.
+  </div>
+  {% else %}
+  <form id="sign-form" method="post" action="/sign/{{ sig.token }}" class="sign-form">
+    <label class="field">
+      <span>Type your full name</span>
+      <input type="text" name="signer_name" id="signer-name" required
+             autocomplete="name" placeholder="e.g. {{ sig.client_name }}">
+    </label>
+    <label class="field">
+      <span>Draw your signature</span>
+      <canvas id="sig-pad" width="520" height="160"></canvas>
+      <button type="button" id="sig-clear" class="btn ghost">Clear</button>
+    </label>
+    <input type="hidden" name="signature_image" id="signature-image">
+    <p class="muted small">By signing you confirm you have read and accept the
+    agreement above. The exact text you sign is hashed and stored as tamper
+    evidence, together with your name and the time of signing.</p>
+    <button type="submit" class="btn primary">Sign contract</button>
+  </form>
+  <script>
+  (function () {
+    var canvas = document.getElementById('sig-pad');
+    var ctx = canvas.getContext('2d');
+    var drawing = false;
+    function pos(e) {
+      var r = canvas.getBoundingClientRect();
+      var x = (e.touches ? e.touches[0].clientX : e.clientX) - r.left;
+      var y = (e.touches ? e.touches[0].clientY : e.clientY) - r.top;
+      return [x * canvas.width / r.width, y * canvas.height / r.height];
+    }
+    function start(e) { drawing = true; var p = pos(e); ctx.beginPath(); ctx.moveTo(p[0], p[1]); e.preventDefault(); }
+    function move(e) { if (!drawing) return; var p = pos(e); ctx.lineWidth = 2; ctx.lineCap = 'round'; ctx.lineTo(p[0], p[1]); ctx.stroke(); e.preventDefault(); }
+    function stop() { drawing = false; }
+    canvas.addEventListener('mousedown', start);
+    canvas.addEventListener('mousemove', move);
+    window.addEventListener('mouseup', stop);
+    canvas.addEventListener('touchstart', start, {passive: false});
+    canvas.addEventListener('touchmove', move, {passive: false});
+    canvas.addEventListener('touchend', stop);
+    document.getElementById('sig-clear').addEventListener('click', function () {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+    });
+    document.getElementById('sign-form').addEventListener('submit', function (e) {
+      var blank = document.createElement('canvas');
+      blank.width = canvas.width; blank.height = canvas.height;
+      if (canvas.toDataURL() === blank.toDataURL()) {
+        e.preventDefault();
+        alert('Please draw your signature before submitting.');
+        return;
+      }
+      document.getElementById('signature-image').value = canvas.toDataURL('image/png');
+    });
+  })();
+  </script>
+  {% endif %}
+</div>
+{% endblock %}

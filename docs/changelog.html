@@ -95,15 +95,22 @@
         <details>
           <summary>On this page</summary>
           <ul class="toc-list">
-<li><a href="#020---2026-10-04">[0.2.0] - 2026-10-04</a>
+<li><a href="#030---2026-10-05">[0.3.0] - 2026-10-05</a>
 <ul class="toc-sub">
 <li><a href="#added">Added</a></li>
 <li><a href="#changed">Changed</a></li>
+<li><a href="#honest-scope-e-signature">Honest scope (e-signature)</a></li>
+</ul>
+</li>
+<li><a href="#020---2026-10-04">[0.2.0] - 2026-10-04</a>
+<ul class="toc-sub">
+<li><a href="#added-2">Added</a></li>
+<li><a href="#changed-2">Changed</a></li>
 </ul>
 </li>
 <li><a href="#010---2026-10-02">[0.1.0] - 2026-10-02</a>
 <ul class="toc-sub">
-<li><a href="#added-2">Added</a></li>
+<li><a href="#added-3">Added</a></li>
 <li><a href="#fixed">Fixed</a></li>
 <li><a href="#honest-scope-v1">Honest scope (v1)</a></li>
 </ul>
@@ -112,9 +119,32 @@
         </details>
       </div>
       <p>InvoiceGuard follows semver. Newest first.</p>
+<h2 id="030---2026-10-05">[0.3.0] - 2026-10-05</h2>
+<p>Real e-signature: clients can now sign the contract electronically instead of (or in addition to) acknowledging via the paid deposit link.</p>
+<h3 id="added">Added</h3>
+<ul>
+<li>E-signature capture: <code>invoiceguard project sign-request &lt;id&gt;</code> creates a one-time, single-use signing link (<code>/sign/&lt;token&gt;</code>, served by the dashboard). The client reads the rendered contract, types their full name, and draws a signature on a canvas (mouse or touch).
+</li>
+<li>Tamper evidence: at signing time the exact signed contract text is hashed (SHA-256) and stored with the project, together with the signer's name and timestamp — proving <em>what</em> was signed, not just <em>that</em> something was signed.
+</li>
+<li>Signing flips <code>contract_ack</code> to 1 (a signed contract IS the acknowledgment), with <code>contract_ack_at</code> = signing time. The request token is invalidated after use; re-requesting while a request is pending returns the same link.
+</li>
+<li><code>invoiceguard project sign-status &lt;id&gt;</code> shows pending/signed state, signer, timestamp, and the contract hash. Dashboard signing receipt page shows the captured signature and the hash.
+</li>
+</ul>
+<h3 id="changed">Changed</h3>
+<ul>
+<li>Contract §4 (Sign-off) now describes the electronic signature process instead of the v1 deposit-link acknowledgment. <code>project ack</code> (manual acknowledgment) is kept as a fallback path.
+</li>
+</ul>
+<h3 id="honest-scope-e-signature">Honest scope (e-signature)</h3>
+<ul>
+<li>This is a browser-based typed/drawn signature captured by InvoiceGuard and stored locally — NOT a qualified third-party e-signature service (DocuSign/HelloSign). Legal weight varies by jurisdiction.
+</li>
+</ul>
 <h2 id="020---2026-10-04">[0.2.0] - 2026-10-04</h2>
 <p>Partial payments: invoices no longer have to be all-or-nothing.</p>
-<h3 id="added">Added</h3>
+<h3 id="added-2">Added</h3>
 <ul>
 <li>Payment ledger: new <code>payments</code> table (additive migration; pre-0.2.0 paid invoices get a labeled backfill row on first open, so old databases keep working)
 </li>
@@ -125,7 +155,7 @@
 <li>Dunning emails now show paid-so-far and the remaining balance (<code>{paid}</code> / <code>{outstanding}</code> template variables; the three built-in templates use them)
 </li>
 </ul>
-<h3 id="changed">Changed</h3>
+<h3 id="changed-2">Changed</h3>
 <ul>
 <li><code>invoice mark-paid</code> now records the full outstanding balance in the ledger (was: status flip with no payment record); it errors instead of silently re-marking an already-paid or void invoice
 </li>
@@ -136,7 +166,7 @@
 </ul>
 <h2 id="010---2026-10-02">[0.1.0] - 2026-10-02</h2>
 <p>First release on PyPI (<code>pip install invoiceguard</code>) and GitHub.</p>
-<h3 id="added-2">Added</h3>
+<h3 id="added-3">Added</h3>
 <ul>
 <li>CLI: <code>init</code>, <code>client add/list</code>, <code>project create/list/ack</code>, <code>invoice create/list/mark-paid/void</code>, <code>check-due</code>, <code>dashboard</code>
 </li>
@@ -179,15 +209,22 @@
   <aside class="toc-side" aria-label="Table of contents">
     <p class="toc-label">On this page</p>
     <ul class="toc-list">
-<li><a href="#020---2026-10-04">[0.2.0] - 2026-10-04</a>
+<li><a href="#030---2026-10-05">[0.3.0] - 2026-10-05</a>
 <ul class="toc-sub">
 <li><a href="#added">Added</a></li>
 <li><a href="#changed">Changed</a></li>
+<li><a href="#honest-scope-e-signature">Honest scope (e-signature)</a></li>
+</ul>
+</li>
+<li><a href="#020---2026-10-04">[0.2.0] - 2026-10-04</a>
+<ul class="toc-sub">
+<li><a href="#added-2">Added</a></li>
+<li><a href="#changed-2">Changed</a></li>
 </ul>
 </li>
 <li><a href="#010---2026-10-02">[0.1.0] - 2026-10-02</a>
 <ul class="toc-sub">
-<li><a href="#added-2">Added</a></li>
+<li><a href="#added-3">Added</a></li>
 <li><a href="#fixed">Fixed</a></li>
 <li><a href="#honest-scope-v1">Honest scope (v1)</a></li>
 </ul>

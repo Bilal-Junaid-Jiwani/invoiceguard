@@ -31,6 +31,8 @@ invoiceguard project create --client "Acme Corp" --title "Website redesign" \
   --late-fee-pct 1.5 --late-fee-grace-days 15 [--ack]
 invoiceguard project list
 invoiceguard project ack 1
+invoiceguard project sign-request 1   # one-time e-signature link
+invoiceguard project sign-status 1    # pending / signed + signer + hash
 ```
 
 - `create` requires an existing client (matched by exact `--client` name) and `--title` and `--amount` (in currency units, e.g. `2000`).
@@ -38,8 +40,9 @@ invoiceguard project ack 1
 - Prints the generated contract (with the late-fee clause) as a preview.
 - `--ack` records the contract as acknowledged by the client at creation time; without it, the contract shows `no-ack` until you run `project ack ID` after the client accepts the deposit link.
 - `list` shows `#id  title  client  amount  [ack|no-ack]`.
+- `sign-request` creates a one-time, single-use signing link (`/sign/<token>`, served by the dashboard) for the client to type their name and draw a signature; the signed contract text is hashed (SHA-256) and stored as tamper evidence. Re-running while a request is pending returns the same link. `sign-status` shows the request state.
 
-See [Contracts](contracts.html) for what the contract contains.
+See [Contracts](contracts.html) for what the contract contains and the honest limits of the e-signature.
 
 ## `invoice`
 

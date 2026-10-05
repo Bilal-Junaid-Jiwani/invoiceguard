@@ -26,11 +26,14 @@ src/invoiceguard/web/static/style.css
 src/invoiceguard/web/templates/base.html
 src/invoiceguard/web/templates/detail.html
 src/invoiceguard/web/templates/index.html
+src/invoiceguard/web/templates/sign.html
+src/invoiceguard/web/templates/signed.html
 tests/test_cli.py
 tests/test_contract.py
 tests/test_dunning.py
 tests/test_e2e.py
 tests/test_partial_payments.py
+tests/test_signatures.py
 tests/test_stripe.py
 tests/test_web_dashboard.py
 tests/test_webhook.py

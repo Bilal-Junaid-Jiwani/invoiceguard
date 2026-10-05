@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block title %}Contract signed · InvoiceGuard{% endblock %}
+{% block content %}
+<div class="sign-wrap">
+  <h1>Contract signed</h1>
+  <div class="notice ok">
+    Thank you, <strong>{{ result.signer_name }}</strong> — the agreement for
+    <strong>{{ sig.project_title }}</strong> is signed.
+  </div>
+  <dl class="kv">
+    <dt>Signed at</dt><dd>{{ result.signed_at }}</dd>
+    <dt>Contract SHA-256</dt><dd><code>{{ result.contract_hash }}</code></dd>
+  </dl>
+  <p class="muted small">This page is a receipt. The freelancer keeps the
+  signed record with their InvoiceGuard project; the signing link is now
+  single-use and closed.</p>
+  {% if sig.signature_image %}
+  <p class="muted small">Your signature:</p>
+  <img class="sig-preview" src="{{ sig.signature_image }}" alt="signature">
+  {% endif %}
+</div>
+{% endblock %}

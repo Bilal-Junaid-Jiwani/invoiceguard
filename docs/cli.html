@@ -141,6 +141,8 @@ invoiceguard client list
   --late-fee-pct 1.5 --late-fee-grace-days 15 [--ack]
 invoiceguard project list
 invoiceguard project ack 1
+invoiceguard project sign-request 1   # one-time e-signature link
+invoiceguard project sign-status 1    # pending / signed + signer + hash
 </code></pre>
 <ul>
 <li><code>create</code> requires an existing client (matched by exact <code>--client</code> name) and <code>--title</code> and <code>--amount</code> (in currency units, e.g. <code>2000</code>).
@@ -153,8 +155,10 @@ invoiceguard project ack 1
 </li>
 <li><code>list</code> shows <code>#id  title  client  amount  [ack|no-ack]</code>.
 </li>
+<li><code>sign-request</code> creates a one-time, single-use signing link (<code>/sign/&lt;token&gt;</code>, served by the dashboard) for the client to type their name and draw a signature; the signed contract text is hashed (SHA-256) and stored as tamper evidence. Re-running while a request is pending returns the same link. <code>sign-status</code> shows the request state.
+</li>
 </ul>
-<p>See <a href="contracts.html">Contracts</a> for what the contract contains.</p>
+<p>See <a href="contracts.html">Contracts</a> for what the contract contains and the honest limits of the e-signature.</p>
 <h2 id="invoice"><code>invoice</code></h2>
 <pre class="codeblock" data-lang="bash"><code>invoiceguard invoice create --project 1 --kind deposit [--amount 1000] [--due-days 7]
 invoiceguard invoice list

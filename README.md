@@ -19,7 +19,7 @@ Solo freelancers don't get paid. A Kaplan Group report (April 2026) found **85% 
 
 Local-first (SQLite), open-source (Apache-2.0), works alongside your existing invoicing tools via Stripe. No platform switch required.
 
-> **Honest scope:** v1's "signature" is a client-acknowledgment checkbox (recorded when the deposit link is paid), not a legal e-signature. See [Limits of v1](#limits-of-v1).
+> **Honest scope:** contracts are signed electronically in the browser (typed name + drawn signature, SHA-256 hash of the signed text stored as tamper evidence) — a captured signature, not a qualified third-party e-signature service. See [Limits of v1](#limits-of-v1).
 
 ![InvoiceGuard dashboard — invoice list with escalation stages](https://raw.githubusercontent.com/Bilal-Junaid-Jiwani/invoiceguard/main/docs/assets/img/dashboard-list.png)
 
@@ -104,7 +104,9 @@ Send the pay link to the client. That's the whole pre-work flow.
 | `invoiceguard client add --name N --email E` | Add a client |
 | `invoiceguard client list` | List clients |
 | `invoiceguard project create --client N --title T --amount 2000 [--deposit-pct 50] [--late-fee-pct 1.5] [--late-fee-grace-days 15] [--ack]` | Create project + generate contract markdown |
-| `invoiceguard project ack ID` | Record client acknowledgment of the contract |
+| `invoiceguard project ack ID` | Record client acknowledgment of the contract (deposit-link path) |
+| `invoiceguard project sign-request ID` | Create a one-time e-signature link for the contract (`/sign/<token>`) |
+| `invoiceguard project sign-status ID` | Show pending/signed state, signer, timestamp, contract hash |
 | `invoiceguard project list` | List projects |
 | `invoiceguard invoice create --project ID --kind deposit\|milestone\|final [--amount X] [--due-days 7]` | Create a Stripe payment link (status → `sent`) |
 | `invoiceguard invoice list` | List invoices |
@@ -154,6 +156,7 @@ CREATE TABLE projects(id INTEGER PRIMARY KEY, client_id INTEGER NOT NULL REFEREN
 CREATE TABLE invoices(id INTEGER PRIMARY KEY, project_id INTEGER NOT NULL REFERENCES projects(id), kind TEXT NOT NULL, amount_cents INTEGER NOT NULL, currency TEXT NOT NULL DEFAULT 'USD', status TEXT NOT NULL DEFAULT 'draft', stripe_url TEXT, stripe_session_id TEXT, due_date TEXT, sent_at TEXT, paid_at TEXT, created_at TEXT NOT NULL);
 CREATE TABLE dunning_events(id INTEGER PRIMARY KEY, invoice_id INTEGER NOT NULL REFERENCES invoices(id), stage TEXT NOT NULL, sent_at TEXT NOT NULL);
 CREATE TABLE payments(id INTEGER PRIMARY KEY, invoice_id INTEGER NOT NULL REFERENCES invoices(id), amount_cents INTEGER NOT NULL CHECK (amount_cents > 0), method TEXT NOT NULL DEFAULT 'manual', note TEXT, paid_at TEXT NOT NULL);
+CREATE TABLE signatures(id INTEGER PRIMARY KEY, project_id INTEGER NOT NULL REFERENCES projects(id), token TEXT NOT NULL UNIQUE, status TEXT NOT NULL DEFAULT 'pending', signer_name TEXT, signature_image TEXT, contract_hash TEXT, signed_at TEXT, created_at TEXT NOT NULL);
 ```
 
 kinds: `deposit | milestone | final`. statuses: `draft | sent | partially-paid | paid | overdue | void`. stages: `day1 | day7 | day15`.
@@ -196,18 +199,18 @@ python -m venv .venv && .venv/bin/pip install -r requirements.txt && .venv/bin/p
 .venv/bin/python -m pytest tests/ -q
 ```
 
-54 tests, all green (2026-10-02): contract clause rendering, dunning stage selection + idempotency, template rendering, webhook signature verification (real HMAC check, offline), Stripe link creation (mocked SDK, params asserted), CLI flows, dashboard integration (page rendering + offline webhook checks incl. the `invoiceguard_invoice_id` metadata-key regression and the webhook-secret resolution regression: `INVOICEGUARD_STRIPE_WEBHOOK_SECRET` env / config-file secret honored, placeholder rejected), and a full end-to-end (init → client → project → invoice → `check-due` against a real local SMTP server → assert email captured + `dunning_events` row written).
+89 tests, all green (2026-10-05): contract clause rendering (incl. the e-signature sign-off wording), dunning stage selection + idempotency, template rendering, webhook signature verification (real HMAC check, offline), Stripe link creation (mocked SDK, params asserted), CLI flows (incl. `project sign-request`/`sign-status`), e-signature DB ops (idempotent request, single-use token, tamper-evidence hash, ack flip) + full web signing flow (page render, validation, signed receipt, single-use enforcement), dashboard integration (page rendering + offline webhook checks incl. the `invoiceguard_invoice_id` metadata-key regression and the webhook-secret resolution regression), and a full end-to-end (init → client → project → invoice → `check-due` against a real local SMTP server → assert email captured + `dunning_events` row written).
 
 ## Limits of v1
 
 - **No live Stripe call was verified in this build environment** — Stripe's connector isn't connected here. `invoice create` was verified with a mocked `stripe` SDK asserting the exact `PaymentLink.create` params (line items, price data, metadata); webhook handling was verified with **real** `stripe.Webhook.construct_event` signature verification using a test secret (works offline). You add your own test key (2 min, above) and the live path is standard Stripe API.
-- **v1 acknowledgment is a checkbox, not a signature.** Paying the deposit link = the client accepted the terms; `contract_ack=1` records it. Real e-signature is roadmap.
+- **E-signature is browser-captured, not qualified.** `project sign-request` gives the client a one-time signing link: typed name + drawn signature on the contract, with the exact signed text hashed (SHA-256) and stored as tamper evidence. It is NOT a qualified third-party e-signature service (DocuSign/HelloSign); legal weight varies by jurisdiction. The older acknowledgment path still exists: paying the deposit link, or `project ack`.
 - **Email deliverability is yours.** InvoiceGuard sends via *your* SMTP. Use a reputable provider (Gmail App Password, SendGrid, etc.) and warm up new addresses; check spam folders in testing.
 - **Late-fee enforceability varies by jurisdiction.** The clause is a contractual starting point, not legal advice. Adjust `late_fee_pct` / grace days per project.
 
 ## Roadmap
 
-- **Real e-signature** — typed-name / drawn-signature capture on the contract, stored with the project.
+- ~~Real e-signature~~ — shipped in v0.3.0: `project sign-request` / `project sign-status`, one-time `/sign/<token>` page with typed-name + drawn-signature capture and SHA-256 tamper evidence.
 - **SMS / WhatsApp escalation** — day-15 via message, not just email.
 - **Agency mode** — multi-freelancer workspaces, per-client dunning policies.
 - Late-fee accrual calculator + ledger on the dashboard.

@@ -44,6 +44,6 @@ Either the webhook isn't configured (see above), the event wasn't `checkout.sess
 Honest boundaries, not bugs:
 
 - **No live Stripe call was verified in this build environment.** Payment-link creation was verified with a mocked Stripe SDK (exact API params asserted); webhook handling was verified with real `stripe.Webhook.construct_event` signature checks offline. You add your own test key; the live path is the standard Stripe API.
-- **The "signature" is an acknowledgment checkbox**, not a legal e-signature. Paying the deposit link = accepting the terms; `contract_ack=1` records it.
+- **The contract "signature" is browser-captured, not qualified.** v0.3.0 added real e-signature: the client types their name and draws a signature on the signing page; the signed text is hashed (SHA-256) and stored as tamper evidence. It is not a qualified third-party e-signature service; legal weight varies by jurisdiction. The older acknowledgment path (paying the deposit link = accepting the terms; `contract_ack=1`) still works as a fallback.
 - **Email deliverability is yours** (your SMTP, your reputation).
 - **Late-fee enforceability varies by jurisdiction** — the clause is a starting point, not legal advice.

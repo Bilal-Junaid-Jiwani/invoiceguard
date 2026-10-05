@@ -58,6 +58,17 @@ CREATE TABLE payments(
   note TEXT,
   paid_at TEXT NOT NULL
 );
+CREATE TABLE signatures(
+  id INTEGER PRIMARY KEY,
+  project_id INTEGER NOT NULL REFERENCES projects(id),
+  token TEXT NOT NULL UNIQUE,
+  status TEXT NOT NULL DEFAULT 'pending',
+  signer_name TEXT,
+  signature_image TEXT,
+  contract_hash TEXT,
+  signed_at TEXT,
+  created_at TEXT NOT NULL
+);
 ```
 
 ## Enumerations

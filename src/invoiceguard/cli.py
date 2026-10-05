@@ -150,7 +150,7 @@ def project_list():
 @project.command("ack")
 @click.argument("project_id", type=int)
 def project_ack(project_id):
-    """Record client acknowledgment of the contract (v1: paid deposit link)."""
+    """Record client acknowledgment of the contract (paid deposit link)."""
     db = _db()
     if not db.get_project(project_id):
         db.close()
@@ -159,6 +159,53 @@ def project_ack(project_id):
     db.close()
     click.echo(f"project #{project_id}: contract acknowledged at "
                f"{datetime.now(timezone.utc).isoformat()}")
+
+
+@project.command("sign-request")
+@click.argument("project_id", type=int)
+def project_sign_request(project_id):
+    """Create a one-time e-signature link for the project's contract.
+
+    Prints a /sign/<token> URL — send it to the client while
+    `invoiceguard dashboard` is running. The client reads the contract,
+    types their name and draws a signature; the signed text is hashed
+    (SHA-256) and stored as tamper evidence. Re-running for the same
+    project returns the existing pending link.
+    """
+    db = _db()
+    if not db.get_project(project_id):
+        db.close()
+        raise click.ClickException(f"no project #{project_id}")
+    token = db.create_signature_request(project_id)
+    db.close()
+    click.echo(f"project #{project_id}: signature request created")
+    click.echo(f"  signing link: http://127.0.0.1:8000/sign/{token}")
+    click.echo("  (works while `invoiceguard dashboard` is running; "
+               "single-use, expires when signed)")
+
+
+@project.command("sign-status")
+@click.argument("project_id", type=int)
+def project_sign_status(project_id):
+    """Show the e-signature status of a project's contract."""
+    db = _db()
+    proj = db.get_project(project_id)
+    if not proj:
+        db.close()
+        raise click.ClickException(f"no project #{project_id}")
+    sig = db.get_signature_for_project(project_id)
+    db.close()
+    if not sig:
+        click.echo(f"project #{project_id}: no signature request yet — "
+                   f"run `invoiceguard project sign-request {project_id}`")
+    elif sig["status"] == "signed":
+        click.echo(f"project #{project_id}: SIGNED")
+        click.echo(f"  signer:      {sig['signer_name']}")
+        click.echo(f"  signed at:   {sig['signed_at']}")
+        click.echo(f"  contract sha256: {sig['contract_hash']}")
+    else:
+        click.echo(f"project #{project_id}: awaiting signature")
+        click.echo(f"  signing link: http://127.0.0.1:8000/sign/{sig['token']}")
 
 
 # -- invoice --------------------------------------------------------------

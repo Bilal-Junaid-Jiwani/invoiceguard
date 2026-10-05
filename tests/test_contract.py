@@ -27,9 +27,13 @@ def test_custom_terms_render():
     assert "EUR" in md
 
 
-def test_ack_wording_honest():
+def test_sign_off_wording_honest():
     md = render_contract("Acme", "a@b.c", "Site", 100_00, "USD",
                          50.0, 1.5, 15)
-    # v1 signature = acknowledgment via deposit-link payment, not e-sign
-    assert "paying the deposit" in md.lower()
-    assert "contract_ack = 1 (client paid the deposit link)" in md
+    # sign-off is now typed/drawn e-signature with a tamper-evidence hash —
+    # still honestly framed as NOT a qualified third-party e-signature
+    assert "types their full name" in md
+    assert "draws a signature" in md
+    assert "SHA-256" in md
+    assert "not a qualified third-party e-signature service" in md
+    assert "contract_ack = 1" in md

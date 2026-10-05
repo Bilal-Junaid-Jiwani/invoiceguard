@@ -124,6 +124,10 @@ invoiceguard dashboard --port 8080
 </li>
 <li><strong><code>GET /healthz</code></strong> — <code>{"ok": true}</code>, for uptime checks.
 </li>
+<li><strong><code>GET /sign/{token}</code></strong> — the client's one-time contract signing page: renders the contract, collects a typed name and a drawn signature (see <a href="contracts.html">Contracts</a>).
+</li>
+<li><strong><code>POST /sign/{token}</code></strong> — records the signature; returns a signed-receipt page. Unknown or already-used tokens return 404 / 400.
+</li>
 <li><strong><code>POST /webhooks/stripe</code></strong> — the Stripe webhook receiver (see <a href="webhooks.html">Webhooks</a>).
 </li>
 </ul>

@@ -98,7 +98,7 @@
       <div class="feature">
         <div class="feature-icon"><svg width="24" height="24" viewBox="0 0 24 24"><path d="M6 3h9l4 4v14H6z" fill="none" stroke="#f2efe4" stroke-width="1.8"/><path d="M9 12h7M9 15.5h7" stroke="#c39a3f" stroke-width="1.8" stroke-linecap="round"/></svg></div>
         <h3>Late-fee contracts</h3>
-        <p>Generates a contract with a late-fee clause (your rate, your grace period). The client acknowledges it by accepting the deposit link.</p>
+        <p>Generates a contract with a late-fee clause (your rate, your grace period). The client signs it electronically — typed name + drawn signature on a one-time link — or acknowledges it by accepting the deposit link.</p>
       </div>
       <div class="feature">
         <div class="feature-icon"><svg width="24" height="24" viewBox="0 0 24 24"><path d="M4 6h16v12H4z" fill="none" stroke="#f2efe4" stroke-width="1.8"/><path d="M4 6l8 6 8-6" fill="none" stroke="#f2efe4" stroke-width="1.8"/><circle cx="17.5" cy="17.5" r="4.5" fill="#c39a3f"/><path d="M15.8 17.5l1.3 1.3 2.3-2.6" stroke="#0c4a3a" stroke-width="1.6" fill="none"/></svg></div>
@@ -138,7 +138,7 @@
     <div class="steps">
       <div class="step">
         <h3>Before work starts</h3>
-        <p>Create the project, generate the contract with its late-fee clause, and send the deposit link. The client accepting the link is their acknowledgment.</p>
+        <p>Create the project, generate the contract with its late-fee clause, and send the client a one-time signing link. The drawn signature is captured with a SHA-256 hash of the signed text as tamper evidence — or, for the quick path, the client accepting the deposit link counts as acknowledgment.</p>
         <code>project create</code><code>invoice create --kind deposit</code>
       </div>
       <div class="step">
@@ -194,7 +194,7 @@
     <div class="honest">
       <h3>Honest about v1's limits</h3>
       <ul>
-        <li>The "signature" is a client-acknowledgment checkbox (deposit-link acceptance), not a legal e-signature.</li>
+        <li>The e-signature is browser-captured (typed name + drawn signature, SHA-256 hash of the signed text stored as tamper evidence) — not a qualified third-party e-signature service.</li>
         <li>Live Stripe calls weren't verified in the build environment — payment links were tested with a mocked SDK; webhook signatures with real HMAC checks. You add your own test key.</li>
         <li>Emails go through <em>your</em> SMTP — deliverability is yours.</li>
         <li>Late-fee enforceability varies by jurisdiction; the clause is a starting point, not legal advice.</li>
@@ -224,7 +224,7 @@
       </details>
       <details>
         <summary>Is the contract a legal e-signature?</summary>
-        <p>No — v1 records a client acknowledgment (the deposit link being paid counts as acceptance of the terms). Real e-signature capture is on the roadmap.</p>
+        <p>Since v0.3.0 the client signs electronically in the browser: typed name + drawn signature, with the exact signed text hashed (SHA-256) and stored as tamper evidence. Honest framing: it is a captured signature, not a qualified third-party e-signature service (DocuSign/HelloSign) — legal weight varies by jurisdiction.</p>
       </details>
       <details>
         <summary>How do the collection emails get sent?</summary>

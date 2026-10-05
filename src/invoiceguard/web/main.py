@@ -13,16 +13,20 @@ is also honored when neither env var is set.
 Routes:
     GET  /                 invoice list + totals + status filter
     GET  /invoices/{id}    invoice detail + timeline
+    GET  /sign/{token}     one-time contract signing page (e-signature)
+    POST /sign/{token}     record the client's signature
     POST /webhooks/stripe  Stripe checkout.session.completed → mark paid
 """
 from __future__ import annotations
 
 import json
 import os
+import re
+import html
 from contextlib import asynccontextmanager
 
 import stripe
-from fastapi import FastAPI, HTTPException, Query, Request
+from fastapi import FastAPI, Form, HTTPException, Query, Request
 from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
@@ -107,6 +111,83 @@ def invoice_detail(request: Request, invoice_id: int):
 @app.get("/healthz")
 def healthz():
     return {"ok": True}
+
+
+# -- e-signature -----------------------------------------------------
+_MD_RULES = (
+    (re.compile(r"^### (.*)$"), r"<h3>\1</h3>"),
+    (re.compile(r"^## (.*)$"), r"<h2>\1</h2>"),
+    (re.compile(r"^# (.*)$"), r"<h1>\1</h1>"),
+    (re.compile(r"^&gt; (.*)$"), r"<blockquote>\1</blockquote>"),
+)
+
+
+def _md_inline(text: str) -> str:
+    return re.sub(r"\*\*(.+?)\*\*", r"<strong>\1</strong>", text)
+
+
+def contract_to_html(md: str) -> str:
+    """Render contract markdown to safe HTML (stdlib only).
+
+    The contract text is author-generated, but we escape it first anyway
+    and only allow a small markup subset: headings, bold, blockquotes,
+    and paragraphs.
+    """
+    parts: list[str] = []
+    para: list[str] = []
+    for raw in md.splitlines():
+        line = html.escape(raw).strip()
+        matched = False
+        for rx, repl in _MD_RULES:
+            m = rx.match(line)
+            if m:
+                if para:
+                    parts.append("<p>" + _md_inline("<br>".join(para)) + "</p>")
+                    para = []
+                parts.append(re.sub(rx, repl, line))
+                matched = True
+                break
+        if not matched:
+            if line:
+                para.append(_md_inline(line))
+            elif para:
+                parts.append("<p>" + _md_inline("<br>".join(para)) + "</p>")
+                para = []
+    if para:
+        parts.append("<p>" + _md_inline("<br>".join(para)) + "</p>")
+    return "\n".join(parts)
+
+
+@app.get("/sign/{token}", response_class=HTMLResponse)
+def sign_page(request: Request, token: str):
+    """One-time contract signing page for the client."""
+    sig = db.get_signature_request(token)
+    if sig is None:
+        raise HTTPException(status_code=404, detail="signature request not found")
+    ctx = _base_ctx()
+    ctx.update(
+        sig=sig,
+        contract_html=contract_to_html(sig["contract_md"]),
+        signed=sig["status"] == "signed",
+    )
+    return templates.TemplateResponse(request, "sign.html", ctx)
+
+
+@app.post("/sign/{token}", response_class=HTMLResponse)
+async def sign_submit(request: Request, token: str):
+    form = await request.form()
+    try:
+        res = db.sign_contract(
+            token,
+            signer_name=str(form.get("signer_name", "")),
+            signature_image=str(form.get("signature_image", "")),
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    sig = db.get_signature_request(token)
+    ctx = _base_ctx()
+    ctx.update(sig=sig, result=res)
+    return templates.TemplateResponse(request, "signed.html", ctx)
 
 
 @app.post("/webhooks/stripe")
