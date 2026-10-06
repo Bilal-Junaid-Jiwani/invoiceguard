@@ -31,9 +31,9 @@ Each stage is recorded in the `dunning_events` table and sent **at most once per
 
 `~/.invoiceguard/templates/day1.md`, `day7.md`, `day15.md` — plain markdown with `{variables}`, rendered with stdlib string formatting only:
 
-`{client_name}` `{project_title}` `{amount}` `{paid}` `{outstanding}` `{due_date}` `{days_overdue}` `{late_fee_pct}` `{pay_url}`
+`{client_name}` `{project_title}` `{amount}` `{paid}` `{outstanding}` `{due_date}` `{days_overdue}` `{late_fee_pct}` `{late_fee_due}` `{total_with_late_fees}` `{pay_url}`
 
-`{amount}` is the original invoice amount; `{paid}` and `{outstanding}` come from the payment ledger (v0.2.0).
+`{amount}` is the original invoice amount; `{paid}` and `{outstanding}` come from the payment ledger (v0.2.0). `{late_fee_due}` and `{total_with_late_fees}` (v0.4.0) come from the late-fee accrual calculator, computed off the current outstanding balance.
 
 Edit them freely; `check-due` picks up changes on the next run. If a template references an unknown variable, the run fails loudly instead of sending a broken email. If a template file is missing, the command tells you to re-run `invoiceguard init`.
 

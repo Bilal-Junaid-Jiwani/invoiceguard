@@ -128,8 +128,8 @@
 <p><code>check-due</code> prints <code>nothing due — no emails sent</code> when there's nothing to do, or one line per email sent (<code>sent day7 to billing@acme.com (invoice #3)</code>).</p>
 <h2 id="email-templates">Email templates</h2>
 <p><code>~/.invoiceguard/templates/day1.md</code>, <code>day7.md</code>, <code>day15.md</code> — plain markdown with <code>{variables}</code>, rendered with stdlib string formatting only:</p>
-<p><code>{client_name}</code> <code>{project_title}</code> <code>{amount}</code> <code>{paid}</code> <code>{outstanding}</code> <code>{due_date}</code> <code>{days_overdue}</code> <code>{late_fee_pct}</code> <code>{pay_url}</code></p>
-<p><code>{amount}</code> is the original invoice amount; <code>{paid}</code> and <code>{outstanding}</code> come from the payment ledger (v0.2.0).</p>
+<p><code>{client_name}</code> <code>{project_title}</code> <code>{amount}</code> <code>{paid}</code> <code>{outstanding}</code> <code>{due_date}</code> <code>{days_overdue}</code> <code>{late_fee_pct}</code> <code>{late_fee_due}</code> <code>{total_with_late_fees}</code> <code>{pay_url}</code></p>
+<p><code>{amount}</code> is the original invoice amount; <code>{paid}</code> and <code>{outstanding}</code> come from the payment ledger (v0.2.0). <code>{late_fee_due}</code> and <code>{total_with_late_fees}</code> (v0.4.0) come from the late-fee accrual calculator, computed off the current outstanding balance.</p>
 <p>Edit them freely; <code>check-due</code> picks up changes on the next run. If a template references an unknown variable, the run fails loudly instead of sending a broken email. If a template file is missing, the command tells you to re-run <code>invoiceguard init</code>.</p>
 <p>Default subjects:</p>
 <ul>

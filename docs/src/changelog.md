@@ -5,6 +5,18 @@ description: InvoiceGuard release history — newest first, no fluff.
 ---
 InvoiceGuard follows semver. Newest first.
 
+## [0.4.0] - 2026-10-06
+
+Late-fee accrual calculator: the contract has always promised "{late_fee_pct}% per month, compounding monthly" after the grace period — now InvoiceGuard computes the actual number.
+
+### Added
+- `invoiceguard invoice late-fees <id> [--as-of YYYY-MM-DD]` — accrual breakdown: due date, grace window, rate, months billed, accrued fees, total due. Fees start accruing the day after the grace period ends; each started calendar month charges one full monthly fee, compounding on the running balance, rounded half-up to the cent.
+- Dashboard invoice detail page: "Accrued late fees" and "Total with fees" rows under Contract & terms.
+- New dunning template variables: `{late_fee_due}` and `{total_with_late_fees}`. The shipped `day15.md` formal notice now quotes the actual accrued fees and total due.
+
+### Honest scope (late fees)
+- A partial month counts as a full month; the calculator uses the current outstanding balance and does not retroactively amortize mid-accrual payments. Late-fee enforceability varies by jurisdiction.
+
 ## [0.3.0] - 2026-10-05
 
 Real e-signature: clients can now sign the contract electronically instead of (or in addition to) acknowledging via the paid deposit link.

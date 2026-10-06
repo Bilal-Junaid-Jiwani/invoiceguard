@@ -211,9 +211,9 @@ python -m venv .venv && .venv/bin/pip install -r requirements.txt && .venv/bin/p
 ## Roadmap
 
 - ~~Real e-signature~~ — shipped in v0.3.0: `project sign-request` / `project sign-status`, one-time `/sign/<token>` page with typed-name + drawn-signature capture and SHA-256 tamper evidence.
+- ~~Late-fee accrual calculator~~ — shipped in v0.4.0: `invoice late-fees <id>` with monthly-compounding breakdown, dashboard "Accrued late fees" / "Total with fees" rows, `{late_fee_due}` / `{total_with_late_fees}` dunning variables.
 - **SMS / WhatsApp escalation** — day-15 via message, not just email.
 - **Agency mode** — multi-freelancer workspaces, per-client dunning policies.
-- Late-fee accrual calculator + ledger on the dashboard.
 - ~~Partial payments / payment plans~~ — shipped in v0.2.0.
 
 ## Changelog

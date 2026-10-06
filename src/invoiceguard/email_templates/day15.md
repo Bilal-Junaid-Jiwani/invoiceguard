@@ -11,6 +11,8 @@ Per our Freelance Services Agreement, which you acknowledged when accepting
 the deposit link, a late fee of **{late_fee_pct}% per month** applies to
 overdue balances after the 15-day grace period.
 
+Accrued late fees to date: **{late_fee_due}**. Total now due: **{total_with_late_fees}**.
+
 Pay immediately to stop further fees from accruing: {pay_url}
 
 If payment is not received, the balance (plus accrued late fees) will be

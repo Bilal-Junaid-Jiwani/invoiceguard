@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "invoiceguard"
-version = "0.3.0"
+version = "0.4.0"
 description = "Freelancer payment enforcement: deposit links tied to a contract with a late-fee clause, then automated 3-stage collections."
 readme = "README.md"
 requires-python = ">=3.10"

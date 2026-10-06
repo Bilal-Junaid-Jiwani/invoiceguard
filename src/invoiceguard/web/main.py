@@ -33,6 +33,7 @@ from fastapi.templating import Jinja2Templates
 
 from . import db
 from ..config import is_placeholder, load_config
+from ..late_fees import late_fee_summary
 
 
 def webhook_secret() -> str | None:
@@ -103,6 +104,7 @@ def invoice_detail(request: Request, invoice_id: int):
         invoice=inv,
         events=events,
         payments=invoice_payments,
+        late=late_fee_summary(inv),
         timeline=db.build_timeline(inv, events, invoice_payments),
     )
     return templates.TemplateResponse(request, "detail.html", ctx)

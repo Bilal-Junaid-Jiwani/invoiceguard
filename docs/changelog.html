@@ -95,22 +95,28 @@
         <details>
           <summary>On this page</summary>
           <ul class="toc-list">
-<li><a href="#030---2026-10-05">[0.3.0] - 2026-10-05</a>
+<li><a href="#040---2026-10-06">[0.4.0] - 2026-10-06</a>
 <ul class="toc-sub">
 <li><a href="#added">Added</a></li>
+<li><a href="#honest-scope-late-fees">Honest scope (late fees)</a></li>
+</ul>
+</li>
+<li><a href="#030---2026-10-05">[0.3.0] - 2026-10-05</a>
+<ul class="toc-sub">
+<li><a href="#added-2">Added</a></li>
 <li><a href="#changed">Changed</a></li>
 <li><a href="#honest-scope-e-signature">Honest scope (e-signature)</a></li>
 </ul>
 </li>
 <li><a href="#020---2026-10-04">[0.2.0] - 2026-10-04</a>
 <ul class="toc-sub">
-<li><a href="#added-2">Added</a></li>
+<li><a href="#added-3">Added</a></li>
 <li><a href="#changed-2">Changed</a></li>
 </ul>
 </li>
 <li><a href="#010---2026-10-02">[0.1.0] - 2026-10-02</a>
 <ul class="toc-sub">
-<li><a href="#added-3">Added</a></li>
+<li><a href="#added-4">Added</a></li>
 <li><a href="#fixed">Fixed</a></li>
 <li><a href="#honest-scope-v1">Honest scope (v1)</a></li>
 </ul>
@@ -119,9 +125,25 @@
         </details>
       </div>
       <p>InvoiceGuard follows semver. Newest first.</p>
+<h2 id="040---2026-10-06">[0.4.0] - 2026-10-06</h2>
+<p>Late-fee accrual calculator: the contract has always promised "{late_fee_pct}% per month, compounding monthly" after the grace period — now InvoiceGuard computes the actual number.</p>
+<h3 id="added">Added</h3>
+<ul>
+<li><code>invoiceguard invoice late-fees &lt;id&gt; [--as-of YYYY-MM-DD]</code> — accrual breakdown: due date, grace window, rate, months billed, accrued fees, total due. Fees start accruing the day after the grace period ends; each started calendar month charges one full monthly fee, compounding on the running balance, rounded half-up to the cent.
+</li>
+<li>Dashboard invoice detail page: "Accrued late fees" and "Total with fees" rows under Contract &amp; terms.
+</li>
+<li>New dunning template variables: <code>{late_fee_due}</code> and <code>{total_with_late_fees}</code>. The shipped <code>day15.md</code> formal notice now quotes the actual accrued fees and total due.
+</li>
+</ul>
+<h3 id="honest-scope-late-fees">Honest scope (late fees)</h3>
+<ul>
+<li>A partial month counts as a full month; the calculator uses the current outstanding balance and does not retroactively amortize mid-accrual payments. Late-fee enforceability varies by jurisdiction.
+</li>
+</ul>
 <h2 id="030---2026-10-05">[0.3.0] - 2026-10-05</h2>
 <p>Real e-signature: clients can now sign the contract electronically instead of (or in addition to) acknowledging via the paid deposit link.</p>
-<h3 id="added">Added</h3>
+<h3 id="added-2">Added</h3>
 <ul>
 <li>E-signature capture: <code>invoiceguard project sign-request &lt;id&gt;</code> creates a one-time, single-use signing link (<code>/sign/&lt;token&gt;</code>, served by the dashboard). The client reads the rendered contract, types their full name, and draws a signature on a canvas (mouse or touch).
 </li>
@@ -144,7 +166,7 @@
 </ul>
 <h2 id="020---2026-10-04">[0.2.0] - 2026-10-04</h2>
 <p>Partial payments: invoices no longer have to be all-or-nothing.</p>
-<h3 id="added-2">Added</h3>
+<h3 id="added-3">Added</h3>
 <ul>
 <li>Payment ledger: new <code>payments</code> table (additive migration; pre-0.2.0 paid invoices get a labeled backfill row on first open, so old databases keep working)
 </li>
@@ -166,7 +188,7 @@
 </ul>
 <h2 id="010---2026-10-02">[0.1.0] - 2026-10-02</h2>
 <p>First release on PyPI (<code>pip install invoiceguard</code>) and GitHub.</p>
-<h3 id="added-3">Added</h3>
+<h3 id="added-4">Added</h3>
 <ul>
 <li>CLI: <code>init</code>, <code>client add/list</code>, <code>project create/list/ack</code>, <code>invoice create/list/mark-paid/void</code>, <code>check-due</code>, <code>dashboard</code>
 </li>
@@ -209,22 +231,28 @@
   <aside class="toc-side" aria-label="Table of contents">
     <p class="toc-label">On this page</p>
     <ul class="toc-list">
-<li><a href="#030---2026-10-05">[0.3.0] - 2026-10-05</a>
+<li><a href="#040---2026-10-06">[0.4.0] - 2026-10-06</a>
 <ul class="toc-sub">
 <li><a href="#added">Added</a></li>
+<li><a href="#honest-scope-late-fees">Honest scope (late fees)</a></li>
+</ul>
+</li>
+<li><a href="#030---2026-10-05">[0.3.0] - 2026-10-05</a>
+<ul class="toc-sub">
+<li><a href="#added-2">Added</a></li>
 <li><a href="#changed">Changed</a></li>
 <li><a href="#honest-scope-e-signature">Honest scope (e-signature)</a></li>
 </ul>
 </li>
 <li><a href="#020---2026-10-04">[0.2.0] - 2026-10-04</a>
 <ul class="toc-sub">
-<li><a href="#added-2">Added</a></li>
+<li><a href="#added-3">Added</a></li>
 <li><a href="#changed-2">Changed</a></li>
 </ul>
 </li>
 <li><a href="#010---2026-10-02">[0.1.0] - 2026-10-02</a>
 <ul class="toc-sub">
-<li><a href="#added-3">Added</a></li>
+<li><a href="#added-4">Added</a></li>
 <li><a href="#fixed">Fixed</a></li>
 <li><a href="#honest-scope-v1">Honest scope (v1)</a></li>
 </ul>

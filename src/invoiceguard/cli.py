@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import shutil
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 from pathlib import Path
 
 import click
@@ -14,6 +14,7 @@ from .config import (CONFIG_TEMPLATE, config_path, db_path, load_config,
 from .contracts import render_contract
 from .db import DB
 from .dunning import check_due, money
+from .late_fees import late_fee_summary
 from .stripe_links import create_payment_link, default_due_date
 
 TEMPLATE_SOURCE = Path(__file__).resolve().parent / "email_templates"
@@ -350,6 +351,43 @@ def invoice_void(invoice_id):
     db.update_invoice(invoice_id, status="void")
     db.close()
     click.echo(f"invoice #{invoice_id} voided")
+
+
+@invoice.command("late-fees")
+@click.argument("invoice_id", type=int)
+@click.option("--as-of", "as_of", default=None,
+              help="Accrual date as YYYY-MM-DD (default: today)")
+def invoice_late_fees(invoice_id, as_of):
+    """Show accrued late fees for an invoice (contract §3).
+
+    Fees accrue at the project's monthly rate, compounding monthly,
+    starting the day after the grace period ends. A partial month
+    counts as a full month.
+    """
+    db = _db()
+    full = db.invoice_full(invoice_id)
+    db.close()
+    if not full:
+        raise click.ClickException(f"no invoice #{invoice_id}")
+    if as_of:
+        try:
+            date.fromisoformat(as_of[:10])
+        except ValueError:
+            raise click.ClickException(
+                f"bad --as-of date {as_of!r} — use YYYY-MM-DD")
+    summary = late_fee_summary(full, as_of=as_of)
+    cur = full["currency"]
+    click.echo(f"invoice #{invoice_id}: late-fee accrual "
+               f"(as of {as_of[:10] if as_of else date.today().isoformat()})")
+    click.echo(f"  due date:      {full['due_date'] or '— (no due date: no fees accrue)'}")
+    click.echo(f"  rate:          {full['late_fee_pct']}%/month, compounding monthly")
+    click.echo(f"  grace:         {full['late_fee_grace_days']} days"
+               + (f" → fees accrue from {summary['accrual_start']}"
+                  if summary["accrual_start"] else ""))
+    click.echo(f"  outstanding:   {money(full['outstanding_cents'], cur)}")
+    click.echo(f"  months billed: {summary['months']}")
+    click.echo(f"  accrued fees:  {money(summary['fees_cents'], cur)}")
+    click.echo(f"  total due:     {money(summary['total_cents'], cur)}")
 
 
 # -- dunning ---------------------------------------------------------------

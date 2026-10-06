@@ -17,6 +17,7 @@ from pathlib import Path
 
 from .config import templates_dir
 from .db import DB
+from .late_fees import late_fee_summary
 from .mail import send_email
 
 STAGES = ("day1", "day7", "day15")
@@ -83,6 +84,7 @@ def check_due(db: DB, smtp_cfg: dict,
                 f"(re-run `invoiceguard init`)"
             )
 
+        late = late_fee_summary(inv, as_of=today)
         context = {
             "client_name": inv["client_name"],
             "project_title": inv["project_title"],
@@ -92,6 +94,8 @@ def check_due(db: DB, smtp_cfg: dict,
             "due_date": inv["due_date"],
             "days_overdue": days_overdue,
             "late_fee_pct": inv["late_fee_pct"],
+            "late_fee_due": money(late["fees_cents"], inv["currency"]),
+            "total_with_late_fees": money(late["total_cents"], inv["currency"]),
             "pay_url": inv["stripe_url"] or "(no payment link yet)",
         }
         body = render_template(template_path, context)

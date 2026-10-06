@@ -52,6 +52,7 @@ invoiceguard invoice list
 invoiceguard invoice record-payment 1 --amount 250 [--note "check #1"] [--method bank]
 invoiceguard invoice mark-paid 1
 invoiceguard invoice void 1
+invoiceguard invoice late-fees 1 [--as-of 2026-10-06]
 ```
 
 - `create` requires `--project` (id) and `--kind`: one of `deposit`, `milestone`, `final`.
@@ -61,6 +62,7 @@ invoiceguard invoice void 1
 - `list` shows `#id  kind  status  amount  project  due-date`.
 - `record-payment` records a (partial) payment in the ledger. A payment that clears the outstanding balance marks the invoice `paid`; otherwise the invoice becomes `partially-paid` and keeps dunning against the remaining balance. Overpaying is rejected.
 - `mark-paid` manually marks an invoice paid — since v0.2.0 it records the full outstanding balance in the ledger, and it errors on already-paid or void invoices. `void` voids it.
+- `late-fees` (v0.4.0) shows the accrued late fees for an invoice under contract §3: due date, grace window, monthly rate, months billed, accrued fees, and total due. `--as-of YYYY-MM-DD` computes as of a past date (default: today).
 
 ## `check-due`
 
