@@ -19,6 +19,12 @@ from .config import templates_dir
 from .db import DB
 from .late_fees import late_fee_summary
 from .mail import send_email
+from .messaging import (message_channel, messaging_configured, render_message,
+                        send_message)
+
+# Stages that also escalate by SMS/WhatsApp when messaging is configured
+# and the client has a phone number on file.
+MESSAGE_STAGES = ("day15",)
 
 STAGES = ("day1", "day7", "day15")
 # Stage fires when days_overdue >= threshold and the stage is next in line.
@@ -63,8 +69,16 @@ def stage_for(days_overdue: int, sent: set[str]) -> str | None:
 
 
 def check_due(db: DB, smtp_cfg: dict,
-              templates_dir_: Path | None = None) -> list[dict]:
-    """Send due dunning emails. Returns a list of what was sent."""
+              templates_dir_: Path | None = None,
+              messaging_cfg: dict | None = None) -> list[dict]:
+    """Send due dunning emails. Returns a list of what was sent.
+
+    When messaging_cfg is configured (Twilio credentials present), the
+    day-15 stage additionally goes out as an SMS/WhatsApp message to
+    clients with a phone number on file — recorded in message_events,
+    at most once per stage per invoice. A failed message send never
+    blocks the email: the failure is noted in the result dict instead.
+    """
     templates = templates_dir() if templates_dir_ is None else templates_dir_
     today = date.today()
     results: list[dict] = []
@@ -105,10 +119,28 @@ def check_due(db: DB, smtp_cfg: dict,
 
         db.record_dunning(inv["id"], stage)
         db.update_invoice(inv["id"], status="overdue")
-        results.append({
+        result = {
             "invoice_id": inv["id"],
             "stage": stage,
             "to": inv["client_email"],
             "subject": subject,
-        })
+        }
+
+        if (stage in MESSAGE_STAGES and messaging_configured(messaging_cfg)
+                and inv.get("client_phone")):
+            channel = message_channel(messaging_cfg)
+            if not db.message_sent(inv["id"], stage, channel):
+                try:
+                    reply = send_message(messaging_cfg,
+                                         inv["client_phone"],
+                                         render_message(context),
+                                         channel=channel)
+                    db.record_message(inv["id"], channel, stage,
+                                      inv["client_phone"],
+                                      provider_sid=reply.get("sid"))
+                    result["message_channel"] = channel
+                    result["message_to"] = inv["client_phone"]
+                except (ValueError, RuntimeError) as e:
+                    result["message_error"] = str(e)
+        results.append(result)
     return results

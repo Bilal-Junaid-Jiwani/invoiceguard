@@ -15,6 +15,9 @@ from .contracts import render_contract
 from .db import DB
 from .dunning import check_due, money
 from .late_fees import late_fee_summary
+from .messaging import (message_channel, messaging_configured,
+                        messaging_from_config, normalize_phone,
+                        render_message, send_message)
 from .stripe_links import create_payment_link, default_due_date
 
 TEMPLATE_SOURCE = Path(__file__).resolve().parent / "email_templates"
@@ -65,12 +68,42 @@ def client():
 @client.command("add")
 @click.option("--name", required=True, help="Client name")
 @click.option("--email", default=None, help="Client email (for dunning)")
-def client_add(name, email):
+@click.option("--phone", default=None,
+              help="Client phone in E.164 form, e.g. +15551234567 "
+                   "(for SMS/WhatsApp escalation)")
+def client_add(name, email, phone):
     """Add a client."""
+    if phone and not normalize_phone(phone):
+        raise click.ClickException(
+            f"invalid phone number {phone!r} — use E.164 form, "
+            f"e.g. +15551234567")
     db = _db()
-    cid = db.add_client(name, email)
+    cid = db.add_client(name, email, normalize_phone(phone) if phone else None)
     db.close()
-    click.echo(f"client #{cid}: {name} <{email or 'no email'}>")
+    click.echo(f"client #{cid}: {name} <{email or 'no email'}>"
+               + (f" phone {normalize_phone(phone)}" if phone else ""))
+
+
+@client.command("set-phone")
+@click.argument("client_id", type=int)
+@click.option("--phone", default=None,
+              help="Phone in E.164 form; omit (or pass empty) to clear it")
+def client_set_phone(client_id, phone):
+    """Set or clear a client's phone number (SMS/WhatsApp escalation)."""
+    db = _db()
+    if not db.get_client(client_id):
+        db.close()
+        raise click.ClickException(f"no client #{client_id}")
+    normalized = normalize_phone(phone) if phone else None
+    if phone and not normalized:
+        db.close()
+        raise click.ClickException(
+            f"invalid phone number {phone!r} — use E.164 form, "
+            f"e.g. +15551234567")
+    db.set_client_phone(client_id, normalized)
+    db.close()
+    click.echo(f"client #{client_id}: phone "
+               f"{normalized or '(cleared)'}")
 
 
 @client.command("list")
@@ -80,7 +113,8 @@ def client_list():
     rows = db.list_clients()
     db.close()
     for r in rows:
-        click.echo(f"#{r['id']:>3}  {r['name']:<30} {r['email'] or ''}")
+        click.echo(f"#{r['id']:>3}  {r['name']:<30} {r['email'] or '':<28} "
+                   f"{r['phone'] or ''}")
 
 
 # -- project --------------------------------------------------------------
@@ -390,6 +424,70 @@ def invoice_late_fees(invoice_id, as_of):
     click.echo(f"  total due:     {money(summary['total_cents'], cur)}")
 
 
+@invoice.command("notify")
+@click.argument("invoice_id", type=int)
+@click.option("--channel", type=click.Choice(["sms", "whatsapp"]),
+              default=None,
+              help="Channel (default: messaging.channel from config)")
+@click.option("--dry-run", is_flag=True, default=False,
+              help="Render and print the message without sending it")
+def invoice_notify(invoice_id, channel, dry_run):
+    """Send an SMS/WhatsApp payment reminder for one invoice, now.
+
+    Uses the same message text as the automatic day-15 escalation.
+    With --dry-run it only prints the rendered message (works even
+    without Twilio credentials, as long as the client has a phone).
+    """
+    db = _db()
+    full = db.invoice_full(invoice_id)
+    if not full:
+        db.close()
+        raise click.ClickException(f"no invoice #{invoice_id}")
+    phone = normalize_phone(full.get("client_phone"))
+    if not phone:
+        db.close()
+        raise click.ClickException(
+            f"client for invoice #{invoice_id} has no valid phone number — "
+            f"add one with `invoiceguard client set-phone`")
+    late = late_fee_summary(full)
+    context = {
+        "client_name": full["client_name"],
+        "project_title": full["project_title"],
+        "outstanding": money(full["outstanding_cents"], full["currency"]),
+        "days_overdue": max(
+            0, (date.today() - date.fromisoformat(full["due_date"])).days
+        ) if full["due_date"] else 0,
+        "due_date": full["due_date"] or "—",
+        "total_with_late_fees": money(late["total_cents"], full["currency"]),
+        "pay_url": full["stripe_url"] or "(no payment link yet)",
+    }
+    body = render_message(context)
+    cfg = load_config()
+    msg_cfg = messaging_from_config(cfg)
+    ch = channel or message_channel(msg_cfg)
+    if dry_run:
+        db.close()
+        click.echo(f"[dry-run] would send {ch} to {phone}:")
+        click.echo(f"  {body}")
+        return
+    if not messaging_configured(msg_cfg):
+        db.close()
+        raise click.ClickException(
+            "messaging is not configured — set messaging.account_sid / "
+            "auth_token / from_number in the config (or the "
+            "INVOICEGUARD_TWILIO_* env vars). Tip: --dry-run previews "
+            "the message without credentials.")
+    try:
+        reply = send_message(msg_cfg, phone, body, channel=ch)
+    except (ValueError, RuntimeError) as e:
+        db.close()
+        raise click.ClickException(str(e))
+    db.record_message(invoice_id, ch, "manual", phone,
+                      provider_sid=reply.get("sid"))
+    db.close()
+    click.echo(f"sent {ch} to {phone} (invoice #{invoice_id})")
+
+
 # -- dunning ---------------------------------------------------------------
 @cli.command("check-due")
 def check_due_cmd():
@@ -403,13 +501,19 @@ def check_due_cmd():
             "SMTP is not configured — set smtp.host etc. in "
             f"{config_path()} first."
         )
-    results = check_due(db, smtp_cfg)
+    msg_cfg = messaging_from_config(cfg)
+    results = check_due(db, smtp_cfg, messaging_cfg=msg_cfg)
     db.close()
     if not results:
         click.echo("nothing due — no emails sent")
     for r in results:
         click.echo(f"sent {r['stage']} to {r['to']} "
                    f"(invoice #{r['invoice_id']})")
+        if r.get("message_to"):
+            click.echo(f"  + {r['message_channel']} message to "
+                       f"{r['message_to']}")
+        elif r.get("message_error"):
+            click.echo(f"  ! message failed: {r['message_error']}")
 
 
 # -- dashboard -------------------------------------------------------------

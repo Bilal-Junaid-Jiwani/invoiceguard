@@ -41,6 +41,15 @@ smtp:
 # Web-facing base URL (used to point the Stripe webhook at this app)
 app:
   base_url: "http://localhost:8000"
+
+# SMS / WhatsApp escalation (optional) — when set, the day-15 formal
+# notice also goes out as a short message via Twilio. Leave unset for
+# email-only dunning. Get credentials at https://console.twilio.com
+# messaging:
+#   channel: "sms"                      # or "whatsapp"
+#   account_sid: "AC_..."               # or env INVOICEGUARD_TWILIO_ACCOUNT_SID
+#   auth_token: "your-auth-token"       # or env INVOICEGUARD_TWILIO_AUTH_TOKEN
+#   from_number: "+10000000000"         # your Twilio number, E.164
 """
 
 

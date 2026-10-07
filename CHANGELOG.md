@@ -2,6 +2,20 @@
 
 Every release, newest first. InvoiceGuard follows semver.
 
+## [0.5.0] - 2026-10-07
+
+SMS / WhatsApp escalation: the day-15 formal notice can now also reach the client as a short message, not just email — clients read texts even when they let email pile up.
+
+### Added
+- `messaging.py`: SMS and WhatsApp sending via the Twilio Messages API (stdlib urllib, no new dependency). Same context variables as the dunning emails, rendered into one short message (`InvoiceGuard: Hi {client_name}, ... Pay here: {pay_url}`).
+- Automatic escalation: when `messaging:` is configured and the client has a phone on file, `check-due` sends the day-15 stage by message as well as email. Sends are recorded in a new `message_events` ledger and happen at most once per stage per invoice (same idempotency rule as email). A failed message never blocks the email — the failure is reported in the `check-due` output instead.
+- `invoiceguard invoice notify <id> [--channel sms|whatsapp] [--dry-run]` — send a payment reminder for one invoice right now; `--dry-run` renders and prints the exact message without sending (works without Twilio credentials).
+- Client phone numbers: `invoiceguard client add --phone +15551234567`, `invoiceguard client set-phone <id> [--phone ...]`, shown in `client list`. Numbers are normalized to E.164 form and validated on entry.
+- Config: new `messaging:` section (`channel`, `account_sid`, `auth_token`, `from_number`), overridable via `INVOICEGUARD_TWILIO_ACCOUNT_SID` / `INVOICEGUARD_TWILIO_AUTH_TOKEN` / `INVOICEGUARD_TWILIO_FROM_NUMBER` env vars. Additive DB migration adds `clients.phone` + the `message_events` table to existing databases automatically.
+
+### Honest scope (messaging)
+- Requires your own Twilio account (credentials + a Twilio number); sends are verified with the HTTP layer mocked — no live Twilio call was made in this build environment. WhatsApp additionally requires a Twilio-approved WhatsApp sender on your account. Message/phone-number availability and pricing are Twilio's, and consumer-messaging consent rules vary by jurisdiction — only message clients who agreed to be contacted.
+
 ## [0.4.0] - 2026-10-06
 
 Late-fee accrual calculator: the contract has always promised "{late_fee_pct}% per month, compounding monthly" after the grace period — now InvoiceGuard computes the actual number.

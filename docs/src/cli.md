@@ -16,12 +16,14 @@ Creates `~/.invoiceguard/`: the config template, an empty SQLite database, and t
 ## `client`
 
 ```bash
-invoiceguard client add --name "Acme Corp" --email "billing@acme.com"
+invoiceguard client add --name "Acme Corp" --email "billing@acme.com" [--phone +15551234567]
+invoiceguard client set-phone 1 [--phone +15551234567]   # omit --phone to clear
 invoiceguard client list
 ```
 
-- `add` requires `--name`; `--email` is optional (needed later for dunning emails).
-- `list` prints `#id  name  email` rows.
+- `add` requires `--name`; `--email` is optional (needed later for dunning emails). `--phone` (E.164 form) enables SMS/WhatsApp escalation for that client; invalid numbers are rejected.
+- `set-phone` updates or clears the phone number of an existing client.
+- `list` prints `#id  name  email  phone` rows.
 
 ## `project`
 
@@ -53,6 +55,7 @@ invoiceguard invoice record-payment 1 --amount 250 [--note "check #1"] [--method
 invoiceguard invoice mark-paid 1
 invoiceguard invoice void 1
 invoiceguard invoice late-fees 1 [--as-of 2026-10-06]
+invoiceguard invoice notify 1 [--channel sms|whatsapp] [--dry-run]
 ```
 
 - `create` requires `--project` (id) and `--kind`: one of `deposit`, `milestone`, `final`.
@@ -63,6 +66,7 @@ invoiceguard invoice late-fees 1 [--as-of 2026-10-06]
 - `record-payment` records a (partial) payment in the ledger. A payment that clears the outstanding balance marks the invoice `paid`; otherwise the invoice becomes `partially-paid` and keeps dunning against the remaining balance. Overpaying is rejected.
 - `mark-paid` manually marks an invoice paid — since v0.2.0 it records the full outstanding balance in the ledger, and it errors on already-paid or void invoices. `void` voids it.
 - `late-fees` (v0.4.0) shows the accrued late fees for an invoice under contract §3: due date, grace window, monthly rate, months billed, accrued fees, and total due. `--as-of YYYY-MM-DD` computes as of a past date (default: today).
+- `notify` (v0.5.0) sends an SMS/WhatsApp payment reminder for one invoice right now (same text as the automatic day-15 message). `--dry-run` prints the rendered message without sending — no Twilio credentials needed, but the client needs a phone number.
 
 ## `check-due`
 

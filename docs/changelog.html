@@ -95,6 +95,8 @@
         <details>
           <summary>On this page</summary>
           <ul class="toc-list">
+<li><a href="#050---2026-10-07">[0.5.0] - 2026-10-07</a>
+</li>
 <li><a href="#040---2026-10-06">[0.4.0] - 2026-10-06</a>
 <ul class="toc-sub">
 <li><a href="#added">Added</a></li>
@@ -125,6 +127,8 @@
         </details>
       </div>
       <p>InvoiceGuard follows semver. Newest first.</p>
+<h2 id="050---2026-10-07">[0.5.0] - 2026-10-07</h2>
+<p>SMS / WhatsApp escalation: the day-15 formal notice can now also reach the client as a short message via Twilio (SMS or WhatsApp), recorded in a new <code>message_events</code> ledger. New: <code>invoice notify &lt;id&gt; [--channel sms|whatsapp] [--dry-run]</code>, <code>client add --phone</code>, <code>client set-phone</code>. See <a href="dunning.html">Dunning engine</a> and <a href="configuration.html">Configuration</a>. Honest scope: needs your own Twilio account; no live Twilio call was verified in the build environment.</p>
 <h2 id="040---2026-10-06">[0.4.0] - 2026-10-06</h2>
 <p>Late-fee accrual calculator: the contract has always promised "{late_fee_pct}% per month, compounding monthly" after the grace period — now InvoiceGuard computes the actual number.</p>
 <h3 id="added">Added</h3>
@@ -231,6 +235,8 @@
   <aside class="toc-side" aria-label="Table of contents">
     <p class="toc-label">On this page</p>
     <ul class="toc-list">
+<li><a href="#050---2026-10-07">[0.5.0] - 2026-10-07</a>
+</li>
 <li><a href="#040---2026-10-06">[0.4.0] - 2026-10-06</a>
 <ul class="toc-sub">
 <li><a href="#added">Added</a></li>

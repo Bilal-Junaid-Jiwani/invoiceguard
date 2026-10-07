@@ -126,13 +126,16 @@
 </code></pre>
 <p>Creates <code>~/.invoiceguard/</code>: the config template, an empty SQLite database, and the three dunning email templates. Idempotent — existing files are left alone.</p>
 <h2 id="client"><code>client</code></h2>
-<pre class="codeblock" data-lang="bash"><code>invoiceguard client add --name "Acme Corp" --email "billing@acme.com"
+<pre class="codeblock" data-lang="bash"><code>invoiceguard client add --name "Acme Corp" --email "billing@acme.com" [--phone +15551234567]
+invoiceguard client set-phone 1 [--phone +15551234567]   # omit --phone to clear
 invoiceguard client list
 </code></pre>
 <ul>
-<li><code>add</code> requires <code>--name</code>; <code>--email</code> is optional (needed later for dunning emails).
+<li><code>add</code> requires <code>--name</code>; <code>--email</code> is optional (needed later for dunning emails). <code>--phone</code> (E.164 form) enables SMS/WhatsApp escalation for that client; invalid numbers are rejected.
 </li>
-<li><code>list</code> prints <code>#id  name  email</code> rows.
+<li><code>set-phone</code> updates or clears the phone number of an existing client.
+</li>
+<li><code>list</code> prints <code>#id  name  email  phone</code> rows.
 </li>
 </ul>
 <h2 id="project"><code>project</code></h2>
@@ -166,6 +169,7 @@ invoiceguard invoice record-payment 1 --amount 250 [--note "check #1"] [--method
 invoiceguard invoice mark-paid 1
 invoiceguard invoice void 1
 invoiceguard invoice late-fees 1 [--as-of 2026-10-06]
+invoiceguard invoice notify 1 [--channel sms|whatsapp] [--dry-run]
 </code></pre>
 <ul>
 <li><code>create</code> requires <code>--project</code> (id) and <code>--kind</code>: one of <code>deposit</code>, <code>milestone</code>, <code>final</code>.
@@ -183,6 +187,8 @@ invoiceguard invoice late-fees 1 [--as-of 2026-10-06]
 <li><code>mark-paid</code> manually marks an invoice paid — since v0.2.0 it records the full outstanding balance in the ledger, and it errors on already-paid or void invoices. <code>void</code> voids it.
 </li>
 <li><code>late-fees</code> (v0.4.0) shows the accrued late fees for an invoice under contract §3: due date, grace window, monthly rate, months billed, accrued fees, and total due. <code>--as-of YYYY-MM-DD</code> computes as of a past date (default: today).
+</li>
+<li><code>notify</code> (v0.5.0) sends an SMS/WhatsApp payment reminder for one invoice right now (same text as the automatic day-15 message). <code>--dry-run</code> prints the rendered message without sending — no Twilio credentials needed, but the client needs a phone number.
 </li>
 </ul>
 <h2 id="check-due"><code>check-due</code></h2>

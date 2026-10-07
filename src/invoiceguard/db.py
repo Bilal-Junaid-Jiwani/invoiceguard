@@ -18,6 +18,7 @@ CREATE TABLE IF NOT EXISTS clients(
     id INTEGER PRIMARY KEY,
     name TEXT NOT NULL,
     email TEXT,
+    phone TEXT,
     created_at TEXT NOT NULL
 );
 CREATE TABLE IF NOT EXISTS projects(
@@ -83,7 +84,31 @@ CREATE INDEX IF NOT EXISTS idx_signatures_token
     ON signatures(token);
 CREATE INDEX IF NOT EXISTS idx_signatures_project
     ON signatures(project_id);
+CREATE TABLE IF NOT EXISTS message_events(
+    id INTEGER PRIMARY KEY,
+    invoice_id INTEGER NOT NULL REFERENCES invoices(id),
+    channel TEXT NOT NULL DEFAULT 'sms',
+    stage TEXT NOT NULL,
+    to_addr TEXT NOT NULL,
+    provider_sid TEXT,
+    sent_at TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_message_events_invoice
+    ON message_events(invoice_id, stage, channel);
 """
+
+
+def migrate_clients_phone(conn: sqlite3.Connection) -> None:
+    """Additive migration: clients.phone (added in v0.5.0).
+
+    CREATE TABLE IF NOT EXISTS never alters an existing table, so
+    databases created before v0.5.0 get the column here. Idempotent —
+    safe to call on every connect.
+    """
+    cols = {r[1] for r in conn.execute("PRAGMA table_info(clients)")}
+    if "phone" not in cols:
+        conn.execute("ALTER TABLE clients ADD COLUMN phone TEXT")
+        conn.commit()
 
 
 def now_iso() -> str:
@@ -121,16 +146,26 @@ class DB:
         self.conn.row_factory = sqlite3.Row
         self.conn.execute("PRAGMA foreign_keys = ON")
         self.conn.executescript(SCHEMA)
+        migrate_clients_phone(self.conn)
         backfill_paid_ledger(self.conn)
 
     # -- clients -----------------------------------------------------
-    def add_client(self, name: str, email: str | None = None) -> int:
+    def add_client(self, name: str, email: str | None = None,
+                   phone: str | None = None) -> int:
         cur = self.conn.execute(
-            "INSERT INTO clients(name, email, created_at) VALUES (?, ?, ?)",
-            (name, email, now_iso()),
+            "INSERT INTO clients(name, email, phone, created_at) "
+            "VALUES (?, ?, ?, ?)",
+            (name, email, phone, now_iso()),
         )
         self.conn.commit()
         return cur.lastrowid
+
+    def set_client_phone(self, client_id: int, phone: str | None) -> None:
+        self.conn.execute(
+            "UPDATE clients SET phone = ? WHERE id = ?",
+            (phone, client_id),
+        )
+        self.conn.commit()
 
     def get_client(self, client_id: int) -> sqlite3.Row | None:
         return self.conn.execute(
@@ -313,7 +348,8 @@ class DB:
         row = self.conn.execute(
             """SELECT i.*, p.title AS project_title, p.late_fee_pct,
                       p.late_fee_grace_days, p.contract_ack,
-                      c.name AS client_name, c.email AS client_email
+                      c.name AS client_name, c.email AS client_email,
+                      c.phone AS client_phone
                FROM invoices i
                JOIN projects p ON p.id = i.project_id
                JOIN clients c ON c.id = p.client_id
@@ -422,13 +458,51 @@ class DB:
         ).fetchall()
         return {r["stage"] for r in rows}
 
+    # -- message events (SMS / WhatsApp) ------------------------------
+    def record_message(self, invoice_id: int, channel: str, stage: str,
+                       to_addr: str, provider_sid: str | None = None) -> None:
+        self.conn.execute(
+            "INSERT INTO message_events(invoice_id, channel, stage, "
+            "to_addr, provider_sid, sent_at) VALUES (?, ?, ?, ?, ?, ?)",
+            (invoice_id, channel, stage, to_addr, provider_sid, now_iso()),
+        )
+        self.conn.commit()
+
+    def message_sent(self, invoice_id: int, stage: str,
+                     channel: str | None = None) -> bool:
+        """True when a message event already exists for invoice+stage
+        (optionally restricted to one channel). Messages, like dunning
+        emails, are sent at most once per stage per invoice."""
+        if channel:
+            row = self.conn.execute(
+                "SELECT 1 FROM message_events WHERE invoice_id = ? "
+                "AND stage = ? AND channel = ? LIMIT 1",
+                (invoice_id, stage, channel),
+            ).fetchone()
+        else:
+            row = self.conn.execute(
+                "SELECT 1 FROM message_events WHERE invoice_id = ? "
+                "AND stage = ? LIMIT 1",
+                (invoice_id, stage),
+            ).fetchone()
+        return row is not None
+
+    def messages(self, invoice_id: int) -> list[dict]:
+        """Message ledger rows for an invoice, oldest first."""
+        rows = self.conn.execute(
+            "SELECT * FROM message_events WHERE invoice_id = ? "
+            "ORDER BY sent_at ASC, id ASC",
+            (invoice_id,),
+        ).fetchall()
+        return [dict(r) for r in rows]
+
     def overdue_invoices(self) -> list[dict]:
         """Invoices still unpaid (sent|overdue|partially-paid), past due_date,
         with an outstanding balance > 0."""
         rows = self.conn.execute(
             """SELECT i.*, p.title AS project_title, p.late_fee_pct,
                       p.late_fee_grace_days, c.name AS client_name,
-                      c.email AS client_email,
+                      c.email AS client_email, c.phone AS client_phone,
                       COALESCE((SELECT SUM(p2.amount_cents) FROM payments p2
                                 WHERE p2.invoice_id = i.id), 0) AS paid_cents
                FROM invoices i

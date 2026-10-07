@@ -10,6 +10,7 @@ CREATE TABLE clients(
   id INTEGER PRIMARY KEY,
   name TEXT NOT NULL,
   email TEXT,
+  phone TEXT,
   created_at TEXT NOT NULL
 );
 
@@ -69,6 +70,16 @@ CREATE TABLE signatures(
   signed_at TEXT,
   created_at TEXT NOT NULL
 );
+
+CREATE TABLE message_events(
+  id INTEGER PRIMARY KEY,
+  invoice_id INTEGER NOT NULL REFERENCES invoices(id),
+  channel TEXT NOT NULL DEFAULT 'sms',
+  stage TEXT NOT NULL,
+  to_addr TEXT NOT NULL,
+  provider_sid TEXT,
+  sent_at TEXT NOT NULL
+);
 ```
 
 ## Enumerations
@@ -84,3 +95,4 @@ CREATE TABLE signatures(
 - The dashboard's `web/db.py` module is the second implementation of this schema used by the web app; both follow the same frozen contract.
 - `seed_demo.py` (in the repo) seeds a demo database where every sample name carries a `(demo)` suffix so demo data can never be mistaken for real clients.
 - The `payments` table (v0.2.0) is the ledger: every `record-payment`, `mark-paid`, and Stripe webhook writes rows here. Databases created before v0.2.0 get a labeled backfill row for invoices already marked `paid`, so outstanding balances stay truthful without any manual migration.
+- `clients.phone` and the `message_events` table (v0.5.0) support SMS/WhatsApp escalation. Existing databases gain both automatically on first open (additive migration, same pattern as the payments backfill).

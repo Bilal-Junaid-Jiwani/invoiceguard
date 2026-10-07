@@ -124,10 +124,19 @@ smtp:
 # Web-facing base URL (used to point the Stripe webhook at this app)
 app:
   base_url: "http://localhost:8000"
+
+# SMS / WhatsApp escalation (optional, v0.5.0) — when set, the day-15
+# formal notice also goes out as a short message via Twilio. Leave unset
+# for email-only dunning. Get credentials at https://console.twilio.com
+# messaging:
+#   channel: "sms"                      # or "whatsapp"
+#   account_sid: "AC_..."               # or env INVOICEGUARD_TWILIO_ACCOUNT_SID
+#   auth_token: "your-auth-token"       # or env INVOICEGUARD_TWILIO_AUTH_TOKEN
+#   from_number: "+10000000000"         # your Twilio number, E.164
 </code></pre>
 <p>Never commit this file with real secrets. The repo's <code>.gitignore</code> covers <code>config.yaml</code>, <code>.env</code>, <code>*.key</code>, and the local DB.</p>
 <h2 id="environment-variables">Environment variables</h2>
-<div class="table-wrap"><table><thead><tr><th>Variable</th><th>Overrides</th></tr></thead><tbody><tr><td><code>INVOICEGUARD_STRIPE_SECRET_KEY</code></td><td><code>stripe_secret_key</code></td></tr><tr><td><code>INVOICEGUARD_STRIPE_WEBHOOK_SECRET</code></td><td><code>stripe_webhook_secret</code> (webhook endpoint)</td></tr><tr><td><code>INVOICEGUARD_SMTP_PASSWORD</code></td><td><code>smtp.password</code></td></tr><tr><td><code>STRIPE_WEBHOOK_SECRET</code></td><td>legacy alias for the webhook secret (lowest priority)</td></tr><tr><td><code>INVOICEGUARD_CONFIG</code></td><td>path of the config file itself (default <code>~/.invoiceguard/config.yaml</code>)</td></tr><tr><td><code>INVOICEGUARD_DB</code></td><td>path of the SQLite database (default <code>~/.invoiceguard/invoiceguard.db</code>)</td></tr></tbody></table></div>
+<div class="table-wrap"><table><thead><tr><th>Variable</th><th>Overrides</th></tr></thead><tbody><tr><td><code>INVOICEGUARD_STRIPE_SECRET_KEY</code></td><td><code>stripe_secret_key</code></td></tr><tr><td><code>INVOICEGUARD_STRIPE_WEBHOOK_SECRET</code></td><td><code>stripe_webhook_secret</code> (webhook endpoint)</td></tr><tr><td><code>INVOICEGUARD_SMTP_PASSWORD</code></td><td><code>smtp.password</code></td></tr><tr><td><code>INVOICEGUARD_TWILIO_ACCOUNT_SID</code></td><td><code>messaging.account_sid</code></td></tr><tr><td><code>INVOICEGUARD_TWILIO_AUTH_TOKEN</code></td><td><code>messaging.auth_token</code></td></tr><tr><td><code>INVOICEGUARD_TWILIO_FROM_NUMBER</code></td><td><code>messaging.from_number</code></td></tr><tr><td><code>STRIPE_WEBHOOK_SECRET</code></td><td>legacy alias for the webhook secret (lowest priority)</td></tr><tr><td><code>INVOICEGUARD_CONFIG</code></td><td>path of the config file itself (default <code>~/.invoiceguard/config.yaml</code>)</td></tr><tr><td><code>INVOICEGUARD_DB</code></td><td>path of the SQLite database (default <code>~/.invoiceguard/invoiceguard.db</code>)</td></tr></tbody></table></div>
 <h2 id="webhook-secret-resolution-order">Webhook secret resolution order</h2>
 <p>The dashboard's <code>POST /webhooks/stripe</code> endpoint resolves its signing secret like this:</p>
 <ol>

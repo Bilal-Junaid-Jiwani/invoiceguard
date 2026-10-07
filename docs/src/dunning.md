@@ -47,5 +47,11 @@ Default subjects:
 
 `check-due` refuses to run until SMTP is configured — the template default host (`smtp.example.com`) is rejected with an error pointing at your config file. Email is sent through **your** SMTP provider; deliverability is yours (see [Troubleshooting](troubleshooting.html)).
 
+## SMS / WhatsApp escalation (v0.5.0)
+
+When the `messaging:` section is configured (see [Configuration](configuration.html)) and the client has a phone number on file, the **day15** stage also goes out as a short SMS or WhatsApp message via Twilio — same outstanding amount, accrued late fees, and pay link, in one short text. Sends are recorded in the `message_events` ledger and happen **at most once per stage per invoice**, exactly like email. A failed message send never blocks the email; the failure is printed in the `check-due` output instead.
+
+`invoiceguard invoice notify <id>` sends the same message on demand (with `--dry-run` to preview without sending). Without messaging configuration, dunning stays email-only — nothing errors, nothing pretends a message was sent.
+
 > [!NOTE]
-> v1 escalation is email-only. SMS/WhatsApp escalation is on the [roadmap](roadmap.html).
+> Messaging requires your own Twilio account; WhatsApp additionally needs a Twilio-approved WhatsApp sender. Only message clients who agreed to be contacted — consent rules vary by jurisdiction.

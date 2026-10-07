@@ -9,6 +9,7 @@ src/invoiceguard/db.py
 src/invoiceguard/dunning.py
 src/invoiceguard/late_fees.py
 src/invoiceguard/mail.py
+src/invoiceguard/messaging.py
 src/invoiceguard/stripe_links.py
 src/invoiceguard/webhooks.py
 src/invoiceguard.egg-info/PKG-INFO
@@ -34,6 +35,7 @@ tests/test_contract.py
 tests/test_dunning.py
 tests/test_e2e.py
 tests/test_late_fees.py
+tests/test_messaging.py
 tests/test_partial_payments.py
 tests/test_signatures.py
 tests/test_stripe.py
