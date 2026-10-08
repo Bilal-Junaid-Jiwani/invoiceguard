@@ -18,6 +18,7 @@ from .late_fees import late_fee_summary
 from .messaging import (message_channel, messaging_configured,
                         messaging_from_config, normalize_phone,
                         render_message, send_message)
+from .reports import invoices_csv, payments_csv, receivables_report
 from .stripe_links import create_payment_link, default_due_date
 
 TEMPLATE_SOURCE = Path(__file__).resolve().parent / "email_templates"
@@ -486,6 +487,110 @@ def invoice_notify(invoice_id, channel, dry_run):
                       provider_sid=reply.get("sid"))
     db.close()
     click.echo(f"sent {ch} to {phone} (invoice #{invoice_id})")
+
+
+@invoice.command("report")
+@click.option("--as-of", "as_of", default=None,
+              help="Report date as YYYY-MM-DD (default: today)")
+@click.option("--csv", "csv_path", default=None, metavar="PATH",
+              help="Also write one CSV row per open invoice to PATH "
+                   "('-' prints the CSV instead of the text report)")
+@click.option("--payments-csv", "payments_csv_path", default=None,
+              metavar="PATH",
+              help="Also write the full payment ledger as CSV to PATH "
+                   "('-' prints it instead of the text report)")
+def invoice_report(as_of, csv_path, payments_csv_path):
+    """Read-only receivables report: who owes what, and how late.
+
+    Aging buckets, per-client totals, and accrued late fees over open
+    invoices (sent / overdue / partially-paid with a balance), using
+    the same outstanding-balance definition as the dashboard. Never
+    sends anything and never changes invoice state.
+    """
+    if csv_path == "-" and payments_csv_path == "-":
+        raise click.ClickException(
+            "only one CSV can be printed to stdout — "
+            "give the other a file path")
+    if as_of:
+        try:
+            date.fromisoformat(as_of[:10])
+        except ValueError:
+            raise click.ClickException(
+                f"bad --as-of date {as_of!r} — use YYYY-MM-DD")
+    db = _db()
+    report = receivables_report(db, as_of=as_of)
+    inv_csv = invoices_csv(report["rows"]) if csv_path else None
+    pay_csv = payments_csv(db) if payments_csv_path else None
+    db.close()
+
+    notes = []
+    stdout_csv = None
+    if csv_path == "-":
+        stdout_csv = inv_csv
+    elif csv_path:
+        Path(csv_path).write_text(inv_csv, encoding="utf-8")
+        notes.append(f"wrote invoice CSV: {csv_path} "
+                     f"({len(report['rows'])} rows)")
+    if payments_csv_path == "-":
+        stdout_csv = pay_csv
+    elif payments_csv_path:
+        Path(payments_csv_path).write_text(pay_csv, encoding="utf-8")
+        notes.append(f"wrote payments CSV: {payments_csv_path} "
+                     f"({pay_csv.count(chr(10)) - 1} rows)")
+    if stdout_csv is not None:
+        for n in notes:
+            click.echo(n, err=True)
+        click.echo(stdout_csv, nl=False)
+        return
+
+    rows = report["rows"]
+    click.echo(f"receivables report (as of {report['as_of']})")
+    if not rows:
+        click.echo("  no open invoices — nothing outstanding")
+    else:
+        click.echo("")
+        click.echo("aging — outstanding by days overdue:")
+        multi = len(report["totals"]) > 1
+        for cur in sorted(report["buckets"]):
+            if multi:
+                click.echo(f"  [{cur}]")
+            for b in report["buckets"][cur]:
+                click.echo(f"  {(b['label'] + ':'):<26} {b['count']:>3} "
+                           f"invoice(s)  "
+                           f"{money(b['outstanding_cents'], cur):>12}")
+            t = report["totals"][cur]
+            click.echo(f"  {'total:':<26} {t['count']:>3} invoice(s)  "
+                       f"{money(t['outstanding_cents'], cur):>12}"
+                       f"  (+ {money(t['fees_cents'], cur)} accrued late"
+                       f" fees = {money(t['total_cents'], cur)} due)")
+        click.echo("")
+        click.echo("open invoices (oldest debt first):")
+        for r in rows:
+            if r["days_overdue"] is None:
+                due = "no due date"
+            elif r["days_overdue"] > 0:
+                due = f"due {r['due_date']} ({r['days_overdue']}d overdue)"
+            elif r["due_date"] > report["as_of"]:
+                due = f"due {r['due_date']} (not yet due)"
+            else:
+                due = f"due {r['due_date']} (due today)"
+            fees = (f" + {money(r['late_fees_cents'], r['currency'])} fees"
+                    if r["late_fees_cents"] else "")
+            click.echo(f"  #{r['id']:<4} {r['client_name']:<20} "
+                       f"{r['project_title']:<28} {due:<30} "
+                       f"{money(r['outstanding_cents'], r['currency']):>12}"
+                       f" outstanding{fees}")
+        click.echo("")
+        click.echo("by client:")
+        for c in report["by_client"]:
+            click.echo(f"  {c['client_name']:<20} {c['count']} invoice(s)  "
+                       f"{money(c['outstanding_cents'], c['currency'])}"
+                       f" outstanding  "
+                       f"({money(c['fees_cents'], c['currency'])} fees,"
+                       f" {money(c['total_cents'], c['currency'])}"
+                       f" total due)")
+    for n in notes:
+        click.echo(n)
 
 
 # -- dunning ---------------------------------------------------------------

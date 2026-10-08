@@ -95,6 +95,8 @@
         <details>
           <summary>On this page</summary>
           <ul class="toc-list">
+<li><a href="#060---2026-10-08">[0.6.0] - 2026-10-08</a>
+</li>
 <li><a href="#050---2026-10-07">[0.5.0] - 2026-10-07</a>
 </li>
 <li><a href="#040---2026-10-06">[0.4.0] - 2026-10-06</a>
@@ -127,6 +129,8 @@
         </details>
       </div>
       <p>InvoiceGuard follows semver. Newest first.</p>
+<h2 id="060---2026-10-08">[0.6.0] - 2026-10-08</h2>
+<p>Receivables report: <code>invoiceguard invoice report [--as-of YYYY-MM-DD]</code> — read-only aging over open invoices (Current / 1-30 / 31-60 / 61-90 / 90+ day buckets, per-client totals, accrued late fees via the same §3 calculator as <code>invoice late-fees</code>), with <code>--csv</code> / <code>--payments-csv</code> exports for accounting. "Outstanding" matches the dashboard totals; drafts, paid, and void invoices are excluded. See <a href="cli.html">CLI reference</a>. Honest scope: read-only; fees are computed on the current outstanding balance as of the report date.</p>
 <h2 id="050---2026-10-07">[0.5.0] - 2026-10-07</h2>
 <p>SMS / WhatsApp escalation: the day-15 formal notice can now also reach the client as a short message via Twilio (SMS or WhatsApp), recorded in a new <code>message_events</code> ledger. New: <code>invoice notify &lt;id&gt; [--channel sms|whatsapp] [--dry-run]</code>, <code>client add --phone</code>, <code>client set-phone</code>. See <a href="dunning.html">Dunning engine</a> and <a href="configuration.html">Configuration</a>. Honest scope: needs your own Twilio account; no live Twilio call was verified in the build environment.</p>
 <h2 id="040---2026-10-06">[0.4.0] - 2026-10-06</h2>
@@ -235,6 +239,8 @@
   <aside class="toc-side" aria-label="Table of contents">
     <p class="toc-label">On this page</p>
     <ul class="toc-list">
+<li><a href="#060---2026-10-08">[0.6.0] - 2026-10-08</a>
+</li>
 <li><a href="#050---2026-10-07">[0.5.0] - 2026-10-07</a>
 </li>
 <li><a href="#040---2026-10-06">[0.4.0] - 2026-10-06</a>

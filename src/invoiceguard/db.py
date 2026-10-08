@@ -496,6 +496,50 @@ class DB:
         ).fetchall()
         return [dict(r) for r in rows]
 
+    def open_invoices(self) -> list[dict]:
+        """Invoices still owed on (sent|overdue|partially-paid) with an
+        outstanding balance > 0, oldest due date first (undated last).
+
+        Same 'outstanding' definition as the dashboard totals: invoice
+        amount minus the payment-ledger sum. Unlike overdue_invoices()
+        this includes not-yet-due invoices — receivables already sent —
+        which an aging report needs; drafts, paid, and void invoices
+        are excluded.
+        """
+        rows = self.conn.execute(
+            """SELECT i.*, p.title AS project_title, p.late_fee_pct,
+                      p.late_fee_grace_days, c.name AS client_name,
+                      c.email AS client_email, c.phone AS client_phone,
+                      COALESCE((SELECT SUM(p2.amount_cents) FROM payments p2
+                                WHERE p2.invoice_id = i.id), 0) AS paid_cents
+               FROM invoices i
+               JOIN projects p ON p.id = i.project_id
+               JOIN clients c ON c.id = p.client_id
+               WHERE i.status IN ('sent', 'overdue', 'partially-paid')
+               ORDER BY (i.due_date IS NULL), i.due_date, i.id"""
+        ).fetchall()
+        out = []
+        for r in rows:
+            d = dict(r)
+            d["outstanding_cents"] = d["amount_cents"] - d["paid_cents"]
+            if d["outstanding_cents"] > 0:
+                out.append(d)
+        return out
+
+    def all_payments(self) -> list[dict]:
+        """Every payment-ledger row joined with invoice/project/client,
+        oldest first — the reconciliation view behind the CSV export."""
+        rows = self.conn.execute(
+            """SELECT pay.*, i.kind AS invoice_kind, i.currency AS currency,
+                      p.title AS project_title, c.name AS client_name
+               FROM payments pay
+               JOIN invoices i ON i.id = pay.invoice_id
+               JOIN projects p ON p.id = i.project_id
+               JOIN clients c ON c.id = p.client_id
+               ORDER BY pay.paid_at ASC, pay.id ASC"""
+        ).fetchall()
+        return [dict(r) for r in rows]
+
     def overdue_invoices(self) -> list[dict]:
         """Invoices still unpaid (sent|overdue|partially-paid), past due_date,
         with an outstanding balance > 0."""

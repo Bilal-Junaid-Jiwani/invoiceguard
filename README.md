@@ -115,6 +115,7 @@ Send the pay link to the client. That's the whole pre-work flow.
 | `invoiceguard invoice mark-paid ID` | Manually mark paid (records the full outstanding balance in the payment ledger) |
 | `invoiceguard invoice void ID` | Void an invoice |
 | `invoiceguard invoice notify ID [--channel sms\|whatsapp] [--dry-run]` | Send an SMS/WhatsApp payment reminder now (`--dry-run` prints the message without sending) |
+| `invoiceguard invoice report [--as-of DATE] [--csv PATH] [--payments-csv PATH]` | Read-only receivables report: aging buckets, oldest debt first, per-client totals, accrued late fees; CSV export for accounting (`-` prints to stdout) |
 | `invoiceguard check-due` | Run the dunning scan (cron target) |
 | `invoiceguard dashboard [--port 8000]` | Launch the local web dashboard (`http://127.0.0.1:8000`) — invoice list, detail with escalation timeline, Stripe webhook receiver |
 
@@ -210,7 +211,7 @@ python -m venv .venv && .venv/bin/pip install -r requirements.txt && .venv/bin/p
 .venv/bin/python -m pytest tests/ -q
 ```
 
-136 tests, all green (2026-10-07): contract clause rendering (incl. the e-signature sign-off wording), dunning stage selection + idempotency, template rendering, webhook signature verification (real HMAC check, offline), Stripe link creation (mocked SDK, params asserted), CLI flows (incl. `project sign-request`/`sign-status`), e-signature DB ops (idempotent request, single-use token, tamper-evidence hash, ack flip) + full web signing flow (page render, validation, signed receipt, single-use enforcement), dashboard integration (page rendering + offline webhook checks incl. the `invoiceguard_invoice_id` metadata-key regression and the webhook-secret resolution regression), SMS/WhatsApp messaging (phone normalization, Twilio payload with mocked HTTP, config resolution, day-15 escalation + `invoice notify` incl. dry-run), and a full end-to-end (init → client → project → invoice → `check-due` against a real local SMTP server → assert email captured + `dunning_events` row written).
+148 tests, all green (2026-10-08): contract clause rendering (incl. the e-signature sign-off wording), dunning stage selection + idempotency, template rendering, webhook signature verification (real HMAC check, offline), Stripe link creation (mocked SDK, params asserted), CLI flows (incl. `project sign-request`/`sign-status`), e-signature DB ops (idempotent request, single-use token, tamper-evidence hash, ack flip) + full web signing flow (page render, validation, signed receipt, single-use enforcement), dashboard integration (page rendering + offline webhook checks incl. the `invoiceguard_invoice_id` metadata-key regression and the webhook-secret resolution regression), SMS/WhatsApp messaging (phone normalization, Twilio payload with mocked HTTP, config resolution, day-15 escalation + `invoice notify` incl. dry-run), receivables aging report (bucket boundaries, dashboard-consistent outstanding totals, per-currency aggregation, late-fee agreement with the §3 calculator) + invoice/payment CSV exports, and a full end-to-end (init → client → project → invoice → `check-due` against a real local SMTP server → assert email captured + `dunning_events` row written).
 
 ## Limits of v1
 

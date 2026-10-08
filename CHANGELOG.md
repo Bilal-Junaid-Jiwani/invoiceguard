@@ -2,6 +2,17 @@
 
 Every release, newest first. InvoiceGuard follows semver.
 
+## [0.6.0] - 2026-10-08
+
+Receivables report: see who owes you what, and how late — without opening the dashboard — and get the numbers out as CSV for your accountant.
+
+### Added
+- `invoiceguard invoice report [--as-of YYYY-MM-DD]` — read-only aging report over open invoices (sent / overdue / partially-paid with a balance): outstanding totals grouped into Current / 1-30 / 31-60 / 61-90 / 90+ day buckets, every open invoice oldest-debt-first with its accrued late fees (same contract §3 calculator as `invoice late-fees`), per-client totals, and grand totals. "Open" and "outstanding" mean exactly what the dashboard totals mean (invoice amount minus the payment-ledger sum); drafts, paid, and void invoices are excluded. Totals are per currency — different currencies are never added together.
+- CSV export for accounting: `--csv PATH` writes one row per open invoice (amount, paid, outstanding, accrued late fees, total due, due date, days overdue); `--payments-csv PATH` writes the full payment ledger (date, invoice, client, method, amount, note) for bank reconciliation — including payments on invoices that are now paid in full. Passing `-` as the path prints that CSV to stdout instead of the text report.
+
+### Honest scope (report)
+- Read-only: the report never sends anything and never changes invoice state. Late fees are computed as of the report date on the current outstanding balance — the same caveat as `invoice late-fees` (no day-by-day amortization of payments made mid-accrual). Aging buckets are whole days overdue as of the report date; an invoice due today counts as Current. Agency mode (multi-freelancer workspaces, per-client dunning policies) remains unshipped — it is a multi-day change and was deliberately not rushed into this release.
+
 ## [0.5.0] - 2026-10-07
 
 SMS / WhatsApp escalation: the day-15 formal notice can now also reach the client as a short message, not just email — clients read texts even when they let email pile up.

@@ -3,7 +3,7 @@ title: Roadmap
 eyebrow: Reference
 description: What's planned for InvoiceGuard — honestly labeled as plans, not shipped features.
 ---
-These are **plans, not promises** — nothing below is shipped in v0.5.0.
+These are **plans, not promises** — nothing below is shipped in v0.6.0.
 
 - ~~**Real e-signature**~~ — shipped in v0.3.0: typed-name / drawn-signature capture on the contract, stored with the project, SHA-256 tamper evidence.
 - ~~**Late-fee accrual calculator**~~ — shipped in v0.4.0: monthly-compounding accrual of contract §3 fees, `invoice late-fees` CLI, dashboard rows, dunning template variables.

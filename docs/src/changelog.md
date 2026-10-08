@@ -5,6 +5,10 @@ description: InvoiceGuard release history — newest first, no fluff.
 ---
 InvoiceGuard follows semver. Newest first.
 
+## [0.6.0] - 2026-10-08
+
+Receivables report: `invoiceguard invoice report [--as-of YYYY-MM-DD]` — read-only aging over open invoices (Current / 1-30 / 31-60 / 61-90 / 90+ day buckets, per-client totals, accrued late fees via the same §3 calculator as `invoice late-fees`), with `--csv` / `--payments-csv` exports for accounting. "Outstanding" matches the dashboard totals; drafts, paid, and void invoices are excluded. See [CLI reference](cli.html). Honest scope: read-only; fees are computed on the current outstanding balance as of the report date.
+
 ## [0.5.0] - 2026-10-07
 
 SMS / WhatsApp escalation: the day-15 formal notice can now also reach the client as a short message via Twilio (SMS or WhatsApp), recorded in a new `message_events` ledger. New: `invoice notify <id> [--channel sms|whatsapp] [--dry-run]`, `client add --phone`, `client set-phone`. See [Dunning engine](dunning.html) and [Configuration](configuration.html). Honest scope: needs your own Twilio account; no live Twilio call was verified in the build environment.

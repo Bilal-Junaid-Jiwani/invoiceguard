@@ -56,6 +56,7 @@ invoiceguard invoice mark-paid 1
 invoiceguard invoice void 1
 invoiceguard invoice late-fees 1 [--as-of 2026-10-06]
 invoiceguard invoice notify 1 [--channel sms|whatsapp] [--dry-run]
+invoiceguard invoice report [--as-of 2026-10-08] [--csv invoices.csv] [--payments-csv payments.csv]
 ```
 
 - `create` requires `--project` (id) and `--kind`: one of `deposit`, `milestone`, `final`.
@@ -67,6 +68,7 @@ invoiceguard invoice notify 1 [--channel sms|whatsapp] [--dry-run]
 - `mark-paid` manually marks an invoice paid — since v0.2.0 it records the full outstanding balance in the ledger, and it errors on already-paid or void invoices. `void` voids it.
 - `late-fees` (v0.4.0) shows the accrued late fees for an invoice under contract §3: due date, grace window, monthly rate, months billed, accrued fees, and total due. `--as-of YYYY-MM-DD` computes as of a past date (default: today).
 - `notify` (v0.5.0) sends an SMS/WhatsApp payment reminder for one invoice right now (same text as the automatic day-15 message). `--dry-run` prints the rendered message without sending — no Twilio credentials needed, but the client needs a phone number.
+- `report` (v0.6.0) is a read-only receivables report: open invoices (sent / overdue / partially-paid with a balance) grouped into Current / 1-30 / 31-60 / 61-90 / 90+ day aging buckets, oldest debt first, with accrued late fees, per-client totals, and grand totals. `--as-of YYYY-MM-DD` pins the report date. `--csv PATH` exports one row per open invoice and `--payments-csv PATH` exports the full payment ledger for accounting; `-` as the path prints that CSV to stdout instead of the text report. It never sends anything or changes invoice state.
 
 ## `check-due`
 
