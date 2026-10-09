@@ -89,6 +89,63 @@ def test_check_due_refuses_without_smtp(home):
     assert "SMTP is not configured" in res.output
 
 
+def test_project_create_amount_rounds_half_up(home):
+    # Money convention (late_fees.py) is half-up: 1.005 must be 101 cents,
+    # not the 100 that float + banker's rounding produced.
+    r = CliRunner()
+    r.invoke(cli, ["client", "add", "--name", "Hooli"])
+    res = r.invoke(cli, ["project", "create", "--client", "Hooli",
+                         "--title", "T", "--amount", "1.005"])
+    assert res.exit_code == 0, res.output
+    db = DB(home / "invoiceguard.db")
+    assert db.get_project(1)["amount_cents"] == 101
+    db.close()
+
+
+def test_amounts_reject_garbage_and_nonpositive(home):
+    r = CliRunner()
+    r.invoke(cli, ["client", "add", "--name", "Hooli"])
+    for bad in ("abc", "0", "-50", "1,000"):
+        res = r.invoke(cli, ["project", "create", "--client", "Hooli",
+                             "--title", "T", "--amount", bad])
+        assert res.exit_code != 0, (bad, res.output)
+    db = DB(home / "invoiceguard.db")
+    assert db.list_projects() == []  # nothing was written
+    db.close()
+
+
+def test_record_payment_rounds_half_up(home, monkeypatch):
+    r = _seed(home, monkeypatch)
+    r.invoke(cli, ["invoice", "create", "--project", "1", "--kind", "deposit"])
+    res = r.invoke(cli, ["invoice", "record-payment", "1",
+                         "--amount", "10.075"])
+    assert res.exit_code == 0, res.output
+    db = DB(home / "invoiceguard.db")
+    assert db.payments(1)[0]["amount_cents"] == 1008
+    db.close()
+
+
+def test_deposit_split_rounds_half_up(home, monkeypatch):
+    # 5 cents at 50%: half-up deposit is 3 cents (banker's gave 2), and
+    # deposit + final still sum to the project total.
+    r = CliRunner()
+    r.invoke(cli, ["client", "add", "--name", "Hooli"])
+    r.invoke(cli, ["project", "create", "--client", "Hooli",
+                   "--title", "Tiny", "--amount", "0.05"])
+    monkeypatch.setattr(
+        stripe.PaymentLink, "create",
+        lambda **kw: types.SimpleNamespace(
+            url="https://buy.stripe.com/x", id="plink_x"))
+    monkeypatch.setenv("INVOICEGUARD_STRIPE_SECRET_KEY", "sk_test_000")
+    assert r.invoke(cli, ["invoice", "create", "--project", "1",
+                          "--kind", "deposit"]).exit_code == 0
+    assert r.invoke(cli, ["invoice", "create", "--project", "1",
+                          "--kind", "final"]).exit_code == 0
+    db = DB(home / "invoiceguard.db")
+    assert [x["amount_cents"] for x in db.list_invoices()] == [3, 2]
+    db.close()
+
+
 def test_dashboard_launches_uvicorn(home, monkeypatch):
     import uvicorn
     from invoiceguard.web.main import app as web_app

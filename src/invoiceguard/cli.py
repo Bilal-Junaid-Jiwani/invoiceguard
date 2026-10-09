@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import shutil
 from datetime import date, datetime, timezone
+from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
 from pathlib import Path
 
 import click
@@ -22,6 +23,33 @@ from .reports import invoices_csv, payments_csv, receivables_report
 from .stripe_links import create_payment_link, default_due_date
 
 TEMPLATE_SOURCE = Path(__file__).resolve().parent / "email_templates"
+
+
+def _amount_to_cents(raw: str) -> int:
+    """Parse a user-typed money amount ("250", "19.99") into exact cents.
+
+    Decimal parsing rounded half-up — the project's money convention
+    (see late_fees.py). Float + Python's round() (banker's rounding on
+    a binary approximation) silently turned e.g. 1.005 into 100 cents
+    instead of 101. Raises ClickException on garbage or non-positive
+    input, before anything is written.
+    """
+    try:
+        cents = (Decimal(str(raw).strip()) * 100).quantize(
+            Decimal("1"), rounding=ROUND_HALF_UP)
+    except InvalidOperation:
+        raise click.ClickException(
+            f"invalid amount {raw!r} — use a plain number like 250 "
+            f"or 19.99")
+    if cents <= 0:
+        raise click.ClickException("amount must be positive")
+    return int(cents)
+
+
+def _pct_cents(cents: int, pct: float) -> int:
+    """pct% of a cents amount, rounded half-up to the cent."""
+    return int((Decimal(cents) * Decimal(str(pct)) / 100).quantize(
+        Decimal("1"), rounding=ROUND_HALF_UP))
 
 
 def _db() -> DB:
@@ -128,7 +156,7 @@ def project():
 @click.option("--client", "client_name", required=True,
               help="Client name (must already exist)")
 @click.option("--title", required=True, help="Project title")
-@click.option("--amount", type=float, required=True,
+@click.option("--amount", required=True,
               help="Total project amount in currency units, e.g. 2000")
 @click.option("--currency", default="USD")
 @click.option("--deposit-pct", type=float, default=50.0)
@@ -148,7 +176,7 @@ def project_create(client_name, title, amount, currency, deposit_pct,
             f"with `invoiceguard client add`"
         )
     client = clients[0]
-    amount_cents = round(amount * 100)
+    amount_cents = _amount_to_cents(amount)
     contract = render_contract(
         client["name"], client["email"], title, amount_cents, currency,
         deposit_pct, late_fee_pct, late_fee_grace_days,
@@ -164,7 +192,7 @@ def project_create(client_name, title, amount, currency, deposit_pct,
     click.echo(f"  client: {client['name']}")
     click.echo(f"  amount: {money(amount_cents, currency)} "
                f"(deposit {deposit_pct}% = "
-               f"{money(round(amount_cents * deposit_pct / 100), currency)})")
+               f"{money(_pct_cents(amount_cents, deposit_pct), currency)})")
     click.echo(f"  late fee: {late_fee_pct}%/mo after {late_fee_grace_days} days grace")
     click.echo(f"  contract acknowledged: {'yes' if ack else 'no — run `invoiceguard project ack ' + str(pid) + '` after the client accepts'}")
     click.echo("  --- contract preview ---")
@@ -254,7 +282,7 @@ def invoice():
 @click.option("--project", "project_id", type=int, required=True)
 @click.option("--kind", type=click.Choice(["deposit", "milestone", "final"]),
               required=True)
-@click.option("--amount", type=float, default=None,
+@click.option("--amount", default=None,
               help="Override amount in currency units (default: kind-based)")
 @click.option("--due-days", type=int, default=7,
               help="Days until due (default 7)")
@@ -267,15 +295,15 @@ def invoice_create(project_id, kind, amount, due_days):
         raise click.ClickException(f"no project #{project_id}")
 
     if amount is None:
+        deposit_cents = _pct_cents(proj["amount_cents"], proj["deposit_pct"])
         if kind == "deposit":
-            amount_cents = round(proj["amount_cents"] * proj["deposit_pct"] / 100)
+            amount_cents = deposit_cents
         elif kind == "final":
-            amount_cents = proj["amount_cents"] - round(
-                proj["amount_cents"] * proj["deposit_pct"] / 100)
+            amount_cents = proj["amount_cents"] - deposit_cents
         else:  # milestone
             amount_cents = proj["amount_cents"]
     else:
-        amount_cents = round(amount * 100)
+        amount_cents = _amount_to_cents(amount)
 
     due = (datetime.now(timezone.utc).date()
            ).isoformat() if due_days <= 0 else default_due_date(due_days)
@@ -317,7 +345,7 @@ def invoice_list():
 
 @invoice.command("record-payment")
 @click.argument("invoice_id", type=int)
-@click.option("--amount", type=float, required=True,
+@click.option("--amount", required=True,
               help="Payment amount in currency units (e.g. 250.00)")
 @click.option("--note", default=None,
               help="Optional note (check number, bank reference, ...)")
@@ -335,7 +363,7 @@ def invoice_record_payment(invoice_id, amount, note, method):
     if not inv:
         db.close()
         raise click.ClickException(f"no invoice #{invoice_id}")
-    cents = round(amount * 100)
+    cents = _amount_to_cents(amount)
     try:
         res = db.record_payment(invoice_id, cents, method=method, note=note)
     except ValueError as e:

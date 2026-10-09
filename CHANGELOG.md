@@ -2,6 +2,17 @@
 
 Every release, newest first. InvoiceGuard follows semver.
 
+## [0.6.1] - 2026-10-09
+
+CLI money-parsing fix: amounts you type are no longer a cent low.
+
+### Fixed
+- `project create --amount`, `invoice create --amount`, and `invoice record-payment --amount` parsed your input through binary float + Python's `round()` (banker's rounding), so `--amount 1.005` was recorded as 100 cents instead of 101 and `record-payment --amount 10.075` booked 1007 instead of 1008. Amounts are now parsed with `Decimal` and rounded half-up to the cent — the same rounding convention the late-fee calculator (contract §3) already documented — and the deposit/final split uses the same half-up rule (deposit + final still sum to the project total).
+- Non-positive or non-numeric amounts (`--amount 0`, `--amount -50`, `--amount abc`) are now rejected with a clear error before anything is written; previously `project create --amount -50` silently created a negative-cents project, and a bad `invoice create --amount` could leave an orphan draft invoice behind when Stripe rejected the amount.
+
+### Honest scope (0.6.1)
+- Only CLI-entered amounts changed; stored cents, the payment ledger, and Stripe session amounts were already exact integers and are untouched. Existing databases need no migration. Agency mode remains unshipped.
+
 ## [0.6.0] - 2026-10-08
 
 Receivables report: see who owes you what, and how late — without opening the dashboard — and get the numbers out as CSV for your accountant.
