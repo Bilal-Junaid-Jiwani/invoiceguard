@@ -88,9 +88,7 @@
 </ul></div>
     <div class="sidebar-foot">
       <a href="https://github.com/Bilal-Junaid-Jiwani/invoiceguard">GitHub</a>
-      <span aria-hidden="true">·</span>
       <a href="https://pypi.org/project/invoiceguard/">PyPI</a>
-      <span aria-hidden="true">·</span>
       <a href="changelog.html">v0.1.0</a>
     </div>
   </aside>
@@ -115,6 +113,7 @@
   id INTEGER PRIMARY KEY,
   name TEXT NOT NULL,
   email TEXT,
+  phone TEXT,
   created_at TEXT NOT NULL
 );
 
@@ -154,12 +153,42 @@ CREATE TABLE dunning_events(
   stage TEXT NOT NULL,
   sent_at TEXT NOT NULL
 );
+
+CREATE TABLE payments(
+  id INTEGER PRIMARY KEY,
+  invoice_id INTEGER NOT NULL REFERENCES invoices(id),
+  amount_cents INTEGER NOT NULL CHECK (amount_cents &gt; 0),
+  method TEXT NOT NULL DEFAULT 'manual',
+  note TEXT,
+  paid_at TEXT NOT NULL
+);
+CREATE TABLE signatures(
+  id INTEGER PRIMARY KEY,
+  project_id INTEGER NOT NULL REFERENCES projects(id),
+  token TEXT NOT NULL UNIQUE,
+  status TEXT NOT NULL DEFAULT 'pending',
+  signer_name TEXT,
+  signature_image TEXT,
+  contract_hash TEXT,
+  signed_at TEXT,
+  created_at TEXT NOT NULL
+);
+
+CREATE TABLE message_events(
+  id INTEGER PRIMARY KEY,
+  invoice_id INTEGER NOT NULL REFERENCES invoices(id),
+  channel TEXT NOT NULL DEFAULT 'sms',
+  stage TEXT NOT NULL,
+  to_addr TEXT NOT NULL,
+  provider_sid TEXT,
+  sent_at TEXT NOT NULL
+);
 </code></pre>
 <h2 id="enumerations">Enumerations</h2>
 <ul>
 <li>Invoice <strong>kinds</strong>: <code>deposit | milestone | final</code>
 </li>
-<li>Invoice <strong>statuses</strong>: <code>draft | sent | paid | overdue | void</code>
+<li>Invoice <strong>statuses</strong>: <code>draft | sent | partially-paid | paid | overdue | void</code> (<code>partially-paid</code> added in v0.2.0)
 </li>
 <li>Dunning <strong>stages</strong>: <code>day1 | day7 | day15</code>
 </li>
@@ -174,6 +203,10 @@ CREATE TABLE dunning_events(
 </li>
 <li><code>seed_demo.py</code> (in the repo) seeds a demo database where every sample name carries a <code>(demo)</code> suffix so demo data can never be mistaken for real clients.
 </li>
+<li>The <code>payments</code> table (v0.2.0) is the ledger: every <code>record-payment</code>, <code>mark-paid</code>, and Stripe webhook writes rows here. Databases created before v0.2.0 get a labeled backfill row for invoices already marked <code>paid</code>, so outstanding balances stay truthful without any manual migration.
+</li>
+<li><code>clients.phone</code> and the <code>message_events</code> table (v0.5.0) support SMS/WhatsApp escalation. Existing databases gain both automatically on first open (additive migration, same pattern as the payments backfill).
+</li>
 </ul>
       <nav class="prev-next" aria-label="Previous and next pages">
         <a class="page-prev" href="contracts.html"><span class="prev-next-label">Previous</span><span class="prev-next-title">&larr; Contracts</span></a>
@@ -182,9 +215,7 @@ CREATE TABLE dunning_events(
     </article>
     <footer class="doc-footer">
       <p>InvoiceGuard is open source (Apache-2.0).
-      <a href="https://github.com/Bilal-Junaid-Jiwani/invoiceguard">GitHub</a> ·
-      <a href="https://pypi.org/project/invoiceguard/">PyPI</a> ·
-      <a href="site/index.html">Marketing site</a></p>
+      <span class="foot-links"><a href="https://github.com/Bilal-Junaid-Jiwani/invoiceguard">GitHub</a><a href="https://pypi.org/project/invoiceguard/">PyPI</a><a href="site/index.html">Marketing site</a></span></p>
     </footer>
   </main>
 

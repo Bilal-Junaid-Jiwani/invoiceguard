@@ -88,9 +88,7 @@
 </ul></div>
     <div class="sidebar-foot">
       <a href="https://github.com/Bilal-Junaid-Jiwani/invoiceguard">GitHub</a>
-      <span aria-hidden="true">·</span>
       <a href="https://pypi.org/project/invoiceguard/">PyPI</a>
-      <span aria-hidden="true">·</span>
       <a href="changelog.html">v0.1.0</a>
     </div>
   </aside>
@@ -105,7 +103,9 @@
           <ul class="toc-list">
 <li><a href="#whats-in-the-contract">What's in the contract</a>
 </li>
-<li><a href="#the-acknowledgment-model">The acknowledgment model</a>
+<li><a href="#e-signature">E-signature</a>
+</li>
+<li><a href="#the-older-acknowledgment-path">The older acknowledgment path</a>
 </li>
 <li><a href="#honest-limits">Honest limits</a>
 </li>
@@ -117,26 +117,37 @@
 <ul>
 <li><strong>Parties and scope</strong> — client name/email, project title, date.
 </li>
-<li><strong>Fee and deposit</strong> — total fee, deposit percentage and amount. The deposit is collected through a Stripe payment link, and <em>paying the deposit link is the client's acknowledgment of the agreement</em>.
+<li><strong>Fee and deposit</strong> — total fee, deposit percentage and amount. The deposit is collected through a Stripe payment link.
 </li>
 <li><strong>Late-fee clause</strong> — if an invoice is unpaid after the grace period, a late fee of <code>late_fee_pct</code>% per month applies on the overdue balance, compounding monthly until paid.
 </li>
-<li><strong>Sign-off (v1)</strong> — records <code>contract_ack</code>: <code>1</code> once the deposit link is paid.
+<li><strong>Sign-off</strong> — the client signs electronically (typed name + drawn signature); the exact signed text is hashed (SHA-256) and stored as tamper evidence.
 </li>
 </ul>
 <p>Defaults: 50% deposit, 1.5%/month late fee, 15-day grace — all adjustable per project with <code>--deposit-pct</code>, <code>--late-fee-pct</code>, <code>--late-fee-grace-days</code>.</p>
-<h2 id="the-acknowledgment-model">The acknowledgment model</h2>
-<p>v1's "signature" is a client-acknowledgment checkbox, recorded as <code>contract_ack = 1</code> with a timestamp (<code>contract_ack_at</code>):</p>
+<h2 id="e-signature">E-signature</h2>
+<p>Since v0.3.0, the client can sign the contract electronically instead of (or in addition to) acknowledging via the deposit link:</p>
+<pre class="codeblock" data-lang="bash"><code>invoiceguard project sign-request 3     # prints a one-time signing link
+# send the link to the client while `invoiceguard dashboard` is running
+invoiceguard project sign-status 3      # pending / signed + signer + hash
+</code></pre>
+<p>The signing page (<code>/sign/&lt;token&gt;</code>) renders the contract, and the client types their full name and draws a signature (mouse or touch). On submit, InvoiceGuard stores:</p>
 <ul>
-<li>Pass <code>--ack</code> to <code>project create</code> when the client has already accepted the deposit link.
+<li>the signer's typed name,
 </li>
-<li>Or record it later: <code>invoiceguard project ack &lt;id&gt;</code>.
+<li>the drawn signature image (PNG data URL),
+</li>
+<li>the <strong>SHA-256 of the exact contract text at signing time</strong> — tamper evidence proving <em>what</em> was signed,
+</li>
+<li>the signing timestamp.
 </li>
 </ul>
-<p><code>project list</code> shows <code>ack</code> / <code>no-ack</code> per project so you can see at a glance which contracts are acknowledged.</p>
+<p>Signing flips <code>contract_ack</code> to <code>1</code> (a signed contract IS the acknowledgment) with <code>contract_ack_at</code> = signing time. The link is single-use: after signing it shows a receipt instead of the form. Re-running <code>sign-request</code> while a request is still pending returns the same link rather than orphaning it.</p>
+<h2 id="the-older-acknowledgment-path">The older acknowledgment path</h2>
+<p>Before e-signature, acknowledgment was recorded when the deposit link was paid (or manually with <code>project ack</code> / <code>--ack</code> on create). That path still works: <code>invoiceguard project ack &lt;id&gt;</code> records the acknowledgment with a timestamp. <code>project list</code> shows <code>ack</code> / <code>no-ack</code> per project.</p>
 <h2 id="honest-limits">Honest limits</h2>
 <ul>
-<li>The acknowledgment is <strong>not a legal e-signature</strong> — it's a record that the client paid the deposit link, which the contract text defines as acceptance. Real e-signature (typed name / drawn signature) is on the <a href="roadmap.html">roadmap</a>.
+<li>The e-signature is a <strong>browser-captured typed/drawn signature stored locally</strong> with a tamper-evidence hash — it is NOT a qualified third-party e-signature service (DocuSign/HelloSign). Legal weight varies by jurisdiction.
 </li>
 <li>Late-fee enforceability varies by jurisdiction. The clause is a contractual starting point, not legal advice. Adjust the percentage and grace days per project.
 </li>
@@ -148,9 +159,7 @@
     </article>
     <footer class="doc-footer">
       <p>InvoiceGuard is open source (Apache-2.0).
-      <a href="https://github.com/Bilal-Junaid-Jiwani/invoiceguard">GitHub</a> ·
-      <a href="https://pypi.org/project/invoiceguard/">PyPI</a> ·
-      <a href="site/index.html">Marketing site</a></p>
+      <span class="foot-links"><a href="https://github.com/Bilal-Junaid-Jiwani/invoiceguard">GitHub</a><a href="https://pypi.org/project/invoiceguard/">PyPI</a><a href="site/index.html">Marketing site</a></span></p>
     </footer>
   </main>
 
@@ -159,7 +168,9 @@
     <ul class="toc-list">
 <li><a href="#whats-in-the-contract">What's in the contract</a>
 </li>
-<li><a href="#the-acknowledgment-model">The acknowledgment model</a>
+<li><a href="#e-signature">E-signature</a>
+</li>
+<li><a href="#the-older-acknowledgment-path">The older acknowledgment path</a>
 </li>
 <li><a href="#honest-limits">Honest limits</a>
 </li>

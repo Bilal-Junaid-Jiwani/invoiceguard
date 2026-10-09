@@ -88,9 +88,7 @@
 </ul></div>
     <div class="sidebar-foot">
       <a href="https://github.com/Bilal-Junaid-Jiwani/invoiceguard">GitHub</a>
-      <span aria-hidden="true">·</span>
       <a href="https://pypi.org/project/invoiceguard/">PyPI</a>
-      <span aria-hidden="true">·</span>
       <a href="changelog.html">v0.1.0</a>
     </div>
   </aside>
@@ -126,13 +124,16 @@
 </code></pre>
 <p>Creates <code>~/.invoiceguard/</code>: the config template, an empty SQLite database, and the three dunning email templates. Idempotent — existing files are left alone.</p>
 <h2 id="client"><code>client</code></h2>
-<pre class="codeblock" data-lang="bash"><code>invoiceguard client add --name "Acme Corp" --email "billing@acme.com"
+<pre class="codeblock" data-lang="bash"><code>invoiceguard client add --name "Acme Corp" --email "billing@acme.com" [--phone +15551234567]
+invoiceguard client set-phone 1 [--phone +15551234567]   # omit --phone to clear
 invoiceguard client list
 </code></pre>
 <ul>
-<li><code>add</code> requires <code>--name</code>; <code>--email</code> is optional (needed later for dunning emails).
+<li><code>add</code> requires <code>--name</code>; <code>--email</code> is optional (needed later for dunning emails). <code>--phone</code> (E.164 form) enables SMS/WhatsApp escalation for that client; invalid numbers are rejected.
 </li>
-<li><code>list</code> prints <code>#id  name  email</code> rows.
+<li><code>set-phone</code> updates or clears the phone number of an existing client.
+</li>
+<li><code>list</code> prints <code>#id  name  email  phone</code> rows.
 </li>
 </ul>
 <h2 id="project"><code>project</code></h2>
@@ -141,6 +142,8 @@ invoiceguard client list
   --late-fee-pct 1.5 --late-fee-grace-days 15 [--ack]
 invoiceguard project list
 invoiceguard project ack 1
+invoiceguard project sign-request 1   # one-time e-signature link
+invoiceguard project sign-status 1    # pending / signed + signer + hash
 </code></pre>
 <ul>
 <li><code>create</code> requires an existing client (matched by exact <code>--client</code> name) and <code>--title</code> and <code>--amount</code> (in currency units, e.g. <code>2000</code>).
@@ -153,13 +156,19 @@ invoiceguard project ack 1
 </li>
 <li><code>list</code> shows <code>#id  title  client  amount  [ack|no-ack]</code>.
 </li>
+<li><code>sign-request</code> creates a one-time, single-use signing link (<code>/sign/&lt;token&gt;</code>, served by the dashboard) for the client to type their name and draw a signature; the signed contract text is hashed (SHA-256) and stored as tamper evidence. Re-running while a request is pending returns the same link. <code>sign-status</code> shows the request state.
+</li>
 </ul>
-<p>See <a href="contracts.html">Contracts</a> for what the contract contains.</p>
+<p>See <a href="contracts.html">Contracts</a> for what the contract contains and the honest limits of the e-signature.</p>
 <h2 id="invoice"><code>invoice</code></h2>
 <pre class="codeblock" data-lang="bash"><code>invoiceguard invoice create --project 1 --kind deposit [--amount 1000] [--due-days 7]
 invoiceguard invoice list
+invoiceguard invoice record-payment 1 --amount 250 [--note "check #1"] [--method bank]
 invoiceguard invoice mark-paid 1
 invoiceguard invoice void 1
+invoiceguard invoice late-fees 1 [--as-of 2026-10-06]
+invoiceguard invoice notify 1 [--channel sms|whatsapp] [--dry-run]
+invoiceguard invoice report [--as-of 2026-10-08] [--csv invoices.csv] [--payments-csv payments.csv]
 </code></pre>
 <ul>
 <li><code>create</code> requires <code>--project</code> (id) and <code>--kind</code>: one of <code>deposit</code>, <code>milestone</code>, <code>final</code>.
@@ -172,7 +181,15 @@ invoiceguard invoice void 1
 </li>
 <li><code>list</code> shows <code>#id  kind  status  amount  project  due-date</code>.
 </li>
-<li><code>mark-paid</code> manually marks an invoice paid (records <code>paid_at</code>); <code>void</code> voids it.
+<li><code>record-payment</code> records a (partial) payment in the ledger. A payment that clears the outstanding balance marks the invoice <code>paid</code>; otherwise the invoice becomes <code>partially-paid</code> and keeps dunning against the remaining balance. Overpaying is rejected.
+</li>
+<li><code>mark-paid</code> manually marks an invoice paid — since v0.2.0 it records the full outstanding balance in the ledger, and it errors on already-paid or void invoices. <code>void</code> voids it.
+</li>
+<li><code>late-fees</code> (v0.4.0) shows the accrued late fees for an invoice under contract §3: due date, grace window, monthly rate, months billed, accrued fees, and total due. <code>--as-of YYYY-MM-DD</code> computes as of a past date (default: today).
+</li>
+<li><code>notify</code> (v0.5.0) sends an SMS/WhatsApp payment reminder for one invoice right now (same text as the automatic day-15 message). <code>--dry-run</code> prints the rendered message without sending — no Twilio credentials needed, but the client needs a phone number.
+</li>
+<li><code>report</code> (v0.6.0) is a read-only receivables report: open invoices (sent / overdue / partially-paid with a balance) grouped into Current / 1-30 / 31-60 / 61-90 / 90+ day aging buckets, oldest debt first, with accrued late fees, per-client totals, and grand totals. <code>--as-of YYYY-MM-DD</code> pins the report date. <code>--csv PATH</code> exports one row per open invoice and <code>--payments-csv PATH</code> exports the full payment ledger for accounting; <code>-</code> as the path prints that CSV to stdout instead of the text report. It never sends anything or changes invoice state.
 </li>
 </ul>
 <h2 id="check-due"><code>check-due</code></h2>
@@ -192,9 +209,7 @@ invoiceguard invoice void 1
     </article>
     <footer class="doc-footer">
       <p>InvoiceGuard is open source (Apache-2.0).
-      <a href="https://github.com/Bilal-Junaid-Jiwani/invoiceguard">GitHub</a> ·
-      <a href="https://pypi.org/project/invoiceguard/">PyPI</a> ·
-      <a href="site/index.html">Marketing site</a></p>
+      <span class="foot-links"><a href="https://github.com/Bilal-Junaid-Jiwani/invoiceguard">GitHub</a><a href="https://pypi.org/project/invoiceguard/">PyPI</a><a href="site/index.html">Marketing site</a></span></p>
     </footer>
   </main>
 

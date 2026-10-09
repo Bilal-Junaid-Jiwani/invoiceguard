@@ -80,9 +80,7 @@
 </ul></div>
     <div class="sidebar-foot">
       <a href="https://github.com/Bilal-Junaid-Jiwani/invoiceguard">GitHub</a>
-      <span aria-hidden="true">·</span>
       <a href="https://pypi.org/project/invoiceguard/">PyPI</a>
-      <span aria-hidden="true">·</span>
       <a href="changelog.html">v0.1.0</a>
     </div>
   </aside>
@@ -141,7 +139,7 @@
 <ul>
 <li><strong>No live Stripe call was verified in this build environment.</strong> Payment-link creation was verified with a mocked Stripe SDK (exact API params asserted); webhook handling was verified with real <code>stripe.Webhook.construct_event</code> signature checks offline. You add your own test key; the live path is the standard Stripe API.
 </li>
-<li><strong>The "signature" is an acknowledgment checkbox</strong>, not a legal e-signature. Paying the deposit link = accepting the terms; <code>contract_ack=1</code> records it.
+<li><strong>The contract "signature" is browser-captured, not qualified.</strong> v0.3.0 added real e-signature: the client types their name and draws a signature on the signing page; the signed text is hashed (SHA-256) and stored as tamper evidence. It is not a qualified third-party e-signature service; legal weight varies by jurisdiction. The older acknowledgment path (paying the deposit link = accepting the terms; <code>contract_ack=1</code>) still works as a fallback.
 </li>
 <li><strong>Email deliverability is yours</strong> (your SMTP, your reputation).
 </li>
@@ -155,9 +153,7 @@
     </article>
     <footer class="doc-footer">
       <p>InvoiceGuard is open source (Apache-2.0).
-      <a href="https://github.com/Bilal-Junaid-Jiwani/invoiceguard">GitHub</a> ·
-      <a href="https://pypi.org/project/invoiceguard/">PyPI</a> ·
-      <a href="site/index.html">Marketing site</a></p>
+      <span class="foot-links"><a href="https://github.com/Bilal-Junaid-Jiwani/invoiceguard">GitHub</a><a href="https://pypi.org/project/invoiceguard/">PyPI</a><a href="site/index.html">Marketing site</a></span></p>
     </footer>
   </main>
 

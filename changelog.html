@@ -80,9 +80,7 @@
 </ul></div>
     <div class="sidebar-foot">
       <a href="https://github.com/Bilal-Junaid-Jiwani/invoiceguard">GitHub</a>
-      <span aria-hidden="true">·</span>
       <a href="https://pypi.org/project/invoiceguard/">PyPI</a>
-      <span aria-hidden="true">·</span>
       <a href="changelog.html">v0.1.0</a>
     </div>
   </aside>
@@ -95,9 +93,32 @@
         <details>
           <summary>On this page</summary>
           <ul class="toc-list">
-<li><a href="#010---2026-10-02">[0.1.0] - 2026-10-02</a>
+<li><a href="#060---2026-10-08">[0.6.0] - 2026-10-08</a>
+</li>
+<li><a href="#050---2026-10-07">[0.5.0] - 2026-10-07</a>
+</li>
+<li><a href="#040---2026-10-06">[0.4.0] - 2026-10-06</a>
 <ul class="toc-sub">
 <li><a href="#added">Added</a></li>
+<li><a href="#honest-scope-late-fees">Honest scope (late fees)</a></li>
+</ul>
+</li>
+<li><a href="#030---2026-10-05">[0.3.0] - 2026-10-05</a>
+<ul class="toc-sub">
+<li><a href="#added-2">Added</a></li>
+<li><a href="#changed">Changed</a></li>
+<li><a href="#honest-scope-e-signature">Honest scope (e-signature)</a></li>
+</ul>
+</li>
+<li><a href="#020---2026-10-04">[0.2.0] - 2026-10-04</a>
+<ul class="toc-sub">
+<li><a href="#added-3">Added</a></li>
+<li><a href="#changed-2">Changed</a></li>
+</ul>
+</li>
+<li><a href="#010---2026-10-02">[0.1.0] - 2026-10-02</a>
+<ul class="toc-sub">
+<li><a href="#added-4">Added</a></li>
 <li><a href="#fixed">Fixed</a></li>
 <li><a href="#honest-scope-v1">Honest scope (v1)</a></li>
 </ul>
@@ -106,9 +127,74 @@
         </details>
       </div>
       <p>InvoiceGuard follows semver. Newest first.</p>
+<h2 id="060---2026-10-08">[0.6.0] - 2026-10-08</h2>
+<p>Receivables report: <code>invoiceguard invoice report [--as-of YYYY-MM-DD]</code> — read-only aging over open invoices (Current / 1-30 / 31-60 / 61-90 / 90+ day buckets, per-client totals, accrued late fees via the same §3 calculator as <code>invoice late-fees</code>), with <code>--csv</code> / <code>--payments-csv</code> exports for accounting. "Outstanding" matches the dashboard totals; drafts, paid, and void invoices are excluded. See <a href="cli.html">CLI reference</a>. Honest scope: read-only; fees are computed on the current outstanding balance as of the report date.</p>
+<h2 id="050---2026-10-07">[0.5.0] - 2026-10-07</h2>
+<p>SMS / WhatsApp escalation: the day-15 formal notice can now also reach the client as a short message via Twilio (SMS or WhatsApp), recorded in a new <code>message_events</code> ledger. New: <code>invoice notify &lt;id&gt; [--channel sms|whatsapp] [--dry-run]</code>, <code>client add --phone</code>, <code>client set-phone</code>. See <a href="dunning.html">Dunning engine</a> and <a href="configuration.html">Configuration</a>. Honest scope: needs your own Twilio account; no live Twilio call was verified in the build environment.</p>
+<h2 id="040---2026-10-06">[0.4.0] - 2026-10-06</h2>
+<p>Late-fee accrual calculator: the contract has always promised "{late_fee_pct}% per month, compounding monthly" after the grace period — now InvoiceGuard computes the actual number.</p>
+<h3 id="added">Added</h3>
+<ul>
+<li><code>invoiceguard invoice late-fees &lt;id&gt; [--as-of YYYY-MM-DD]</code> — accrual breakdown: due date, grace window, rate, months billed, accrued fees, total due. Fees start accruing the day after the grace period ends; each started calendar month charges one full monthly fee, compounding on the running balance, rounded half-up to the cent.
+</li>
+<li>Dashboard invoice detail page: "Accrued late fees" and "Total with fees" rows under Contract &amp; terms.
+</li>
+<li>New dunning template variables: <code>{late_fee_due}</code> and <code>{total_with_late_fees}</code>. The shipped <code>day15.md</code> formal notice now quotes the actual accrued fees and total due.
+</li>
+</ul>
+<h3 id="honest-scope-late-fees">Honest scope (late fees)</h3>
+<ul>
+<li>A partial month counts as a full month; the calculator uses the current outstanding balance and does not retroactively amortize mid-accrual payments. Late-fee enforceability varies by jurisdiction.
+</li>
+</ul>
+<h2 id="030---2026-10-05">[0.3.0] - 2026-10-05</h2>
+<p>Real e-signature: clients can now sign the contract electronically instead of (or in addition to) acknowledging via the paid deposit link.</p>
+<h3 id="added-2">Added</h3>
+<ul>
+<li>E-signature capture: <code>invoiceguard project sign-request &lt;id&gt;</code> creates a one-time, single-use signing link (<code>/sign/&lt;token&gt;</code>, served by the dashboard). The client reads the rendered contract, types their full name, and draws a signature on a canvas (mouse or touch).
+</li>
+<li>Tamper evidence: at signing time the exact signed contract text is hashed (SHA-256) and stored with the project, together with the signer's name and timestamp — proving <em>what</em> was signed, not just <em>that</em> something was signed.
+</li>
+<li>Signing flips <code>contract_ack</code> to 1 (a signed contract IS the acknowledgment), with <code>contract_ack_at</code> = signing time. The request token is invalidated after use; re-requesting while a request is pending returns the same link.
+</li>
+<li><code>invoiceguard project sign-status &lt;id&gt;</code> shows pending/signed state, signer, timestamp, and the contract hash. Dashboard signing receipt page shows the captured signature and the hash.
+</li>
+</ul>
+<h3 id="changed">Changed</h3>
+<ul>
+<li>Contract §4 (Sign-off) now describes the electronic signature process instead of the v1 deposit-link acknowledgment. <code>project ack</code> (manual acknowledgment) is kept as a fallback path.
+</li>
+</ul>
+<h3 id="honest-scope-e-signature">Honest scope (e-signature)</h3>
+<ul>
+<li>This is a browser-based typed/drawn signature captured by InvoiceGuard and stored locally — NOT a qualified third-party e-signature service (DocuSign/HelloSign). Legal weight varies by jurisdiction.
+</li>
+</ul>
+<h2 id="020---2026-10-04">[0.2.0] - 2026-10-04</h2>
+<p>Partial payments: invoices no longer have to be all-or-nothing.</p>
+<h3 id="added-3">Added</h3>
+<ul>
+<li>Payment ledger: new <code>payments</code> table (additive migration; pre-0.2.0 paid invoices get a labeled backfill row on first open, so old databases keep working)
+</li>
+<li><code>invoice record-payment &lt;id&gt; --amount &lt;dollars&gt; [--note ...] [--method ...]</code> — record a partial payment; a payment that clears the balance marks the invoice <code>paid</code>, otherwise the invoice becomes <code>partially-paid</code>
+</li>
+<li>Dashboard: per-invoice Paid/Outstanding amounts, a payments ledger on the invoice detail page, payment events in the timeline, a new <code>partially-paid</code> status filter chip, and totals computed from outstanding balances
+</li>
+<li>Dunning emails now show paid-so-far and the remaining balance (<code>{paid}</code> / <code>{outstanding}</code> template variables; the three built-in templates use them)
+</li>
+</ul>
+<h3 id="changed-2">Changed</h3>
+<ul>
+<li><code>invoice mark-paid</code> now records the full outstanding balance in the ledger (was: status flip with no payment record); it errors instead of silently re-marking an already-paid or void invoice
+</li>
+<li>Stripe webhooks record the session amount in the ledger (method <code>stripe</code>); a session for less than the balance leaves the invoice <code>partially-paid</code> instead of <code>paid</code>
+</li>
+<li>Dashboard totals: <em>Collected</em> is now the sum of recorded payments, <em>Outstanding</em>/<em>Overdue</em> are sums of outstanding balances (identical numbers for pre-0.2.0 databases thanks to the backfill)
+</li>
+</ul>
 <h2 id="010---2026-10-02">[0.1.0] - 2026-10-02</h2>
 <p>First release on PyPI (<code>pip install invoiceguard</code>) and GitHub.</p>
-<h3 id="added">Added</h3>
+<h3 id="added-4">Added</h3>
 <ul>
 <li>CLI: <code>init</code>, <code>client add/list</code>, <code>project create/list/ack</code>, <code>invoice create/list/mark-paid/void</code>, <code>check-due</code>, <code>dashboard</code>
 </li>
@@ -142,18 +228,39 @@
     </article>
     <footer class="doc-footer">
       <p>InvoiceGuard is open source (Apache-2.0).
-      <a href="https://github.com/Bilal-Junaid-Jiwani/invoiceguard">GitHub</a> ·
-      <a href="https://pypi.org/project/invoiceguard/">PyPI</a> ·
-      <a href="site/index.html">Marketing site</a></p>
+      <span class="foot-links"><a href="https://github.com/Bilal-Junaid-Jiwani/invoiceguard">GitHub</a><a href="https://pypi.org/project/invoiceguard/">PyPI</a><a href="site/index.html">Marketing site</a></span></p>
     </footer>
   </main>
 
   <aside class="toc-side" aria-label="Table of contents">
     <p class="toc-label">On this page</p>
     <ul class="toc-list">
-<li><a href="#010---2026-10-02">[0.1.0] - 2026-10-02</a>
+<li><a href="#060---2026-10-08">[0.6.0] - 2026-10-08</a>
+</li>
+<li><a href="#050---2026-10-07">[0.5.0] - 2026-10-07</a>
+</li>
+<li><a href="#040---2026-10-06">[0.4.0] - 2026-10-06</a>
 <ul class="toc-sub">
 <li><a href="#added">Added</a></li>
+<li><a href="#honest-scope-late-fees">Honest scope (late fees)</a></li>
+</ul>
+</li>
+<li><a href="#030---2026-10-05">[0.3.0] - 2026-10-05</a>
+<ul class="toc-sub">
+<li><a href="#added-2">Added</a></li>
+<li><a href="#changed">Changed</a></li>
+<li><a href="#honest-scope-e-signature">Honest scope (e-signature)</a></li>
+</ul>
+</li>
+<li><a href="#020---2026-10-04">[0.2.0] - 2026-10-04</a>
+<ul class="toc-sub">
+<li><a href="#added-3">Added</a></li>
+<li><a href="#changed-2">Changed</a></li>
+</ul>
+</li>
+<li><a href="#010---2026-10-02">[0.1.0] - 2026-10-02</a>
+<ul class="toc-sub">
+<li><a href="#added-4">Added</a></li>
 <li><a href="#fixed">Fixed</a></li>
 <li><a href="#honest-scope-v1">Honest scope (v1)</a></li>
 </ul>
