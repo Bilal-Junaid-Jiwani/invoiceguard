@@ -3,10 +3,10 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>InvoiceGuard — stop chasing late payments</title>
-  <meta name="description" content="InvoiceGuard is open-source software for freelancers: deposit links tied to a contract with a late-fee clause, then automated 3-stage collections — email, SMS and WhatsApp. Local-first, Apache-2.0.">
-  <meta property="og:title" content="InvoiceGuard — stop chasing late payments">
-  <meta property="og:description" content="Deposit links + late-fee contracts + automated collections. Open source, local-first.">
+  <title>InvoiceGuard: stop chasing late payments</title>
+  <meta name="description" content="Open-source software for freelancers. A Stripe deposit link tied to a signed late-fee contract, then timed reminders by email and text until the client pays. Local-first, Apache-2.0.">
+  <meta property="og:title" content="InvoiceGuard: stop chasing late payments">
+  <meta property="og:description" content="Deposit links, signed late-fee contracts, and reminders that run themselves. Open source, local-first.">
   <meta property="og:type" content="website">
   <meta property="og:url" content="https://bilal-junaid-jiwani.github.io/invoiceguard/site/">
   <link rel="icon" href="assets/img/favicon.svg" type="image/svg+xml">
@@ -18,7 +18,7 @@
   <div class="nav-inner">
     <a class="brand" href="index.html">
       <img src="assets/img/logo.svg" alt="" width="32" height="32">
-      <span>InvoiceGuard <em>open&nbsp;source</em></span>
+      <span>InvoiceGuard</span>
     </a>
     <button class="nav-toggle" id="nav-toggle" aria-label="Toggle menu" aria-expanded="false">
       <span></span><span></span><span></span>
@@ -38,152 +38,170 @@
 
 <!-- ============ HERO ============ -->
 <section class="hero">
-  <div class="hero-glow" aria-hidden="true"></div>
-  <div class="wrap">
-    <div class="hero-grid">
-      <div class="reveal">
-        <p class="kicker"><span class="kicker-dot"></span>Open-source · Apache-2.0 · v0.6.1</p>
-        <h1>Get paid <span class="accent">before</span> <br class="h1-break">the awkward follow-up.</h1>
-        <p class="hero-sub">InvoiceGuard ties a Stripe deposit link to a contract with a late-fee clause — then runs your collections for you. A polite nudge on day&nbsp;1, a firm reminder on day&nbsp;7, a formal notice — by email and text — on day&nbsp;15. When the client pays, the invoice marks itself paid.</p>
-        <div class="hero-actions">
-          <a class="btn btn-primary" href="../quickstart.html">Start in 5 minutes</a>
-          <a class="btn btn-ghost" href="https://github.com/Bilal-Junaid-Jiwani/invoiceguard">View on GitHub</a>
-        </div>
-        <div class="install-line">
-          <span><span class="prompt">$</span> pip install invoiceguard</span>
-          <button id="copy-install" type="button">Copy</button>
-        </div>
-        <div class="hero-proof">
-          <div class="proof"><strong>Local-first</strong>SQLite on your machine — no cloud account, nothing phones home</div>
-          <div class="proof"><strong>Stripe test mode</strong>run the full flow with test keys before real money</div>
-          <div class="proof"><strong>152 tests green</strong>on the v0.6.1 release, incl. real HMAC webhook checks</div>
-        </div>
+  <div class="wrap hero-grid">
+    <div class="hero-copy">
+      <h1>Get paid before the awkward follow-up.</h1>
+      <p class="hero-sub">InvoiceGuard sends the deposit link, gets the late-fee contract signed, then runs the reminders until your client pays.</p>
+      <div class="hero-actions">
+        <a class="btn btn-primary" href="../quickstart.html">Get started</a>
+        <a class="btn btn-ghost" href="https://github.com/Bilal-Junaid-Jiwani/invoiceguard">View on GitHub</a>
       </div>
-      <div class="hero-visual reveal">
-        <div class="hero-card">
-          <div class="hero-card-head">
-            <h3>Invoices</h3>
-            <span class="status-chip">2 overdue</span>
+      <div class="install-line">
+        <span><span class="prompt">$</span> pip install invoiceguard</span>
+        <button class="copy-btn" type="button" data-copy="pip install invoiceguard">Copy</button>
+      </div>
+    </div>
+
+    <div class="paper-stack" role="img" aria-label="Sample deposit invoice for a bakery client, stamped paid in full, with the signed contract sheet behind it.">
+      <div class="sheet sheet-contract" aria-hidden="true">
+        <p class="doc-title">Service agreement</p>
+        <p class="doc-line">Late fee. Balances unpaid 7 days past due accrue 1.5% per month until the balance is zero.</p>
+        <p class="doc-line">Signed by the client on a one-time link.</p>
+        <p class="doc-hash">sha256: 9f2c4a&hellip;8e41</p>
+      </div>
+      <article class="sheet sheet-invoice" aria-hidden="true">
+        <header class="inv-head">
+          <div>
+            <p class="doc-title">Invoice</p>
+            <p class="doc-sub">Deposit, 50% of the project total</p>
           </div>
-          <table>
-            <thead><tr><th>Invoice</th><th>Status</th><th style="text-align:right">Amount</th></tr></thead>
-            <tbody>
-              <tr><td>Deposit · Website redesign</td><td><span class="badge badge-paid">paid</span></td><td class="money" style="text-align:right">$2,400.00</td></tr>
-              <tr><td>Final · Brand sprint</td><td><span class="badge badge-overdue">overdue · day 7</span></td><td class="money" style="text-align:right">$1,560.00</td></tr>
-              <tr><td>Milestone · API integration</td><td><span class="badge badge-overdue">overdue · day 15</span></td><td class="money" style="text-align:right">$1,800.00</td></tr>
-              <tr><td>Deposit · API integration</td><td><span class="badge badge-sent">sent</span></td><td class="money" style="text-align:right">$3,600.00</td></tr>
-            </tbody>
-          </table>
-          <p class="card-foot">Illustrative dashboard mockup with sample data — real screenshots below.</p>
-        </div>
-        <div class="float-card float-card-a" aria-hidden="true">
-          <svg width="18" height="18" viewBox="0 0 20 20"><path d="M3 11l4.5 4.5L17 6" fill="none" stroke="#0f9d72" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
-          <div><strong>Invoice #1 paid</strong><span>Stripe webhook · just now</span></div>
-        </div>
-        <div class="float-card float-card-b" aria-hidden="true">
-          <svg width="18" height="18" viewBox="0 0 24 24"><path d="M4 6h16v12H4z" fill="none" stroke="#1473e6" stroke-width="1.8"/><path d="M4 6l8 6 8-6" fill="none" stroke="#1473e6" stroke-width="1.8"/></svg>
-          <div><strong>Day-15 notice sent</strong><span>email + WhatsApp</span></div>
-        </div>
-      </div>
-    </div>
-  </div>
-</section>
-
-<!-- ============ TRUST STRIP ============ -->
-<div class="trust">
-  <div class="trust-inner wrap">
-    <span><svg width="16" height="16" viewBox="0 0 16 16"><path d="M8 1l5.5 2v4c0 3.6-2.4 6.3-5.5 8-3.1-1.7-5.5-4.4-5.5-8V3L8 1z" fill="none" stroke="#0f9d72" stroke-width="1.6"/></svg>Apache-2.0 licensed</span>
-    <span><svg width="16" height="16" viewBox="0 0 16 16"><rect x="2" y="2" width="12" height="12" rx="2" fill="none" stroke="#0f9d72" stroke-width="1.6"/><path d="M5 8.5l2 2 4-4.5" fill="none" stroke="#0f9d72" stroke-width="1.6"/></svg>No account, no cloud — runs on your machine</span>
-    <span><svg width="16" height="16" viewBox="0 0 16 16"><path d="M3 5h10M3 8h10M3 11h6" stroke="#0f9d72" stroke-width="1.6" stroke-linecap="round"/></svg>Works alongside your existing invoicing tools</span>
-    <span><svg width="16" height="16" viewBox="0 0 16 16"><circle cx="8" cy="8" r="6.5" fill="none" stroke="#0f9d72" stroke-width="1.6"/><path d="M8 4.5V8l2.4 1.6" fill="none" stroke="#0f9d72" stroke-width="1.6" stroke-linecap="round"/></svg>5-minute setup</span>
-  </div>
-</div>
-
-<!-- ============ FEATURES ============ -->
-<section class="section" id="features">
-  <div class="wrap">
-    <div class="section-head reveal">
-      <p class="eyebrow">Features</p>
-      <h2>Everything a freelancer needs to get paid. Nothing they don't.</h2>
-      <p class="section-lead">Every feature below ships in v0.6.1 and is covered by the test suite. No vaporware, no roadmap theater.</p>
-    </div>
-    <div class="features">
-      <div class="feature reveal">
-        <div class="feature-icon"><svg width="24" height="24" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2.5" fill="none" stroke="#fff" stroke-width="1.8"/><path d="M3 9.5h18" stroke="#fff" stroke-width="1.8"/><rect x="6.5" y="13.5" width="5" height="2.4" rx="1.2" fill="#7BE0BC"/></svg></div>
-        <h3>Stripe deposit links</h3>
-        <p><code>invoice create --kind deposit</code> makes a real Stripe payment link, tagged with your invoice id so payments map back automatically. Test-mode friendly.</p>
-      </div>
-      <div class="feature reveal">
-        <div class="feature-icon"><svg width="24" height="24" viewBox="0 0 24 24"><path d="M6 3h9l4 4v14H6z" fill="none" stroke="#fff" stroke-width="1.8"/><path d="M9.5 12h6M9.5 15.5h6" stroke="#7BE0BC" stroke-width="1.8" stroke-linecap="round"/></svg></div>
-        <h3>Late-fee contracts</h3>
-        <p>Every project generates a contract with a late-fee clause — your rate, your grace period. InvoiceGuard accrues the actual fees (monthly compounding) and shows them on the dashboard.</p>
-      </div>
-      <div class="feature reveal">
-        <div class="feature-icon"><svg width="24" height="24" viewBox="0 0 24 24"><path d="M4 17c2.5-6 5-9 8-9 1.8 0 2.5 1.5 4 1.5 1.6 0 2.5-1 4-1" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round"/><path d="M4 20.5h16" stroke="#7BE0BC" stroke-width="1.8" stroke-linecap="round"/></svg></div>
-        <h3>E-signature capture</h3>
-        <p>The client signs on a one-time link — typed name + drawn signature — and the exact signed text is hashed (SHA-256) and stored as tamper evidence. <em>Honest scope: a captured signature, not a qualified third-party e-signature service.</em></p>
-      </div>
-      <div class="feature reveal">
-        <div class="feature-icon"><svg width="24" height="24" viewBox="0 0 24 24"><rect x="3.5" y="5" width="17" height="13" rx="2.5" fill="none" stroke="#fff" stroke-width="1.8"/><path d="M3.5 5.5l8.5 6 8.5-6" fill="none" stroke="#fff" stroke-width="1.8"/><circle cx="18" cy="18.5" r="4" fill="#0B2B4D"/><path d="M16.4 18.5l1.2 1.2 2.2-2.4" stroke="#7BE0BC" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
-        <h3>3-stage collections</h3>
-        <p>Day-1 nudge → day-7 reminder → day-15 formal notice quoting the late-fee clause. Idempotent — a stage never fires twice for the same invoice. Editable markdown templates.</p>
-      </div>
-      <div class="feature reveal">
-        <div class="feature-icon"><svg width="24" height="24" viewBox="0 0 24 24"><rect x="7" y="2.5" width="10" height="19" rx="2.8" fill="none" stroke="#fff" stroke-width="1.8"/><path d="M10.5 18.5h3" stroke="#7BE0BC" stroke-width="1.8" stroke-linecap="round"/></svg></div>
-        <h3>SMS / WhatsApp escalation</h3>
-        <p>The day-15 notice also goes out as a short text via Twilio when messaging is configured — clients read texts even when email piles up. <code>invoice notify</code> sends the same reminder on demand, with a <code>--dry-run</code> preview.</p>
-      </div>
-      <div class="feature reveal">
-        <div class="feature-icon"><svg width="24" height="24" viewBox="0 0 24 24"><path d="M13 2.5L5 13.5h5.5L9.5 21.5L19 10h-5.5l1-7.5z" fill="none" stroke="#fff" stroke-width="1.8" stroke-linejoin="round"/></svg></div>
-        <h3>Webhook auto-paid</h3>
-        <p>Stripe's <code>checkout.session.completed</code> event marks the invoice paid — verified with real HMAC signature checks, not mocks. A smaller payment leaves it <code>partially-paid</code>. No polling.</p>
-      </div>
-      <div class="feature reveal">
-        <div class="feature-icon"><svg width="24" height="24" viewBox="0 0 24 24"><path d="M12 3v18M6.5 7.5c.8-1.4 2.9-2.2 5.5-2.2 3 0 5 1.3 5 3.2 0 4.6-10.5 2.5-10.5 6.8 0 1.9 2.2 3.2 5.5 3.2 2.6 0 4.7-.9 5.6-2.4" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round"/></svg></div>
-        <h3>Partial payments &amp; ledger</h3>
-        <p>Record part of a bill with <code>invoice record-payment</code> — the payment ledger tracks every dollar in, the invoice goes <code>partially-paid</code>, and dunning keeps chasing only the remaining balance.</p>
-      </div>
-      <div class="feature reveal">
-        <div class="feature-icon"><svg width="24" height="24" viewBox="0 0 24 24"><path d="M5 20V11M10.5 20V5M16 20v-7M21 20H3" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round"/><path d="M5 11l5.5-6 5.5 8" fill="none" stroke="#7BE0BC" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
-        <h3>Receivables report &amp; CSV</h3>
-        <p><code>invoice report</code> shows who owes what and how late — aging buckets, oldest debt first, accrued late fees, per-client totals — and exports invoices and the payment ledger as CSV for your accountant. Read-only.</p>
-      </div>
-      <div class="feature reveal">
-        <div class="feature-icon"><svg width="24" height="24" viewBox="0 0 24 24"><rect x="3" y="3.5" width="18" height="13" rx="2.5" fill="none" stroke="#fff" stroke-width="1.8"/><path d="M7.5 9l-2 2.2 2 2.2M16.5 9l2 2.2-2 2.2" fill="none" stroke="#7BE0BC" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M9.5 21h5" stroke="#fff" stroke-width="1.8" stroke-linecap="round"/></svg></div>
-        <h3>Localhost dashboard</h3>
-        <p>Invoice list with status filters, per-invoice timelines of every escalation, paid/outstanding totals and the payments ledger — served from your own machine, no cloud.</p>
-      </div>
+          <div class="inv-meta">
+            <span>No. 1047</span>
+            <span>Due in 14 days</span>
+          </div>
+        </header>
+        <p class="inv-to">Billed to: Alder Street Bakery (demo)</p>
+        <table class="inv-table">
+          <tbody>
+            <tr>
+              <td>Brand identity and menu boards, deposit</td>
+              <td class="num">$1,250.00</td>
+            </tr>
+            <tr>
+              <td>Late fee once past due, 1.5% monthly after a 7-day grace period</td>
+              <td class="num">per contract</td>
+            </tr>
+            <tr class="inv-total">
+              <td>Total due</td>
+              <td class="num">$1,250.00</td>
+            </tr>
+          </tbody>
+        </table>
+        <p class="inv-foot">Deposit link sent with this invoice. Reminders scheduled by InvoiceGuard.</p>
+        <div class="stamp"><span class="stamp-word">Paid</span><span class="stamp-sub">in full</span></div>
+      </article>
+      <p class="artifact-cap">A deposit invoice, stamped the moment the payment clears. Sample document.</p>
     </div>
   </div>
 </section>
 
 <!-- ============ HOW IT WORKS ============ -->
-<section class="section alt" id="how">
+<section class="section" id="how">
   <div class="wrap">
-    <div class="section-head reveal">
-      <p class="eyebrow">How it works</p>
-      <h2>Set it up once. Then it runs itself.</h2>
-      <p class="section-lead">Three stages, one cron line. Everything after the deposit link is automatic.</p>
+    <div class="sec-head">
+      <h2>After you press send</h2>
+      <p class="sec-lead">A daily run checks what is overdue and sends the next notice. Each stage goes out once. Paid invoices drop out on their own.</p>
     </div>
-    <div class="steps">
-      <div class="step reveal">
-        <div class="step-num">1</div>
-        <h3>Before work starts</h3>
-        <p>Create the project, generate the contract with its late-fee clause, and send the client a one-time signing link. The drawn signature is captured with a SHA-256 hash of the signed text as tamper evidence — or the client accepting the deposit link counts as acknowledgment.</p>
-        <code>project create</code><code>invoice create --kind deposit</code>
-      </div>
-      <div class="step reveal">
-        <div class="step-num">2</div>
-        <h3>After the due date</h3>
-        <p>A daily cron run sends the next escalation stage from your editable templates — day&nbsp;1, day&nbsp;7, day&nbsp;15 — each stage at most once per invoice, never twice. Day 15 also arrives as an SMS or WhatsApp message when Twilio is configured.</p>
-        <code>check-due</code><code>0 9 * * *</code>
-      </div>
-      <div class="step reveal">
-        <div class="step-num">3</div>
-        <h3>When the client pays</h3>
-        <p>Stripe's webhook records the payment automatically — a full payment marks the invoice paid, a smaller one leaves it <code>partially-paid</code>. Off-Stripe money goes in with <code>invoice record-payment</code>. Watch it all happen on the dashboard timeline.</p>
-        <code>POST /webhooks/stripe</code><code>invoiceguard dashboard</code>
-      </div>
+    <table class="ledger">
+      <thead>
+        <tr><th scope="col">When</th><th scope="col">What goes out</th><th scope="col">How</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td class="when">Before work starts</td>
+          <td>The contract, signed on a one-time link, and a Stripe deposit link</td>
+          <td>Sent by you, once</td>
+        </tr>
+        <tr>
+          <td class="when">Day 1 past due</td>
+          <td>A polite nudge with the payment link</td>
+          <td>Email</td>
+        </tr>
+        <tr>
+          <td class="when">Day 7 past due</td>
+          <td>A firmer reminder, with the late fee itemized</td>
+          <td>Email</td>
+        </tr>
+        <tr>
+          <td class="when">Day 15 past due</td>
+          <td>A formal notice quoting the signed clause</td>
+          <td>Email and text</td>
+        </tr>
+        <tr>
+          <td class="when">The moment they pay</td>
+          <td>The invoice flips to paid, the ledger updates, the chasing stops</td>
+          <td>Automatic</td>
+        </tr>
+      </tbody>
+    </table>
+    <p class="ledger-note">Part payments count. The reminders keep chasing whatever balance is left, and stop at zero.</p>
+  </div>
+</section>
+
+<!-- ============ FEATURES ============ -->
+<section class="section" id="features">
+  <div class="wrap">
+    <div class="sec-head">
+      <h2>What it does</h2>
+      <p class="sec-lead">Ten shipped features, grouped by the job they do. The suite behind them runs 152 tests.</p>
+    </div>
+
+    <div class="cluster">
+      <h3>Before the first hour of work</h3>
+      <dl class="feat-list">
+        <div class="feat">
+          <dt>Stripe deposit links</dt>
+          <dd><code>invoiceguard invoice create --kind deposit</code> builds a real Stripe payment link and tags it with the invoice id, so the payment finds its way back. Test mode works end to end.</dd>
+        </div>
+        <div class="feat">
+          <dt>Late-fee contracts</dt>
+          <dd>Every project generates a contract with your late-fee rate and grace period. Fees accrue monthly on overdue balances and show up itemized, never as a surprise.</dd>
+        </div>
+        <div class="feat">
+          <dt>E-signature capture</dt>
+          <dd>The client signs on a one-time link: typed name, drawn signature. The signed text is hashed with SHA-256 and stored as tamper evidence. Stated plainly, it is a captured signature, not a qualified third-party e-signature service.</dd>
+        </div>
+      </dl>
+    </div>
+
+    <div class="cluster">
+      <h3>While the clock runs</h3>
+      <dl class="feat-list">
+        <div class="feat">
+          <dt>3-stage collections</dt>
+          <dd>A polite nudge on day 1, a firmer reminder on day 7, a formal notice on day 15, sent by <code>invoiceguard check-due</code>. The templates are plain markdown you can edit. No stage ever fires twice.</dd>
+        </div>
+        <div class="feat">
+          <dt>SMS and WhatsApp escalation</dt>
+          <dd>The day-15 notice also goes out as a short text through Twilio, if you configure it. <code>invoiceguard invoice notify</code> sends the same reminder on demand, with a <code>--dry-run</code> preview first.</dd>
+        </div>
+        <div class="feat">
+          <dt>Partial payments and the ledger</dt>
+          <dd><code>invoiceguard invoice record-payment</code> logs part of a bill. The ledger tracks what came in, the invoice reads partially-paid, and the reminders chase only what is left.</dd>
+        </div>
+      </dl>
+    </div>
+
+    <div class="cluster">
+      <h3>Proof and paperwork</h3>
+      <dl class="feat-list">
+        <div class="feat">
+          <dt>Webhook auto-paid</dt>
+          <dd>Stripe confirms the payment, the webhook lands, the invoice marks itself paid. Signatures are checked with real HMAC verification. No polling, no refreshing.</dd>
+        </div>
+        <div class="feat">
+          <dt>Receivables report and CSV</dt>
+          <dd><code>invoiceguard invoice report</code> ages every open balance, oldest debt first, with accrued late fees and per-client totals. <code>--csv</code> exports the invoices and the payment ledger for your accountant.</dd>
+        </div>
+        <div class="feat">
+          <dt>Exact money</dt>
+          <dd>Amounts are stored as exact decimals and rounded half-up, never as floats. A cent is a cent, on every line of the ledger.</dd>
+        </div>
+        <div class="feat">
+          <dt>Localhost dashboard</dt>
+          <dd>The same books in a browser: the invoice list, per-invoice timelines, paid and outstanding totals, the payment ledger. It serves from your machine. There is no account and no cloud.</dd>
+        </div>
+      </dl>
     </div>
   </div>
 </section>
@@ -191,141 +209,108 @@
 <!-- ============ EXAMPLE WORKFLOW ============ -->
 <section class="section" id="workflow">
   <div class="wrap">
-    <div class="section-head reveal">
-      <p class="eyebrow">Example workflow</p>
-      <h2>One project, start to paid.</h2>
-      <p class="section-lead">The commands below are the real CLI, walked through a sample engagement. Amounts are illustrative.</p>
+    <div class="sec-head">
+      <h2>Run it on a real job</h2>
+      <p class="sec-lead">The actual commands, in order, on a sample engagement. Amounts are illustrative.</p>
     </div>
-    <ol class="timeline">
-      <li class="reveal">
-        <div class="tl-step"><span class="tl-badge">Setup</span><time>~5 minutes</time></div>
-        <div class="tl-body">
-          <h3>Install &amp; configure</h3>
-          <p><code>invoiceguard init</code> creates <code>~/.invoiceguard</code> with config, database and editable email templates. Paste your Stripe test key and SMTP details into the config — keys live only in config/env, never hardcoded.</p>
-          <pre><code>$ pip install invoiceguard
-$ invoiceguard init</code></pre>
-        </div>
-      </li>
-      <li class="reveal">
-        <div class="tl-step"><span class="tl-badge">Protect</span><time>before work starts</time></div>
-        <div class="tl-body">
-          <h3>Contract + deposit link</h3>
-          <p>Create the client and project; InvoiceGuard generates the contract with your late-fee clause and a Stripe deposit link. Send the one-time signing link — typed name, drawn signature, SHA-256 hash stored — or let the deposit-link acceptance count as acknowledgment.</p>
-          <pre><code>$ invoiceguard client add --name "Acme Corp" --email "billing@acme.com"
-$ invoiceguard project create --client "Acme Corp" --title "Website redesign" \
-    --amount 2000 --deposit-pct 50 --late-fee-pct 1.5
+    <pre class="transcript"><code><span class="tc"># Once: install and set up</span>
+$ pip install invoiceguard
+$ invoiceguard init
+
+<span class="tc"># Before work: client, contract, deposit link</span>
+$ invoiceguard client add --name "Alder Street Bakery" --email billing@alderstreet.example
+$ invoiceguard project create --client "Alder Street Bakery" \
+    --title "Menu boards and signage" --amount 2500 --deposit-pct 50 --late-fee-pct 1.5
 $ invoiceguard invoice create --project 1 --kind deposit
-# =&gt; invoice #1 (deposit): $1,000.00 — pay link: https://buy.stripe.com/...</code></pre>
-        </div>
-      </li>
-      <li class="reveal">
-        <div class="tl-step"><span class="tl-badge">Escalate</span><time>day 1 · 7 · 15</time></div>
-        <div class="tl-body">
-          <h3>Collections run themselves</h3>
-          <p>A daily cron run scans past-due invoices and sends the next stage from your templates — and only the next stage. Each stage fires at most once per invoice. The day-15 formal notice also goes by SMS/WhatsApp when configured.</p>
-          <pre><code>$ invoiceguard check-due
-# day-1 polite nudge · day-7 firm reminder · day-15 formal notice (email + text)</code></pre>
-        </div>
-      </li>
-      <li class="reveal">
-        <div class="tl-step"><span class="tl-badge">Close</span><time>on payment</time></div>
-        <div class="tl-body">
-          <h3>Payment recorded automatically</h3>
-          <p>Stripe's <code>checkout.session.completed</code> webhook flips the invoice to paid; partial payments land in the ledger and leave the balance open for the next stage. Pull the aging report anytime — or export CSV for your accountant.</p>
-          <pre><code>$ invoiceguard invoice report --csv receivables.csv
-# aging buckets · oldest debt first · accrued late fees · per-client totals</code></pre>
-        </div>
-      </li>
-    </ol>
+<span class="tc"># invoice 1: $1,250.00 due. Deposit link sent.</span>
+
+<span class="tc"># After the due date: the daily run does the chasing</span>
+$ invoiceguard check-due
+<span class="tc"># day 1 nudge, day 7 reminder, day 15 formal notice (email, plus text if configured)</span>
+
+<span class="tc"># When the money lands: recorded by webhook, or by hand</span>
+$ invoiceguard invoice record-payment 1 --amount 1250 --method bank
+
+<span class="tc"># Anytime: who owes what</span>
+$ invoiceguard invoice report --csv receivables.csv</code></pre>
   </div>
 </section>
 
 <!-- ============ SCREENSHOTS ============ -->
-<section class="section alt" id="screenshots">
+<section class="section" id="screenshots">
   <div class="wrap">
-    <div class="section-head center reveal">
-      <p class="eyebrow">Screenshots</p>
-      <h2>The real dashboard.</h2>
-      <p class="section-lead">Captured from InvoiceGuard v0.2.0 running locally — the actual app, not mockups.</p>
+    <div class="sec-head">
+      <h2>The dashboard</h2>
+      <p class="sec-lead">The real app, running locally on seeded demo data. Every sample client in it is labeled (demo).</p>
     </div>
-    <div class="shots">
-      <div class="shot reveal">
-        <img src="assets/img/dashboard-list.png" alt="InvoiceGuard dashboard invoice list" loading="lazy">
-        <div class="shot-cap">
-          <h3>Invoice list</h3>
-          <p>Status filters, outstanding/overdue/collected totals, and the current escalation stage on every row.</p>
-        </div>
-      </div>
-      <div class="shot reveal">
-        <img src="assets/img/dashboard-detail.png" alt="InvoiceGuard dashboard invoice detail timeline" loading="lazy">
-        <div class="shot-cap">
-          <h3>Invoice detail</h3>
-          <p>Amount, status, payment link, due date, and a chronological timeline of every dunning event.</p>
-        </div>
-      </div>
-      <div class="shot reveal">
-        <img src="assets/img/dashboard-partial-payment.png" alt="InvoiceGuard dashboard invoice detail with partial payment ledger" loading="lazy">
-        <div class="shot-cap">
-          <h3>Partial payments</h3>
-          <p>A partially-paid invoice: paid and outstanding balances, the payments ledger, and payment events in the timeline.</p>
-        </div>
-      </div>
+    <figure class="shot shot-wide">
+      <img src="assets/img/dashboard-list.png" alt="InvoiceGuard dashboard showing the invoice list" loading="lazy">
+      <figcaption><strong>Invoice list.</strong> Every open invoice, its stage, and what is still owed.</figcaption>
+    </figure>
+    <div class="shots-row">
+      <figure class="shot">
+        <img src="assets/img/dashboard-detail.png" alt="InvoiceGuard dashboard showing one invoice and its timeline" loading="lazy">
+        <figcaption><strong>Invoice detail.</strong> Amount, due date, payment link, and every notice the invoice has sent.</figcaption>
+      </figure>
+      <figure class="shot shot-offset">
+        <img src="assets/img/dashboard-partial-payment.png" alt="InvoiceGuard dashboard showing a part-paid invoice and its payment ledger" loading="lazy">
+        <figcaption><strong>Partial payments.</strong> A part-paid invoice, with the ledger keeping the balance honest.</figcaption>
+      </figure>
     </div>
-    <p class="demo-note reveal">Screenshots show seeded demo data — every sample client and project is labeled <strong>(demo)</strong> and is not a real client.</p>
   </div>
 </section>
 
-<!-- ============ HONEST LIMITS ============ -->
+<!-- ============ FINE PRINT ============ -->
 <section class="section">
   <div class="wrap">
-    <div class="honest reveal">
-      <h3>Honest about v1's limits</h3>
+    <div class="fineprint">
+      <h2>The fine print</h2>
+      <p class="fineprint-lead">What InvoiceGuard does not do, in writing.</p>
       <ul>
-        <li>The e-signature is browser-captured (typed name + drawn signature, SHA-256 hash of the signed text stored as tamper evidence) — not a qualified third-party e-signature service.</li>
-        <li>Live Stripe calls weren't verified in the build environment — payment links were tested with a mocked SDK; webhook signatures with real HMAC checks. You add your own test key.</li>
-        <li>Emails go through <em>your</em> SMTP — deliverability is yours.</li>
-        <li>SMS/WhatsApp needs your own Twilio account; only message clients who agreed to be contacted.</li>
-        <li>Late-fee enforceability varies by jurisdiction; the clause is a starting point, not legal advice.</li>
+        <li>The e-signature is a captured signature: typed name, drawn signature, and a SHA-256 hash of the signed text as tamper evidence. It is not a qualified third-party e-signature service.</li>
+        <li>Live Stripe calls were not verified in the build environment. Payment links are tested against a mocked SDK, webhook signatures against real HMAC checks. You bring your own test key.</li>
+        <li>Email leaves through your SMTP provider. Deliverability is yours.</li>
+        <li>Texts need your own Twilio account, and should only go to clients who agreed to be contacted.</li>
+        <li>Whether a late fee holds up depends on where you and your client are. The contract clause is a starting point, not legal advice.</li>
       </ul>
     </div>
   </div>
 </section>
 
 <!-- ============ FAQ ============ -->
-<section class="section alt" id="faq">
+<section class="section" id="faq">
   <div class="wrap">
-    <div class="section-head center reveal">
-      <p class="eyebrow">FAQ</p>
-      <h2>Questions, answered plainly.</h2>
+    <div class="sec-head">
+      <h2>Questions, answered plainly</h2>
     </div>
     <div class="faq">
-      <details class="reveal">
+      <details>
         <summary>Is InvoiceGuard free?</summary>
-        <p>Yes. It's open source under the Apache-2.0 license — use it, modify it, no account, no subscription. Stripe's own fees apply when you collect real payments, as with any Stripe integration.</p>
+        <p>Yes. It is open source under the Apache-2.0 license. Use it, modify it, no account, no subscription. Stripe charges its own fees on real payments, as with any Stripe integration.</p>
       </details>
-      <details class="reveal">
+      <details>
         <summary>Do I need Stripe to use it?</summary>
-        <p>For payment links, yes — that's how clients pay. Everything else (contracts, dunning, dashboard) works without it. Stripe's test mode lets you try the full flow with test keys before touching real money.</p>
+        <p>For payment links, yes. Contracts, reminders, and the dashboard work without it. Stripe test mode runs the whole flow on test keys before any real money moves.</p>
       </details>
-      <details class="reveal">
+      <details>
         <summary>Where does my data live?</summary>
-        <p>In a SQLite database on your own machine (<code>~/.invoiceguard/invoiceguard.db</code> by default). There's no cloud account and nothing phones home.</p>
+        <p>In a SQLite database on your own machine, at <code>~/.invoiceguard/invoiceguard.db</code> by default. There is no cloud account, and nothing phones home.</p>
       </details>
-      <details class="reveal">
-        <summary>Is the contract a legal e-signature?</summary>
-        <p>Since v0.3.0 the client signs electronically in the browser: typed name + drawn signature, with the exact signed text hashed (SHA-256) and stored as tamper evidence. Honest framing: it is a captured signature, not a qualified third-party e-signature service (DocuSign/HelloSign) — legal weight varies by jurisdiction.</p>
+      <details>
+        <summary>Is the signature legally binding?</summary>
+        <p>The client signs in the browser: typed name, drawn signature, and the exact signed text hashed with SHA-256 as tamper evidence. It is a captured signature, not a qualified third-party service like DocuSign. Legal weight varies by jurisdiction.</p>
       </details>
-      <details class="reveal">
+      <details>
         <summary>How do the collection emails get sent?</summary>
-        <p>Through your SMTP provider (Gmail App Password, SendGrid, anything). You edit the three markdown templates; a daily cron run sends the next stage. Each stage is sent at most once per invoice.</p>
+        <p>Through your SMTP provider, using three markdown templates you can edit. A daily run sends the next stage. Each stage goes out at most once per invoice.</p>
       </details>
-      <details class="reveal">
+      <details>
         <summary>What happens when a client pays?</summary>
-        <p>Stripe sends a <code>checkout.session.completed</code> webhook to your dashboard, which verifies the signature and marks the invoice paid automatically. A smaller payment leaves it partially paid. You can also record payments manually from the CLI.</p>
+        <p>Stripe sends a <code>checkout.session.completed</code> webhook. InvoiceGuard verifies the signature and marks the invoice paid. A smaller payment leaves it partially paid, and you can record off-Stripe payments from the CLI.</p>
       </details>
-      <details class="reveal">
+      <details>
         <summary>Will it replace my invoicing tool?</summary>
-        <p>It's designed to work alongside whatever you already use. InvoiceGuard handles the deposit link, the late-fee contract, and the collections — your existing tool can keep doing the rest.</p>
+        <p>It is built to sit next to the one you have. InvoiceGuard takes the deposit link, the late-fee contract, and the follow-up. Your current tool can keep the rest.</p>
       </details>
     </div>
   </div>
@@ -334,13 +319,14 @@ $ invoiceguard invoice create --project 1 --kind deposit
 <!-- ============ FINAL CTA ============ -->
 <section class="cta-section">
   <div class="wrap">
-    <div class="final-cta reveal">
-      <h2>Late payments are a solved problem now.</h2>
-      <p>Five minutes: install, add a test key, create your first deposit link. The collections run themselves after that.</p>
-      <div class="cta-actions">
-        <a class="btn btn-primary" href="../quickstart.html">Read the quickstart</a>
-        <div class="install-line install-line-dark">
+    <div class="stub">
+      <h2>Let the invoice do the chasing.</h2>
+      <p>Install it, add a test key, send your first deposit link. The follow-up runs itself from there.</p>
+      <div class="stub-actions">
+        <a class="btn btn-primary" href="../quickstart.html">Get started</a>
+        <div class="install-line">
           <span><span class="prompt">$</span> pip install invoiceguard</span>
+          <button class="copy-btn" type="button" data-copy="pip install invoiceguard">Copy</button>
         </div>
       </div>
     </div>
@@ -353,14 +339,14 @@ $ invoiceguard invoice create --project 1 --kind deposit
     <div class="foot-grid">
       <div>
         <div class="foot-brand"><img src="assets/img/logo.svg" alt="" width="28" height="28"> InvoiceGuard</div>
-        <p>Open-source freelancer payment enforcement: deposit links, late-fee contracts, automated collections. Local-first, Apache-2.0.</p>
+        <p>Open-source payment follow-up for freelancers: deposit links, late-fee contracts, and reminders that run themselves. Local-first, Apache-2.0.</p>
       </div>
       <div>
         <h4>Product</h4>
         <ul>
           <li><a href="#features">Features</a></li>
           <li><a href="#how">How it works</a></li>
-          <li><a href="#workflow">Example workflow</a></li>
+          <li><a href="#workflow">Example</a></li>
           <li><a href="#screenshots">Screenshots</a></li>
           <li><a href="#faq">FAQ</a></li>
         </ul>
@@ -379,13 +365,13 @@ $ invoiceguard invoice create --project 1 --kind deposit
         <ul>
           <li><a href="https://github.com/Bilal-Junaid-Jiwani/invoiceguard">GitHub</a></li>
           <li><a href="https://pypi.org/project/invoiceguard/">PyPI</a></li>
-          <li><a href="https://github.com/Bilal-Junaid-Jiwani/invoiceguard/blob/main/LICENSE">Apache-2.0 License</a></li>
+          <li><a href="https://github.com/Bilal-Junaid-Jiwani/invoiceguard/blob/main/LICENSE">Apache-2.0 license</a></li>
         </ul>
       </div>
     </div>
     <div class="foot-base">
-      <span>InvoiceGuard v0.6.1 · Apache-2.0</span>
-      <span><a href="../index.html">Docs</a> · <a href="https://github.com/Bilal-Junaid-Jiwani/invoiceguard">GitHub</a> · <a href="https://pypi.org/project/invoiceguard/">PyPI</a></span>
+      <span>Open source under the Apache-2.0 license.</span>
+      <span class="foot-links"><a href="../index.html">Docs</a><a href="https://github.com/Bilal-Junaid-Jiwani/invoiceguard">GitHub</a><a href="https://pypi.org/project/invoiceguard/">PyPI</a></span>
     </div>
   </div>
 </footer>
