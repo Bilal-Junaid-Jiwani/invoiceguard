@@ -1,4 +1,6 @@
-/* InvoiceGuard marketing site — nav toggle, copy-install, scroll reveal. */
+/* InvoiceGuard marketing site: mobile nav toggle, copy buttons.
+   The one motion moment (the stamp) is CSS-only and honors
+   prefers-reduced-motion. Nothing else animates on scroll. */
 (function () {
   var toggle = document.getElementById("nav-toggle");
   var links = document.getElementById("nav-links");
@@ -15,32 +17,18 @@
     });
   }
 
-  var copy = document.getElementById("copy-install");
-  if (copy) {
-    copy.addEventListener("click", function () {
+  var buttons = document.querySelectorAll(".copy-btn");
+  buttons.forEach(function (btn) {
+    btn.addEventListener("click", function () {
+      var text = btn.getAttribute("data-copy") || "";
       var done = function () {
-        copy.textContent = "Copied";
-        setTimeout(function () { copy.textContent = "Copy"; }, 1600);
+        var original = btn.textContent;
+        btn.textContent = "Copied";
+        setTimeout(function () { btn.textContent = original; }, 1600);
       };
       if (navigator.clipboard && navigator.clipboard.writeText) {
-        navigator.clipboard.writeText("pip install invoiceguard").then(done, done);
+        navigator.clipboard.writeText(text).then(done, done);
       } else { done(); }
     });
-  }
-
-  /* scroll-reveal: fade/slide sections in as they enter the viewport */
-  var reveal = document.querySelectorAll(".reveal");
-  if ("IntersectionObserver" in window && reveal.length) {
-    var io = new IntersectionObserver(function (entries) {
-      entries.forEach(function (entry) {
-        if (entry.isIntersecting) {
-          entry.target.classList.add("in-view");
-          io.unobserve(entry.target);
-        }
-      });
-    }, { threshold: 0.12, rootMargin: "0px 0px -40px 0px" });
-    reveal.forEach(function (el) { io.observe(el); });
-  } else {
-    reveal.forEach(function (el) { el.classList.add("in-view"); });
-  }
+  });
 })();
