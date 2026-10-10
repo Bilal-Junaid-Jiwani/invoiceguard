@@ -2,6 +2,16 @@
 
 Every release, newest first. InvoiceGuard follows semver.
 
+## [0.6.2] - 2026-10-10
+
+Contract deposit fix: the amount printed in the contract now always matches the deposit you are quoted and charged.
+
+### Fixed
+- `render_contract` computed the deposit shown in the contract with binary float + Python's `round()` (banker's rounding) — so a $10.05 project at 50% produced a contract saying a **$5.02** deposit was due, while `project create` quoted $5.03 and the deposit invoice charged $5.03. The contract is the document the client signs (and whose exact text is SHA-256-hashed as tamper evidence at signing), so its deposit figure must be the charged one. It now uses the project's money convention — `Decimal`, rounded half-up to the cent — the same rule the CLI amount parsing (0.6.1) and the late-fee calculator already used.
+
+### Honest scope (0.6.2)
+- Only the deposit figure in newly generated contract text changes, and only on half-cent boundaries (odd-cent totals at a 50% split, etc.) where the old rounding disagreed. Stored contracts, invoice amounts, and the payment ledger are untouched; existing databases need no migration. Agency mode remains unshipped.
+
 ## [0.6.1] - 2026-10-09
 
 CLI money-parsing fix: amounts you type are no longer a cent low.

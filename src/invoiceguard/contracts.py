@@ -17,6 +17,7 @@ tamper-evidence hash — NOT a qualified third-party e-signature service
 from __future__ import annotations
 
 from datetime import date
+from decimal import Decimal, ROUND_HALF_UP
 
 CONTRACT_TEMPLATE = """\
 # Freelance Services Agreement
@@ -57,10 +58,23 @@ the client's acknowledgment (recorded in InvoiceGuard as contract_ack = 1).
 """
 
 
+def _deposit_cents(amount_cents: int, deposit_pct: float) -> int:
+    """deposit_pct% of a cents amount, rounded half-up to the cent.
+
+    The project's money convention (cli._pct_cents, late_fees.py):
+    Decimal arithmetic, never float + round(). Banker's rounding on a
+    binary float turned a $10.05 project at 50% into a $5.02 contract
+    deposit while the CLI quoted — and the deposit invoice charged —
+    $5.03.
+    """
+    return int((Decimal(amount_cents) * Decimal(str(deposit_pct)) / 100)
+               .quantize(Decimal("1"), rounding=ROUND_HALF_UP))
+
+
 def render_contract(client_name: str, client_email: str | None, title: str,
                     amount_cents: int, currency: str, deposit_pct: float,
                     late_fee_pct: float, late_fee_grace_days: int) -> str:
-    deposit_cents = round(amount_cents * deposit_pct / 100.0)
+    deposit_cents = _deposit_cents(amount_cents, deposit_pct)
     return CONTRACT_TEMPLATE.format(
         title=title,
         client_name=client_name,

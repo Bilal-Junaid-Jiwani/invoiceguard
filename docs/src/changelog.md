@@ -5,6 +5,14 @@ description: InvoiceGuard release history — newest first, no fluff.
 ---
 InvoiceGuard follows semver. Newest first.
 
+## [0.6.2] - 2026-10-10
+
+Contract deposit fix: the deposit figure printed in the generated contract now always matches the quoted (and charged) deposit. The contract previously used float + banker's rounding, so a $10.05 project at 50% said $5.02 in the contract while the CLI quoted and charged $5.03. It now uses Decimal half-up, the same money rule as CLI amounts and late fees. Honest scope: only newly generated contract text changes, only on half-cent boundaries; stored contracts and invoices are untouched.
+
+## [0.6.1] - 2026-10-09
+
+CLI money-parsing fix: `--amount` values are parsed with Decimal half-up instead of float + `round()`, so `--amount 1.005` records 101 cents, not 100; non-positive or non-numeric amounts are rejected before anything is written. Honest scope: only CLI-entered amounts changed; stored cents and Stripe session amounts were already exact.
+
 ## [0.6.0] - 2026-10-08
 
 Receivables report: `invoiceguard invoice report [--as-of YYYY-MM-DD]` — read-only aging over open invoices (Current / 1-30 / 31-60 / 61-90 / 90+ day buckets, per-client totals, accrued late fees via the same §3 calculator as `invoice late-fees`), with `--csv` / `--payments-csv` exports for accounting. "Outstanding" matches the dashboard totals; drafts, paid, and void invoices are excluded. See [CLI reference](cli.html). Honest scope: read-only; fees are computed on the current outstanding balance as of the report date.
