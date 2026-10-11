@@ -105,6 +105,8 @@
 </li>
 <li><a href="#idempotency">Idempotency</a>
 </li>
+<li><a href="#skipped-invoices">Skipped invoices</a>
+</li>
 <li><a href="#cron-setup">Cron setup</a>
 </li>
 <li><a href="#email-templates">Email templates</a>
@@ -122,6 +124,11 @@
 <p>The earliest stage whose threshold is met <strong>and that hasn't been sent yet</strong> is sent — escalation always goes day1 → day7 → day15, and exactly one email is sent per invoice per run.</p>
 <h2 id="idempotency">Idempotency</h2>
 <p>Each stage is recorded in the <code>dunning_events</code> table and sent <strong>at most once per invoice</strong>. Re-running <code>check-due</code> never double-sends. Only invoices with status <code>sent</code>, <code>overdue</code>, or <code>partially-paid</code>, a due date in the past, and an outstanding balance above zero are considered; a sent invoice flips to <code>overdue</code> on its first dunning email. Partially-paid invoices keep escalating until the balance is zero — the emails show the paid-so-far and remaining balance (see template variables).</p>
+<h2 id="skipped-invoices">Skipped invoices</h2>
+<p>An invoice whose client has <strong>no email on file</strong> is skipped with a reported reason instead of crashing the run:</p>
+<pre class="codeblock" data-lang="bash"><code>skipped day7 (invoice #3): client has no email on file — add one with `invoiceguard client set-email`
+</code></pre>
+<p>Nothing is recorded for a skipped invoice, so the stage goes out normally on the next run after the email is added. The rest of the batch is unaffected — every other overdue invoice still gets its email.</p>
 <h2 id="cron-setup">Cron setup</h2>
 <pre class="codeblock" data-lang="cron"><code>0 9 * * * /path/to/venv/bin/invoiceguard check-due &gt;&gt; ~/.invoiceguard/check-due.log 2&gt;&amp;1
 </code></pre>
@@ -163,6 +170,8 @@
 <li><a href="#the-three-stages">The three stages</a>
 </li>
 <li><a href="#idempotency">Idempotency</a>
+</li>
+<li><a href="#skipped-invoices">Skipped invoices</a>
 </li>
 <li><a href="#cron-setup">Cron setup</a>
 </li>
