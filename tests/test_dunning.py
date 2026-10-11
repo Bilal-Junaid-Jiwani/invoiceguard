@@ -122,3 +122,70 @@ class TestCheckDueIdempotency:
         db.record_dunning(iid, "day7")
         check_due(db, smtp_cfg)
         assert bodies and "1.5% per month" in bodies[0]
+
+
+class TestCheckDueSkipsEmailLessClients:
+    """check-due must not crash when a client has no email (0.6.3).
+
+    Regression: send_email() raises ValueError on an empty recipient,
+    which aborted the whole dunning run — every other overdue invoice
+    never got its email. Now the stage is skipped with a reported
+    reason, and adding the email later re-sends the stage.
+    """
+
+    def _client_project_invoice(self, db, name, email, days):
+        cid = db.add_client(name, email)
+        pid = db.add_project(cid, "Work", 100_000, contract_md="x")
+        due = (date.today() - timedelta(days=days)).isoformat()
+        iid = db.add_invoice(pid, "final", 100_000, "USD", status="sent",
+                             due_date=due)
+        db.update_invoice(iid, stripe_url="https://pay.stripe.test/x")
+        return iid
+
+    def test_email_less_client_is_skipped_not_crashed(
+            self, db, smtp_cfg, home, monkeypatch):
+        sent = []
+        monkeypatch.setattr(
+            "invoiceguard.dunning.send_email",
+            lambda cfg, to, subject, body: sent.append(to))
+
+        iid_ok = self._client_project_invoice(
+            db, "Has Email", "billing@has.test", days=2)
+        iid_skip = self._client_project_invoice(
+            db, "No Email", None, days=2)
+
+        results = check_due(db, smtp_cfg)  # must not raise
+
+        by_id = {r["invoice_id"]: r for r in results}
+        assert by_id[iid_ok]["stage"] == "day1"
+        assert by_id[iid_ok]["to"] == "billing@has.test"
+        assert "skipped" not in by_id[iid_ok]
+
+        skip = by_id[iid_skip]
+        assert skip["stage"] == "day1"
+        assert skip["to"] is None
+        assert "no email" in skip["skipped"]
+
+        # the good client still got its email; nothing was recorded
+        # for the skipped invoice, so the stage goes out later once
+        # an email is on file.
+        assert sent == ["billing@has.test"]
+        assert db.sent_stages(iid_skip) == set()
+        assert db.get_invoice(iid_skip)["status"] == "sent"
+
+    def test_stage_sends_after_email_added(
+            self, db, smtp_cfg, home, monkeypatch):
+        sent = []
+        monkeypatch.setattr(
+            "invoiceguard.dunning.send_email",
+            lambda cfg, to, subject, body: sent.append(to))
+        iid = self._client_project_invoice(db, "No Email", None, days=2)
+        assert check_due(db, smtp_cfg)[0].get("skipped")
+        # find the client through the project
+        pid = db.get_invoice(iid)["project_id"]
+        cid = db.get_project(pid)["client_id"]
+        db.set_client_email(cid, "now@here.test")
+        results = check_due(db, smtp_cfg)
+        assert results[0]["stage"] == "day1"
+        assert results[0]["to"] == "now@here.test"
+        assert sent == ["now@here.test"]

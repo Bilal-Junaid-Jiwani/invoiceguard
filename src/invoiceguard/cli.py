@@ -113,6 +113,24 @@ def client_add(name, email, phone):
                + (f" phone {normalize_phone(phone)}" if phone else ""))
 
 
+@client.command("set-email")
+@click.argument("client_id", type=int)
+@click.option("--email", default=None,
+              help="Email address (for dunning); omit (or pass empty) "
+                   "to clear it")
+def client_set_email(client_id, email):
+    """Set or clear a client's email address (dunning)."""
+    db = _db()
+    if not db.get_client(client_id):
+        db.close()
+        raise click.ClickException(f"no client #{client_id}")
+    normalized = email.strip() if email and email.strip() else None
+    db.set_client_email(client_id, normalized)
+    db.close()
+    click.echo(f"client #{client_id}: email "
+               f"{normalized or '(cleared)'}")
+
+
 @client.command("set-phone")
 @click.argument("client_id", type=int)
 @click.option("--phone", default=None,
@@ -640,6 +658,10 @@ def check_due_cmd():
     if not results:
         click.echo("nothing due — no emails sent")
     for r in results:
+        if r.get("skipped"):
+            click.echo(f"skipped {r['stage']} (invoice #{r['invoice_id']}): "
+                       f"{r['skipped']}")
+            continue
         click.echo(f"sent {r['stage']} to {r['to']} "
                    f"(invoice #{r['invoice_id']})")
         if r.get("message_to"):

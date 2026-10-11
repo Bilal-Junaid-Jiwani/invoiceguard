@@ -19,6 +19,16 @@ The earliest stage whose threshold is met **and that hasn't been sent yet** is s
 
 Each stage is recorded in the `dunning_events` table and sent **at most once per invoice**. Re-running `check-due` never double-sends. Only invoices with status `sent`, `overdue`, or `partially-paid`, a due date in the past, and an outstanding balance above zero are considered; a sent invoice flips to `overdue` on its first dunning email. Partially-paid invoices keep escalating until the balance is zero — the emails show the paid-so-far and remaining balance (see template variables).
 
+## Skipped invoices
+
+An invoice whose client has **no email on file** is skipped with a reported reason instead of crashing the run:
+
+```bash
+skipped day7 (invoice #3): client has no email on file — add one with `invoiceguard client set-email`
+```
+
+Nothing is recorded for a skipped invoice, so the stage goes out normally on the next run after the email is added. The rest of the batch is unaffected — every other overdue invoice still gets its email.
+
 ## Cron setup
 
 ```cron

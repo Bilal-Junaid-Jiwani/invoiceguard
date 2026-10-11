@@ -167,6 +167,13 @@ class DB:
         )
         self.conn.commit()
 
+    def set_client_email(self, client_id: int, email: str | None) -> None:
+        self.conn.execute(
+            "UPDATE clients SET email = ? WHERE id = ?",
+            (email, client_id),
+        )
+        self.conn.commit()
+
     def get_client(self, client_id: int) -> sqlite3.Row | None:
         return self.conn.execute(
             "SELECT * FROM clients WHERE id = ?", (client_id,)

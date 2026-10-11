@@ -165,3 +165,31 @@ def test_dashboard_launches_uvicorn(home, monkeypatch):
     out = CliRunner().invoke(cli, ["dashboard", "--port", "9000"]).output
     assert "http://127.0.0.1:9000/" in out
     assert calls["port"] == 9000
+
+
+def test_client_set_email(home):
+    # `client add` allows omitting --email, and there was no way to add
+    # one later — `client set-email` fills that gap (0.6.3).
+    r = CliRunner()
+    r.invoke(cli, ["client", "add", "--name", "Initech"])
+    assert "billing@initech.test" not in r.invoke(cli, ["client", "list"]).output
+
+    res = r.invoke(cli, ["client", "set-email", "1",
+                         "--email", "billing@initech.test"])
+    assert res.exit_code == 0, res.output
+    assert "billing@initech.test" in res.output
+    assert "billing@initech.test" in r.invoke(cli, ["client", "list"]).output
+
+    # clear it again
+    res = r.invoke(cli, ["client", "set-email", "1"])
+    assert res.exit_code == 0, res.output
+    assert "(cleared)" in res.output
+    assert "billing@initech.test" not in r.invoke(cli, ["client", "list"]).output
+
+
+def test_client_set_email_unknown_client(home):
+    r = CliRunner()
+    res = r.invoke(cli, ["client", "set-email", "42",
+                         "--email", "x@y.test"])
+    assert res.exit_code != 0
+    assert "no client #42" in res.output

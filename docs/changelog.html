@@ -93,6 +93,8 @@
         <details>
           <summary>On this page</summary>
           <ul class="toc-list">
+<li><a href="#063---2026-10-11">[0.6.3] - 2026-10-11</a>
+</li>
 <li><a href="#062---2026-10-10">[0.6.2] - 2026-10-10</a>
 </li>
 <li><a href="#061---2026-10-09">[0.6.1] - 2026-10-09</a>
@@ -131,6 +133,8 @@
         </details>
       </div>
       <p>InvoiceGuard follows semver. Newest first.</p>
+<h2 id="063---2026-10-11">[0.6.3] - 2026-10-11</h2>
+<p>Dunning robustness: <code>check-due</code> used to crash the whole collections run (<code>ValueError: recipient address is empty</code>) when any overdue invoice's client had no email on file — easy to hit, since <code>client add</code> makes <code>--email</code> optional. Now such invoices are skipped with a reported reason, nothing is recorded for them, and every other overdue invoice still gets its email. New: <code>invoiceguard client set-email &lt;id&gt; [--email ...]</code> to add or clear a client's email (dunning) after creation.</p>
 <h2 id="062---2026-10-10">[0.6.2] - 2026-10-10</h2>
 <p>Contract deposit fix: the deposit figure printed in the generated contract now always matches the quoted (and charged) deposit. The contract previously used float + banker's rounding, so a $10.05 project at 50% said $5.02 in the contract while the CLI quoted and charged $5.03. It now uses Decimal half-up, the same money rule as CLI amounts and late fees. Honest scope: only newly generated contract text changes, only on half-cent boundaries; stored contracts and invoices are untouched.</p>
 <h2 id="061---2026-10-09">[0.6.1] - 2026-10-09</h2>
@@ -243,6 +247,8 @@
   <aside class="toc-side" aria-label="Table of contents">
     <p class="toc-label">On this page</p>
     <ul class="toc-list">
+<li><a href="#063---2026-10-11">[0.6.3] - 2026-10-11</a>
+</li>
 <li><a href="#062---2026-10-10">[0.6.2] - 2026-10-10</a>
 </li>
 <li><a href="#061---2026-10-09">[0.6.1] - 2026-10-09</a>

@@ -18,11 +18,13 @@ Creates `~/.invoiceguard/`: the config template, an empty SQLite database, and t
 ```bash
 invoiceguard client add --name "Acme Corp" --email "billing@acme.com" [--phone +15551234567]
 invoiceguard client set-phone 1 [--phone +15551234567]   # omit --phone to clear
+invoiceguard client set-email 1 [--email billing@acme.com]     # omit --email to clear
 invoiceguard client list
 ```
 
 - `add` requires `--name`; `--email` is optional (needed later for dunning emails). `--phone` (E.164 form) enables SMS/WhatsApp escalation for that client; invalid numbers are rejected.
 - `set-phone` updates or clears the phone number of an existing client.
+- `set-email` updates or clears the email address of an existing client (dunning).
 - `list` prints `#id  name  email  phone` rows.
 
 ## `project`

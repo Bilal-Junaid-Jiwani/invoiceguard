@@ -126,12 +126,15 @@
 <h2 id="client"><code>client</code></h2>
 <pre class="codeblock" data-lang="bash"><code>invoiceguard client add --name "Acme Corp" --email "billing@acme.com" [--phone +15551234567]
 invoiceguard client set-phone 1 [--phone +15551234567]   # omit --phone to clear
+invoiceguard client set-email 1 [--email billing@acme.com]     # omit --email to clear
 invoiceguard client list
 </code></pre>
 <ul>
 <li><code>add</code> requires <code>--name</code>; <code>--email</code> is optional (needed later for dunning emails). <code>--phone</code> (E.164 form) enables SMS/WhatsApp escalation for that client; invalid numbers are rejected.
 </li>
 <li><code>set-phone</code> updates or clears the phone number of an existing client.
+</li>
+<li><code>set-email</code> updates or clears the email address of an existing client (dunning).
 </li>
 <li><code>list</code> prints <code>#id  name  email  phone</code> rows.
 </li>

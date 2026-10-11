@@ -5,6 +5,10 @@ description: InvoiceGuard release history — newest first, no fluff.
 ---
 InvoiceGuard follows semver. Newest first.
 
+## [0.6.3] - 2026-10-11
+
+Dunning robustness: `check-due` used to crash the whole collections run (`ValueError: recipient address is empty`) when any overdue invoice's client had no email on file — easy to hit, since `client add` makes `--email` optional. Now such invoices are skipped with a reported reason, nothing is recorded for them, and every other overdue invoice still gets its email. New: `invoiceguard client set-email <id> [--email ...]` to add or clear a client's email (dunning) after creation.
+
 ## [0.6.2] - 2026-10-10
 
 Contract deposit fix: the deposit figure printed in the generated contract now always matches the quoted (and charged) deposit. The contract previously used float + banker's rounding, so a $10.05 project at 50% said $5.02 in the contract while the CLI quoted and charged $5.03. It now uses Decimal half-up, the same money rule as CLI amounts and late fees. Honest scope: only newly generated contract text changes, only on half-cent boundaries; stored contracts and invoices are untouched.

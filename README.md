@@ -83,7 +83,7 @@ Send the pay link to the client. That's the whole pre-work flow.
 0 9 * * * /path/to/venv/bin/invoiceguard check-due >> ~/.invoiceguard/check-due.log 2>&1
 ```
 
-`invoiceguard check-due` scans invoices past their due date and sends the next escalation stage (day1 → day7 → day15), using the editable markdown templates in `~/.invoiceguard/templates/`. It's idempotent — a stage is never sent twice for the same invoice. When the client pays, Stripe's webhook flips the invoice to `paid` automatically.
+`invoiceguard check-due` scans invoices past their due date and sends the next escalation stage (day1 → day7 → day15), using the editable markdown templates in `~/.invoiceguard/templates/`. It's idempotent — a stage is never sent twice for the same invoice. When the client pays, Stripe's webhook flips the invoice to `paid` automatically. An invoice whose client has no email on file is skipped with a clear reason (one email-less client no longer crashes the whole run); add the email with `invoiceguard client set-email` and the stage goes out on the next run.
 
 **5. Stripe webhook (so payments mark invoices paid)**
 
@@ -103,6 +103,7 @@ Send the pay link to the client. That's the whole pre-work flow.
 | `invoiceguard init` | Create `~/.invoiceguard/` (config template, DB, email templates) |
 | `invoiceguard client add --name N --email E [--phone +15551234567]` | Add a client (phone enables SMS/WhatsApp escalation) |
 | `invoiceguard client set-phone ID [--phone +15551234567]` | Set or clear a client's phone number |
+| `invoiceguard client set-email ID [--email billing@acme.com]` | Set or clear a client's email address (dunning) |
 | `invoiceguard client list` | List clients |
 | `invoiceguard project create --client N --title T --amount 2000 [--deposit-pct 50] [--late-fee-pct 1.5] [--late-fee-grace-days 15] [--ack]` | Create project + generate contract markdown |
 | `invoiceguard project ack ID` | Record client acknowledgment of the contract (deposit-link path) |
@@ -211,7 +212,7 @@ python -m venv .venv && .venv/bin/pip install -r requirements.txt && .venv/bin/p
 .venv/bin/python -m pytest tests/ -q
 ```
 
-154 tests, all green (2026-10-10): contract clause rendering (incl. the e-signature sign-off wording and the contract deposit amount's Decimal half-up rounding, agreeing with the CLI quote and the deposit invoice), CLI money parsing (Decimal half-up amounts, deposit split, invalid/non-positive rejection), dunning stage selection + idempotency, template rendering, webhook signature verification (real HMAC check, offline), Stripe link creation (mocked SDK, params asserted), CLI flows (incl. `project sign-request`/`sign-status`), e-signature DB ops (idempotent request, single-use token, tamper-evidence hash, ack flip) + full web signing flow (page render, validation, signed receipt, single-use enforcement), dashboard integration (page rendering + offline webhook checks incl. the `invoiceguard_invoice_id` metadata-key regression and the webhook-secret resolution regression), SMS/WhatsApp messaging (phone normalization, Twilio payload with mocked HTTP, config resolution, day-15 escalation + `invoice notify` incl. dry-run), receivables aging report (bucket boundaries, dashboard-consistent outstanding totals, per-currency aggregation, late-fee agreement with the §3 calculator) + invoice/payment CSV exports, and a full end-to-end (init → client → project → invoice → `check-due` against a real local SMTP server → assert email captured + `dunning_events` row written).
+158 tests, all green (2026-10-11): contract clause rendering (incl. the e-signature sign-off wording and the contract deposit amount's Decimal half-up rounding, agreeing with the CLI quote and the deposit invoice), CLI money parsing (Decimal half-up amounts, deposit split, invalid/non-positive rejection), dunning stage selection + idempotency + email-less-client skip (no crash, reported reason, other invoices still sent; stage fires after `client set-email`), `client set-email` (set/clear/unknown-client error), template rendering, webhook signature verification (real HMAC check, offline), Stripe link creation (mocked SDK, params asserted), CLI flows (incl. `project sign-request`/`sign-status`), e-signature DB ops (idempotent request, single-use token, tamper-evidence hash, ack flip) + full web signing flow (page render, validation, signed receipt, single-use enforcement), dashboard integration (page rendering + offline webhook checks incl. the `invoiceguard_invoice_id` metadata-key regression and the webhook-secret resolution regression), SMS/WhatsApp messaging (phone normalization, Twilio payload with mocked HTTP, config resolution, day-15 escalation + `invoice notify` incl. dry-run), receivables aging report (bucket boundaries, dashboard-consistent outstanding totals, per-currency aggregation, late-fee agreement with the §3 calculator) + invoice/payment CSV exports, and a full end-to-end (init → client → project → invoice → `check-due` against a real local SMTP server → assert email captured + `dunning_events` row written).
 
 ## Limits of v1
 

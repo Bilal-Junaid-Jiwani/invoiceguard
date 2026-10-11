@@ -73,6 +73,14 @@ def check_due(db: DB, smtp_cfg: dict,
               messaging_cfg: dict | None = None) -> list[dict]:
     """Send due dunning emails. Returns a list of what was sent.
 
+    Invoices whose client has no email on file are skipped — the stage
+    is reported in the result dict with a "skipped" reason instead of
+    crashing the whole run (email is how the stage goes out; the
+    day-15 SMS/WhatsApp is only an escalation *in addition* to it).
+    Nothing is recorded for a skipped invoice, so re-running check-due
+    after adding the email (e.g. `invoiceguard client set-email`) sends
+    the stage then.
+
     When messaging_cfg is configured (Twilio credentials present), the
     day-15 stage additionally goes out as an SMS/WhatsApp message to
     clients with a phone number on file — recorded in message_events,
@@ -89,6 +97,16 @@ def check_due(db: DB, smtp_cfg: dict,
         sent = db.sent_stages(inv["id"])
         stage = stage_for(days_overdue, sent)
         if stage is None:
+            continue
+
+        if not inv.get("client_email"):
+            results.append({
+                "invoice_id": inv["id"],
+                "stage": stage,
+                "to": None,
+                "skipped": "client has no email on file — add one with "
+                           "`invoiceguard client set-email`",
+            })
             continue
 
         template_path = templates / f"{stage}.md"

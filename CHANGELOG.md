@@ -2,6 +2,19 @@
 
 Every release, newest first. InvoiceGuard follows semver.
 
+## [0.6.3] - 2026-10-11
+
+Dunning robustness: one email-less client no longer kills the whole collections run.
+
+### Fixed
+- `check-due` crashed with `ValueError: recipient address is empty` when any overdue invoice's client had no email on file — and since `client add` makes `--email` optional, this was easy to hit. The exception aborted the entire run, so every *other* overdue invoice never got its email. Overdue invoices with no client email are now skipped with a reported reason (`skipped day7 (invoice #3): client has no email on file — add one with `invoiceguard client set-email``); nothing is recorded for a skipped invoice, so the stage goes out on the next run once an email is on file, and the rest of the batch is unaffected.
+
+### Added
+- `invoiceguard client set-email <id> [--email ...]` — set or clear a client's email address (dunning). Previously there was no way to add an email to a client created without one (`set-phone` existed; `set-email` did not).
+
+### Honest scope (0.6.3)
+- Only the email path changes: a skipped stage means its email never went out, so neither the day-15 SMS/WhatsApp escalation (which is only ever *in addition* to the email) nor any dunning-event row is recorded for it. Invoice state is otherwise untouched; existing databases need no migration. Agency mode remains unshipped.
+
 ## [0.6.2] - 2026-10-10
 
 Contract deposit fix: the amount printed in the contract now always matches the deposit you are quoted and charged.
