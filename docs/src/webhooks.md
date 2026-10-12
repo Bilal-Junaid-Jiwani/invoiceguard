@@ -33,7 +33,7 @@ Placeholder values (`whsec_...`, anything ending in `...`) count as **unconfigur
 | `payment_link.expired` | ignored — nothing is auto-voided in v1; void from the CLI or dashboard |
 | anything else | ignored |
 
-Already-paid invoices are left alone (`ignored:already_paid`); events without invoice metadata are ignored.
+Already-paid invoices are left alone (`ignored:already_paid`); **void** invoices are likewise ignored — void is terminal, so a webhook never resurrects one; events without invoice metadata are ignored.
 
 ## Offline smoke test
 

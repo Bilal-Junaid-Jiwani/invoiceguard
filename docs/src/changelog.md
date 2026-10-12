@@ -5,6 +5,10 @@ description: InvoiceGuard release history — newest first, no fluff.
 ---
 InvoiceGuard follows semver. Newest first.
 
+## [0.6.4] - 2026-10-12
+
+Webhook void-safety: the dashboard's Stripe webhook handler (`POST /webhooks/stripe`) no longer records a payment or changes status when the matching invoice was voided. Verified: a void invoice came back as `paid` with a `stripe` ledger row — now void is terminal on the webhook path, matching the core `record_payment()` rule that refuses payments on void invoices. Honest scope: only the webhook path changed; already-paid invoices stay idempotent.
+
 ## [0.6.3] - 2026-10-11
 
 Dunning robustness: `check-due` used to crash the whole collections run (`ValueError: recipient address is empty`) when any overdue invoice's client had no email on file — easy to hit, since `client add` makes `--email` optional. Now such invoices are skipped with a reported reason, nothing is recorded for them, and every other overdue invoice still gets its email. New: `invoiceguard client set-email <id> [--email ...]` to add or clear a client's email (dunning) after creation.

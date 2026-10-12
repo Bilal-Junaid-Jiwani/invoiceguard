@@ -342,7 +342,10 @@ def mark_invoice_paid(stripe_session_id: str, invoice_id_hint: int | None = None
     Looks up by explicit metadata invoice id first, then by stripe_session_id
     column. Records the payment in the ledger (method 'stripe') — the amount
     defaults to the full outstanding balance when the session does not report
-    one. Returns the invoice id marked, or None when nothing matched.
+    one. Void invoices are ignored (None): void is terminal elsewhere too
+    (the core record_payment() refuses to book payments on void invoices),
+    so a late or stray webhook must not resurrect a voided invoice.
+    Returns the invoice id marked, or None when nothing matched.
     """
     conn = get_conn()
     try:
@@ -368,6 +371,9 @@ def mark_invoice_paid(stripe_session_id: str, invoice_id_hint: int | None = None
         ).fetchone()
         if inv["status"] == "paid":
             return target  # idempotent: already fully paid
+        if inv["status"] == "void":
+            return None  # void is terminal: a payment must not resurrect
+                         # a voided invoice
         already = conn.execute(
             "SELECT COALESCE(SUM(amount_cents), 0) FROM payments "
             "WHERE invoice_id = ?",

@@ -300,3 +300,25 @@ class TestDashboardLedger:
         assert marked == iid
         assert wdb.payments(iid)[0]["method"] == "stripe"
         assert wdb.get_invoice(iid)["status"] == "paid"
+
+    def test_mark_invoice_paid_ignores_void(self, home, sample_project,
+                                            tmp_path, monkeypatch):
+        """Regression: a Stripe webhook for a voided invoice must not
+        resurrect it. Core record_payment() refuses payments on void
+        invoices, so the webhook path must treat void as terminal too —
+        a late/duplicate webhook after `invoice void` records nothing and
+        leaves the invoice voided."""
+        path = home / "invoiceguard.db"
+        db = DB(path)
+        iid = db.add_invoice(sample_project["id"], "deposit", 100_000,
+                             "USD", status="sent",
+                             due_date="2026-01-01")
+        db.update_invoice(iid, status="void")
+        db.close()
+
+        wdb = self._web_db(tmp_path, monkeypatch, path)
+        marked = wdb.mark_invoice_paid("cs_void", invoice_id_hint=iid,
+                                       amount_cents=100_000)
+        assert marked is None
+        assert wdb.get_invoice(iid)["status"] == "void"
+        assert wdb.payments(iid) == []

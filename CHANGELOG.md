@@ -2,6 +2,16 @@
 
 Every release, newest first. InvoiceGuard follows semver.
 
+## [0.6.4] - 2026-10-12
+
+Webhook void-safety: a Stripe webhook no longer resurrects a voided invoice.
+
+### Fixed
+- The dashboard's `mark_invoice_paid` (the `POST /webhooks/stripe` handler) recorded the Stripe payment and marked the invoice `paid` even when the invoice had been voided — verified: a void invoice came back as `paid` with a `stripe` ledger row. The core `record_payment()` refuses payments on void invoices (`ValueError: invoice #N is void`), so a late or duplicate webhook after `invoice void` resurrected the invoice against the rest of the system's rules. Void is now terminal on the webhook path too: the event is ignored, nothing is recorded, and the invoice stays void.
+
+### Honest scope (0.6.4)
+- Only the webhook path changed: sent / partially-paid / overdue invoices are marked paid exactly as before, and already-paid invoices stay idempotent. If Stripe money actually lands against a voided invoice, it is not recorded in InvoiceGuard — void it only when you mean no payment should count.
+
 ## [0.6.3] - 2026-10-11
 
 Dunning robustness: one email-less client no longer kills the whole collections run.

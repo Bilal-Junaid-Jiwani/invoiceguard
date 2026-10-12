@@ -93,6 +93,8 @@
         <details>
           <summary>On this page</summary>
           <ul class="toc-list">
+<li><a href="#064---2026-10-12">[0.6.4] - 2026-10-12</a>
+</li>
 <li><a href="#063---2026-10-11">[0.6.3] - 2026-10-11</a>
 </li>
 <li><a href="#062---2026-10-10">[0.6.2] - 2026-10-10</a>
@@ -133,6 +135,8 @@
         </details>
       </div>
       <p>InvoiceGuard follows semver. Newest first.</p>
+<h2 id="064---2026-10-12">[0.6.4] - 2026-10-12</h2>
+<p>Webhook void-safety: the dashboard's Stripe webhook handler (<code>POST /webhooks/stripe</code>) no longer records a payment or changes status when the matching invoice was voided. Verified: a void invoice came back as <code>paid</code> with a <code>stripe</code> ledger row — now void is terminal on the webhook path, matching the core <code>record_payment()</code> rule that refuses payments on void invoices. Honest scope: only the webhook path changed; already-paid invoices stay idempotent.</p>
 <h2 id="063---2026-10-11">[0.6.3] - 2026-10-11</h2>
 <p>Dunning robustness: <code>check-due</code> used to crash the whole collections run (<code>ValueError: recipient address is empty</code>) when any overdue invoice's client had no email on file — easy to hit, since <code>client add</code> makes <code>--email</code> optional. Now such invoices are skipped with a reported reason, nothing is recorded for them, and every other overdue invoice still gets its email. New: <code>invoiceguard client set-email &lt;id&gt; [--email ...]</code> to add or clear a client's email (dunning) after creation.</p>
 <h2 id="062---2026-10-10">[0.6.2] - 2026-10-10</h2>
@@ -247,6 +251,8 @@
   <aside class="toc-side" aria-label="Table of contents">
     <p class="toc-label">On this page</p>
     <ul class="toc-list">
+<li><a href="#064---2026-10-12">[0.6.4] - 2026-10-12</a>
+</li>
 <li><a href="#063---2026-10-11">[0.6.3] - 2026-10-11</a>
 </li>
 <li><a href="#062---2026-10-10">[0.6.2] - 2026-10-10</a>
