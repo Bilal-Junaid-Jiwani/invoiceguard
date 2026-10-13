@@ -29,13 +29,23 @@ skipped day7 (invoice #3): client has no email on file — add one with `invoice
 
 Nothing is recorded for a skipped invoice, so the stage goes out normally on the next run after the email is added. The rest of the batch is unaffected — every other overdue invoice still gets its email.
 
+## Failed sends are isolated
+
+If one invoice's email **fails to send** (a transient SMTP error, a bad relay, ...), the failure is isolated to that invoice — it no longer aborts the whole run:
+
+```bash
+failed day1 (invoice #2): email send failed: 421 transient failure from relay — stage not recorded, will retry next run
+```
+
+Nothing is recorded for a failed invoice (no `dunning_events` row, no status flip), so the stage is simply retried on the next run, and every other overdue invoice still gets its stage.
+
 ## Cron setup
 
 ```cron
 0 9 * * * /path/to/venv/bin/invoiceguard check-due >> ~/.invoiceguard/check-due.log 2>&1
 ```
 
-`check-due` prints `nothing due — no emails sent` when there's nothing to do, or one line per email sent (`sent day7 to billing@acme.com (invoice #3)`).
+`check-due` prints `nothing due — no emails sent` when there's nothing to do, or one line per email sent (`sent day7 to billing@acme.com (invoice #3)`). Skipped invoices print a `skipped` line, failed sends a `failed` line — neither is retried within the same run; both are retried on the next run.
 
 ## Email templates
 

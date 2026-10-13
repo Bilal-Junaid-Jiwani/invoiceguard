@@ -5,6 +5,10 @@ description: InvoiceGuard release history — newest first, no fluff.
 ---
 InvoiceGuard follows semver. Newest first.
 
+## [0.6.5] - 2026-10-13
+
+Dunning send-failure isolation: one invoice's email send failing no longer aborts the whole `check-due` run. Verified: a transient SMTP failure on the first overdue invoice propagated out and killed the run, so every other overdue invoice never got its stage. Now a failed send is reported as `send_error`, nothing is recorded for that invoice (the stage retries on the next run), and the rest of the batch still goes out.
+
 ## [0.6.4] - 2026-10-12
 
 Webhook void-safety: the dashboard's Stripe webhook handler (`POST /webhooks/stripe`) no longer records a payment or changes status when the matching invoice was voided. Verified: a void invoice came back as `paid` with a `stripe` ledger row — now void is terminal on the webhook path, matching the core `record_payment()` rule that refuses payments on void invoices. Honest scope: only the webhook path changed; already-paid invoices stay idempotent.

@@ -2,6 +2,16 @@
 
 Every release, newest first. InvoiceGuard follows semver.
 
+## [0.6.5] - 2026-10-13
+
+Dunning send-failure isolation: one invoice's email send failing no longer aborts the whole `check-due` run.
+
+### Fixed
+- `check_due` called `send_email()` unguarded inside the per-invoice loop — verified: a transient SMTP failure (`smtplib.SMTPException`) on the first overdue invoice propagated out and aborted the run, so every *other* overdue invoice never got its stage that run. This is the same "one bad invoice kills the collections run" shape as the email-less-client crash fixed in 0.6.3 (different trigger). Sending is now isolated per invoice: a failed send is reported in the result dict as `send_error` (and printed as `failed <stage> (invoice #N): ...` by the CLI), nothing is recorded for that invoice, and the rest of the batch still goes out. Catches `OSError` (SMTP, socket, and SSL errors) plus `ValueError`.
+
+### Honest scope (0.6.5)
+- Nothing is recorded for a failed-send invoice — no `dunning_events` row and no status flip to `overdue` — so the stage is simply retried on the next run (the same convention as the 0.6.3 email-less skip). Successful sends are unchanged: send → record → flip, one email per invoice per run, stages still idempotent.
+
 ## [0.6.4] - 2026-10-12
 
 Webhook void-safety: a Stripe webhook no longer resurrects a voided invoice.

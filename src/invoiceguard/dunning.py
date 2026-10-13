@@ -81,6 +81,13 @@ def check_due(db: DB, smtp_cfg: dict,
     after adding the email (e.g. `invoiceguard client set-email`) sends
     the stage then.
 
+    The same per-invoice isolation applies to *delivery* failures: if
+    sending one invoice's email raises (transient SMTP error, bad
+    relay, ...) the failure is reported in the result dict under
+    "send_error", nothing is recorded for that invoice, and the run
+    continues with the rest — one bad send no longer aborts the whole
+    collections run. A failed stage is simply retried on the next run.
+
     When messaging_cfg is configured (Twilio credentials present), the
     day-15 stage additionally goes out as an SMS/WhatsApp message to
     clients with a phone number on file — recorded in message_events,
@@ -133,7 +140,23 @@ def check_due(db: DB, smtp_cfg: dict,
         body = render_template(template_path, context)
         subject = SUBJECTS[stage].format(**context)
 
-        send_email(smtp_cfg, inv["client_email"], subject, body)
+        # Per-invoice delivery isolation: a send failure for this invoice
+        # (transient SMTP error, bad relay, ...) must not abort the whole
+        # collections run — the rest of the batch still goes out, and the
+        # failed stage is retried on the next run (nothing is recorded).
+        # smtplib.SMTPException, socket and SSL errors all derive from
+        # OSError; ValueError covers send_email's own recipient check.
+        try:
+            send_email(smtp_cfg, inv["client_email"], subject, body)
+        except (OSError, ValueError) as e:
+            results.append({
+                "invoice_id": inv["id"],
+                "stage": stage,
+                "to": inv["client_email"],
+                "send_error": f"email send failed: {e} — "
+                              "stage not recorded, will retry next run",
+            })
+            continue
 
         db.record_dunning(inv["id"], stage)
         db.update_invoice(inv["id"], status="overdue")

@@ -189,3 +189,85 @@ class TestCheckDueSkipsEmailLessClients:
         assert results[0]["stage"] == "day1"
         assert results[0]["to"] == "now@here.test"
         assert sent == ["now@here.test"]
+
+
+class TestCheckDueSendFailureIsolation:
+    """check-due must not abort the run when one email send fails (0.6.5).
+
+    Regression: a transient SMTP error on one invoice's send (a relay
+    hiccup, a rejected recipient, ...) propagated out of check_due and
+    aborted the whole collections run — every other overdue invoice never
+    got its stage that run. Now the failure is isolated per invoice:
+    reported in the result dict, nothing recorded for the failed invoice
+    (so the stage retries on the next run), and the rest of the batch
+    still goes out.
+    """
+
+    def _client_project_invoice(self, db, name, email, days):
+        cid = db.add_client(name, email)
+        pid = db.add_project(cid, "Work", 100_000, contract_md="x")
+        due = (date.today() - timedelta(days=days)).isoformat()
+        iid = db.add_invoice(pid, "final", 100_000, "USD", status="sent",
+                             due_date=due)
+        db.update_invoice(iid, stripe_url="https://pay.stripe.test/x")
+        return iid
+
+    def test_one_failed_send_does_not_abort_run(
+            self, db, smtp_cfg, home, monkeypatch):
+        import smtplib
+
+        sent = []
+
+        def flaky_send(cfg, to, subject, body):
+            if to == "alice@flaky.test":
+                raise smtplib.SMTPException("421 transient failure")
+            sent.append(to)
+
+        monkeypatch.setattr("invoiceguard.dunning.send_email", flaky_send)
+
+        iid_bad = self._client_project_invoice(
+            db, "Alice", "alice@flaky.test", days=2)
+        iid_ok = self._client_project_invoice(
+            db, "Bob", "bob@steady.test", days=2)
+
+        results = check_due(db, smtp_cfg)  # must not raise
+
+        by_id = {r["invoice_id"]: r for r in results}
+        failed = by_id[iid_bad]
+        assert failed["stage"] == "day1"
+        assert "transient failure" in failed["send_error"]
+        # nothing recorded for the failed invoice: stage retries next run
+        assert db.sent_stages(iid_bad) == set()
+        assert db.get_invoice(iid_bad)["status"] == "sent"
+
+        # the rest of the batch still went out normally
+        good = by_id[iid_ok]
+        assert good["stage"] == "day1"
+        assert good["to"] == "bob@steady.test"
+        assert sent == ["bob@steady.test"]
+        assert db.sent_stages(iid_ok) == {"day1"}
+        assert db.get_invoice(iid_ok)["status"] == "overdue"
+
+    def test_failed_stage_retries_on_next_run(
+            self, db, smtp_cfg, home, monkeypatch):
+        import smtplib
+
+        calls = []
+
+        def flaky_send(cfg, to, subject, body):
+            calls.append(to)
+            if len(calls) == 1:
+                raise smtplib.SMTPException("421 transient failure")
+
+        monkeypatch.setattr("invoiceguard.dunning.send_email", flaky_send)
+
+        iid = self._client_project_invoice(
+            db, "Alice", "alice@flaky.test", days=2)
+        first = check_due(db, smtp_cfg)
+        assert first[0].get("send_error")
+        second = check_due(db, smtp_cfg)  # relay is fine now
+        assert second[0]["stage"] == "day1"
+        assert second[0]["to"] == "alice@flaky.test"
+        assert "send_error" not in second[0]
+        assert db.sent_stages(iid) == {"day1"}
+

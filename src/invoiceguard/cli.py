@@ -662,6 +662,10 @@ def check_due_cmd():
             click.echo(f"skipped {r['stage']} (invoice #{r['invoice_id']}): "
                        f"{r['skipped']}")
             continue
+        if r.get("send_error"):
+            click.echo(f"failed {r['stage']} (invoice #{r['invoice_id']}): "
+                       f"{r['send_error']}")
+            continue
         click.echo(f"sent {r['stage']} to {r['to']} "
                    f"(invoice #{r['invoice_id']})")
         if r.get("message_to"):
