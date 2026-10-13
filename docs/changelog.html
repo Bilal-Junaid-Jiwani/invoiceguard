@@ -93,6 +93,8 @@
         <details>
           <summary>On this page</summary>
           <ul class="toc-list">
+<li><a href="#065---2026-10-13">[0.6.5] - 2026-10-13</a>
+</li>
 <li><a href="#064---2026-10-12">[0.6.4] - 2026-10-12</a>
 </li>
 <li><a href="#063---2026-10-11">[0.6.3] - 2026-10-11</a>
@@ -135,6 +137,8 @@
         </details>
       </div>
       <p>InvoiceGuard follows semver. Newest first.</p>
+<h2 id="065---2026-10-13">[0.6.5] - 2026-10-13</h2>
+<p>Dunning send-failure isolation: one invoice's email send failing no longer aborts the whole <code>check-due</code> run. Verified: a transient SMTP failure on the first overdue invoice propagated out and killed the run, so every other overdue invoice never got its stage. Now a failed send is reported as <code>send_error</code>, nothing is recorded for that invoice (the stage retries on the next run), and the rest of the batch still goes out.</p>
 <h2 id="064---2026-10-12">[0.6.4] - 2026-10-12</h2>
 <p>Webhook void-safety: the dashboard's Stripe webhook handler (<code>POST /webhooks/stripe</code>) no longer records a payment or changes status when the matching invoice was voided. Verified: a void invoice came back as <code>paid</code> with a <code>stripe</code> ledger row — now void is terminal on the webhook path, matching the core <code>record_payment()</code> rule that refuses payments on void invoices. Honest scope: only the webhook path changed; already-paid invoices stay idempotent.</p>
 <h2 id="063---2026-10-11">[0.6.3] - 2026-10-11</h2>
@@ -251,6 +255,8 @@
   <aside class="toc-side" aria-label="Table of contents">
     <p class="toc-label">On this page</p>
     <ul class="toc-list">
+<li><a href="#065---2026-10-13">[0.6.5] - 2026-10-13</a>
+</li>
 <li><a href="#064---2026-10-12">[0.6.4] - 2026-10-12</a>
 </li>
 <li><a href="#063---2026-10-11">[0.6.3] - 2026-10-11</a>

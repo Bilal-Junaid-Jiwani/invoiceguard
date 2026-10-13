@@ -107,6 +107,8 @@
 </li>
 <li><a href="#skipped-invoices">Skipped invoices</a>
 </li>
+<li><a href="#failed-sends-are-isolated">Failed sends are isolated</a>
+</li>
 <li><a href="#cron-setup">Cron setup</a>
 </li>
 <li><a href="#email-templates">Email templates</a>
@@ -129,10 +131,15 @@
 <pre class="codeblock" data-lang="bash"><code>skipped day7 (invoice #3): client has no email on file — add one with `invoiceguard client set-email`
 </code></pre>
 <p>Nothing is recorded for a skipped invoice, so the stage goes out normally on the next run after the email is added. The rest of the batch is unaffected — every other overdue invoice still gets its email.</p>
+<h2 id="failed-sends-are-isolated">Failed sends are isolated</h2>
+<p>If one invoice's email <strong>fails to send</strong> (a transient SMTP error, a bad relay, ...), the failure is isolated to that invoice — it no longer aborts the whole run:</p>
+<pre class="codeblock" data-lang="bash"><code>failed day1 (invoice #2): email send failed: 421 transient failure from relay — stage not recorded, will retry next run
+</code></pre>
+<p>Nothing is recorded for a failed invoice (no <code>dunning_events</code> row, no status flip), so the stage is simply retried on the next run, and every other overdue invoice still gets its stage.</p>
 <h2 id="cron-setup">Cron setup</h2>
 <pre class="codeblock" data-lang="cron"><code>0 9 * * * /path/to/venv/bin/invoiceguard check-due &gt;&gt; ~/.invoiceguard/check-due.log 2&gt;&amp;1
 </code></pre>
-<p><code>check-due</code> prints <code>nothing due — no emails sent</code> when there's nothing to do, or one line per email sent (<code>sent day7 to billing@acme.com (invoice #3)</code>).</p>
+<p><code>check-due</code> prints <code>nothing due — no emails sent</code> when there's nothing to do, or one line per email sent (<code>sent day7 to billing@acme.com (invoice #3)</code>). Skipped invoices print a <code>skipped</code> line, failed sends a <code>failed</code> line — neither is retried within the same run; both are retried on the next run.</p>
 <h2 id="email-templates">Email templates</h2>
 <p><code>~/.invoiceguard/templates/day1.md</code>, <code>day7.md</code>, <code>day15.md</code> — plain markdown with <code>{variables}</code>, rendered with stdlib string formatting only:</p>
 <p><code>{client_name}</code> <code>{project_title}</code> <code>{amount}</code> <code>{paid}</code> <code>{outstanding}</code> <code>{due_date}</code> <code>{days_overdue}</code> <code>{late_fee_pct}</code> <code>{late_fee_due}</code> <code>{total_with_late_fees}</code> <code>{pay_url}</code></p>
@@ -172,6 +179,8 @@
 <li><a href="#idempotency">Idempotency</a>
 </li>
 <li><a href="#skipped-invoices">Skipped invoices</a>
+</li>
+<li><a href="#failed-sends-are-isolated">Failed sends are isolated</a>
 </li>
 <li><a href="#cron-setup">Cron setup</a>
 </li>
