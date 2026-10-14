@@ -271,3 +271,145 @@ class TestCheckDueSendFailureIsolation:
         assert "send_error" not in second[0]
         assert db.sent_stages(iid) == {"day1"}
 
+
+
+class TestDunningPolicy:
+    """Per-client dunning policies (v0.7.0, first agency-mode slice)."""
+
+    def _client_project_invoice(self, db, name, email, days, monkeypatch=None):
+        from invoiceguard.contracts import render_contract
+        cid = db.add_client(name, email)
+        contract = render_contract(name, email, "Work", 100_000, "USD",
+                                   50.0, 1.5, 15)
+        pid = db.add_project(cid, "Work", 100_000, "USD", 50.0, 1.5, 15,
+                             contract)
+        due = (date.today() - timedelta(days=days)).isoformat()
+        iid = db.add_invoice(pid, "deposit", 100_000, "USD",
+                             status="sent", due_date=due)
+        db.update_invoice(iid, stripe_url="https://pay.stripe.test/x")
+        return cid, iid
+
+    def _fake_send(self, monkeypatch):
+        sent = []
+
+        def fake_send(cfg, to, subject, body):
+            sent.append((to, subject))
+
+        monkeypatch.setattr("invoiceguard.dunning.send_email", fake_send)
+        return sent
+
+    def test_stage_for_with_custom_thresholds(self):
+        th = {"day1": 3, "day7": 10, "day15": 20}
+        assert stage_for(2, set(), th) is None
+        assert stage_for(3, set(), th) == "day1"
+        assert stage_for(25, {"day1"}, th) == "day7"
+
+    def test_stage_for_skips_disabled_stages(self):
+        th = {"day1": 1, "day7": None, "day15": 15}
+        assert stage_for(30, {"day1"}, th) == "day15"
+        assert stage_for(30, set(), {"day1": None, "day7": None,
+                                    "day15": None}) is None
+
+    def test_custom_threshold_fires_at_custom_day(self, db, smtp_cfg,
+                                                  monkeypatch, home):
+        sent = self._fake_send(monkeypatch)
+        cid, iid = self._client_project_invoice(
+            db, "Slow", "slow@test.co", days=2)
+        db.set_client_dunning_policy(cid, day1=3)
+        assert check_due(db, smtp_cfg) == []  # 2 days < custom day1=3
+        assert sent == []
+        db.update_invoice(
+            iid, due_date=(date.today() - timedelta(days=3)).isoformat())
+        results = check_due(db, smtp_cfg)
+        assert [r["stage"] for r in results] == ["day1"]
+        assert len(sent) == 1
+
+    def test_disabled_stage_stops_escalation(self, db, smtp_cfg,
+                                            monkeypatch, home):
+        sent = self._fake_send(monkeypatch)
+        cid, iid = self._client_project_invoice(
+            db, "NoFormal", "nf@test.co", days=20)
+        db.set_client_dunning_policy(cid, day15=0)
+        assert [r["stage"] for r in check_due(db, smtp_cfg)] == ["day1"]
+        assert [r["stage"] for r in check_due(db, smtp_cfg)] == ["day7"]
+        assert check_due(db, smtp_cfg) == []  # day15 disabled: done
+        assert len(sent) == 2
+
+    def test_all_disabled_invoice_reported_skipped(self, db, smtp_cfg,
+                                                   monkeypatch, home):
+        sent = self._fake_send(monkeypatch)
+        cid, iid = self._client_project_invoice(
+            db, "VIP", "vip@test.co", days=30)
+        db.set_client_dunning_policy(cid, day1=0, day7=0, day15=0)
+        results = check_due(db, smtp_cfg)
+        assert len(results) == 1
+        assert results[0]["stage"] is None
+        assert "dunning disabled for this client" in results[0]["skipped"]
+        assert sent == []
+        assert db.sent_stages(iid) == set()  # nothing recorded
+
+    def test_policy_is_per_client(self, db, smtp_cfg, monkeypatch, home):
+        sent = self._fake_send(monkeypatch)
+        cid_slow, _ = self._client_project_invoice(
+            db, "Slow", "slow@test.co", days=2)
+        _, _ = self._client_project_invoice(
+            db, "Fast", "fast@test.co", days=2)
+        db.set_client_dunning_policy(cid_slow, day1=10, day7=14, day15=21)
+        results = check_due(db, smtp_cfg)
+        # only the default-policy client fires day1 at 2 days overdue
+        assert len(results) == 1
+        assert results[0]["to"] == "fast@test.co"
+        assert len(sent) == 1
+
+    def test_null_keeps_defaults(self, db, sample_client):
+        assert db.set_client_dunning_policy(sample_client["id"]) == {
+            "day1": 1, "day7": 7, "day15": 15}
+
+    def test_reset_restores_defaults(self, db, sample_client):
+        db.set_client_dunning_policy(sample_client["id"], day1=3)
+        assert db.reset_client_dunning_policy(sample_client["id"]) == {
+            "day1": 1, "day7": 7, "day15": 15}
+        assert db.get_client(sample_client["id"])["dunning_day1"] is None
+
+    def test_negative_threshold_rejected(self, db, sample_client):
+        with pytest.raises(ValueError, match=">= 0"):
+            db.set_client_dunning_policy(sample_client["id"], day7=-1)
+
+    def test_garbage_threshold_rejected(self, db, sample_client):
+        with pytest.raises(ValueError, match="whole number"):
+            db.set_client_dunning_policy(sample_client["id"], day7="soon")
+
+    def test_out_of_order_thresholds_rejected(self, db, sample_client):
+        with pytest.raises(ValueError, match="escalation must stay"):
+            db.set_client_dunning_policy(sample_client["id"],
+                                         day1=10, day7=5)
+
+    def test_disabled_stage_allows_uneven_order(self, db, sample_client):
+        # day1 disabled: only enabled stages (day7, day15) must stay ordered
+        policy = db.set_client_dunning_policy(sample_client["id"],
+                                              day1=0, day7=5)
+        assert policy == {"day1": None, "day7": 5, "day15": 15}
+
+    def test_unknown_client_rejected(self, db):
+        with pytest.raises(ValueError, match="no client #99"):
+            db.set_client_dunning_policy(99, day1=3)
+
+    def test_migration_adds_columns_to_old_db(self, tmp_path):
+        # DB created before v0.7.0 (no policy columns) gets them on connect.
+        import sqlite3
+        p = tmp_path / "old.db"
+        conn = sqlite3.connect(str(p))
+        conn.execute(
+            "CREATE TABLE clients(id INTEGER PRIMARY KEY, name TEXT NOT "
+            "NULL, email TEXT, phone TEXT, created_at TEXT NOT NULL)")
+        conn.execute(
+            "INSERT INTO clients(name, created_at) VALUES ('Old', 'x')")
+        conn.commit()
+        conn.close()
+        d = DB(p)
+        try:
+            cols = {r[1] for r in d.conn.execute("PRAGMA table_info(clients)")}
+            assert {"dunning_day1", "dunning_day7", "dunning_day15"} <= cols
+            assert d.set_client_dunning_policy(1, day1=2)["day1"] == 2
+        finally:
+            d.close()

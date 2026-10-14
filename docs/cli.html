@@ -127,6 +127,7 @@
 <pre class="codeblock" data-lang="bash"><code>invoiceguard client add --name "Acme Corp" --email "billing@acme.com" [--phone +15551234567]
 invoiceguard client set-phone 1 [--phone +15551234567]   # omit --phone to clear
 invoiceguard client set-email 1 [--email billing@acme.com]     # omit --email to clear
+invoiceguard client set-dunning-policy 1 [--day1 N] [--day7 N] [--day15 N] [--reset]
 invoiceguard client list
 </code></pre>
 <ul>
@@ -136,7 +137,9 @@ invoiceguard client list
 </li>
 <li><code>set-email</code> updates or clears the email address of an existing client (dunning).
 </li>
-<li><code>list</code> prints <code>#id  name  email  phone</code> rows.
+<li><code>set-dunning-policy</code> sets per-client dunning stage thresholds (v0.7.0, agency mode): each <code>--dayN</code> is the days-overdue threshold for that stage; <code>0</code> disables the stage for that client; omit a flag to leave it unchanged. Thresholds must stay in escalation order (day1 → day7 → day15); negative values are rejected. <code>--reset</code> clears overrides back to the global defaults (1/7/15).
+</li>
+<li><code>list</code> prints <code>#id  name  email  phone</code> rows, plus a <code>[dunning ...]</code> marker for clients with policy overrides.
 </li>
 </ul>
 <h2 id="project"><code>project</code></h2>

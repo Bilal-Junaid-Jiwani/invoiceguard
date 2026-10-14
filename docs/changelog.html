@@ -93,6 +93,8 @@
         <details>
           <summary>On this page</summary>
           <ul class="toc-list">
+<li><a href="#070---2026-10-14">[0.7.0] - 2026-10-14</a>
+</li>
 <li><a href="#065---2026-10-13">[0.6.5] - 2026-10-13</a>
 </li>
 <li><a href="#064---2026-10-12">[0.6.4] - 2026-10-12</a>
@@ -137,6 +139,8 @@
         </details>
       </div>
       <p>InvoiceGuard follows semver. Newest first.</p>
+<h2 id="070---2026-10-14">[0.7.0] - 2026-10-14</h2>
+<p>Per-client dunning policies — the first agency-mode slice. Each client can now have its own dunning stage thresholds via <code>invoiceguard client set-dunning-policy &lt;id&gt; [--day1 N] [--day7 N] [--day15 N] [--reset]</code>: a positive number sets a custom days-overdue threshold, <code>0</code> disables the stage for that client, and thresholds must keep escalation order (day1 → day7 → day15). <code>check-due</code> resolves the policy per invoice, so one client can escalate faster while another is never auto-dunned; an invoice whose client has every stage disabled is reported as <code>skipped dunning (invoice #N)</code> instead of silently vanishing. <code>client list</code> shows a <code>[dunning ...]</code> marker for clients with overrides. Existing databases are migrated additively on connect (new columns, NULL = global default). Only <em>when</em> a stage fires changes — templates, subjects, and idempotency are untouched; multi-freelancer workspaces remain unshipped.</p>
 <h2 id="065---2026-10-13">[0.6.5] - 2026-10-13</h2>
 <p>Dunning send-failure isolation: one invoice's email send failing no longer aborts the whole <code>check-due</code> run. Verified: a transient SMTP failure on the first overdue invoice propagated out and killed the run, so every other overdue invoice never got its stage. Now a failed send is reported as <code>send_error</code>, nothing is recorded for that invoice (the stage retries on the next run), and the rest of the batch still goes out.</p>
 <h2 id="064---2026-10-12">[0.6.4] - 2026-10-12</h2>
@@ -255,6 +259,8 @@
   <aside class="toc-side" aria-label="Table of contents">
     <p class="toc-label">On this page</p>
     <ul class="toc-list">
+<li><a href="#070---2026-10-14">[0.7.0] - 2026-10-14</a>
+</li>
 <li><a href="#065---2026-10-13">[0.6.5] - 2026-10-13</a>
 </li>
 <li><a href="#064---2026-10-12">[0.6.4] - 2026-10-12</a>

@@ -19,7 +19,10 @@ CREATE TABLE IF NOT EXISTS clients(
     name TEXT NOT NULL,
     email TEXT,
     phone TEXT,
-    created_at TEXT NOT NULL
+    created_at TEXT NOT NULL,
+    dunning_day1 INTEGER,
+    dunning_day7 INTEGER,
+    dunning_day15 INTEGER
 );
 CREATE TABLE IF NOT EXISTS projects(
     id INTEGER PRIMARY KEY,
@@ -111,6 +114,47 @@ def migrate_clients_phone(conn: sqlite3.Connection) -> None:
         conn.commit()
 
 
+# Global dunning stage defaults (days overdue). Also the baseline for
+# per-client policies: a NULL override falls back to these. Duplicated
+# here (rather than imported from dunning) because dunning imports db.
+DUNNING_STAGES = ("day1", "day7", "day15")
+DEFAULT_DUNNING_THRESHOLDS = {"day1": 1, "day7": 7, "day15": 15}
+
+
+def migrate_clients_dunning_policy(conn: sqlite3.Connection) -> None:
+    """Additive migration: per-client dunning policy columns (v0.7.0).
+
+    dunning_dayN holds the custom days-overdue threshold for that stage:
+    NULL = global default, 0 = stage disabled for this client. Databases
+    created before v0.7.0 get the columns here. Idempotent — safe to
+    call on every connect.
+    """
+    cols = {r[1] for r in conn.execute("PRAGMA table_info(clients)")}
+    for col in ("dunning_day1", "dunning_day7", "dunning_day15"):
+        if col not in cols:
+            conn.execute(f"ALTER TABLE clients ADD COLUMN {col} INTEGER")
+            conn.commit()
+
+
+def resolve_dunning_policy(row) -> dict:
+    """Resolved dunning thresholds for a client-like row.
+
+    Returns {stage: threshold_days | None}; None means the stage is
+    disabled for this client. A NULL column falls back to the global
+    default; 0 disables the stage; a positive int is a custom threshold.
+    """
+    out = {}
+    for s in DUNNING_STAGES:
+        v = row["dunning_" + s] if row is not None else None
+        if v is None:
+            out[s] = DEFAULT_DUNNING_THRESHOLDS[s]
+        elif int(v) <= 0:
+            out[s] = None
+        else:
+            out[s] = int(v)
+    return out
+
+
 def now_iso() -> str:
     return datetime.now(timezone.utc).isoformat()
 
@@ -147,6 +191,7 @@ class DB:
         self.conn.execute("PRAGMA foreign_keys = ON")
         self.conn.executescript(SCHEMA)
         migrate_clients_phone(self.conn)
+        migrate_clients_dunning_policy(self.conn)
         backfill_paid_ledger(self.conn)
 
     # -- clients -----------------------------------------------------
@@ -173,6 +218,69 @@ class DB:
             (email, client_id),
         )
         self.conn.commit()
+
+    def set_client_dunning_policy(self, client_id: int,
+                                  day1: int | None = None,
+                                  day7: int | None = None,
+                                  day15: int | None = None) -> dict:
+        """Set per-client dunning stage thresholds (agency mode).
+
+        Each value: positive int = custom days-overdue threshold for the
+        stage, 0 = stage disabled for this client, None = leave unchanged.
+        Raises ValueError when the client is missing, a value is not a
+        non-negative integer, or the enabled stages would break escalation
+        order (day1 -> day7 -> day15 must stay ascending). Returns the
+        resolved policy dict ({stage: threshold | None}).
+        """
+        client = self.get_client(client_id)
+        if not client:
+            raise ValueError(f"no client #{client_id}")
+        updates: dict[str, int] = {}
+        for stage, value in (("day1", day1), ("day7", day7),
+                             ("day15", day15)):
+            if value is None:
+                continue
+            try:
+                ivalue = int(value)
+            except (TypeError, ValueError):
+                raise ValueError(
+                    f"dunning threshold for {stage} must be a whole "
+                    f"number of days (0 disables the stage)") from None
+            if ivalue < 0:
+                raise ValueError(
+                    f"dunning threshold for {stage} must be >= 0 "
+                    f"(0 disables the stage)")
+            updates["dunning_" + stage] = ivalue
+        # Validate on the merged candidate BEFORE writing anything.
+        candidate = dict(client)
+        candidate.update(updates)
+        resolved = resolve_dunning_policy(candidate)
+        enabled = [(s, t) for s, t in resolved.items() if t is not None]
+        for (s1, t1), (s2, t2) in zip(enabled, enabled[1:]):
+            if t1 > t2:
+                raise ValueError(
+                    f"dunning escalation must stay day1 -> day7 -> day15 "
+                    f"(got {s2}={t2} before {s1}={t1})")
+        if updates:
+            sets = ", ".join(f"{k} = ?" for k in updates)
+            self.conn.execute(
+                f"UPDATE clients SET {sets} WHERE id = ?",
+                (*updates.values(), client_id),
+            )
+            self.conn.commit()
+        return resolved
+
+    def reset_client_dunning_policy(self, client_id: int) -> dict:
+        """Clear a client's dunning overrides back to the global defaults."""
+        if not self.get_client(client_id):
+            raise ValueError(f"no client #{client_id}")
+        self.conn.execute(
+            "UPDATE clients SET dunning_day1 = NULL, dunning_day7 = NULL, "
+            "dunning_day15 = NULL WHERE id = ?",
+            (client_id,),
+        )
+        self.conn.commit()
+        return resolve_dunning_policy(self.get_client(client_id))
 
     def get_client(self, client_id: int) -> sqlite3.Row | None:
         return self.conn.execute(
@@ -356,7 +464,8 @@ class DB:
             """SELECT i.*, p.title AS project_title, p.late_fee_pct,
                       p.late_fee_grace_days, p.contract_ack,
                       c.name AS client_name, c.email AS client_email,
-                      c.phone AS client_phone
+                      c.phone AS client_phone,
+                      c.dunning_day1, c.dunning_day7, c.dunning_day15
                FROM invoices i
                JOIN projects p ON p.id = i.project_id
                JOIN clients c ON c.id = p.client_id
@@ -554,6 +663,7 @@ class DB:
             """SELECT i.*, p.title AS project_title, p.late_fee_pct,
                       p.late_fee_grace_days, c.name AS client_name,
                       c.email AS client_email, c.phone AS client_phone,
+                      c.dunning_day1, c.dunning_day7, c.dunning_day15,
                       COALESCE((SELECT SUM(p2.amount_cents) FROM payments p2
                                 WHERE p2.invoice_id = i.id), 0) AS paid_cents
                FROM invoices i

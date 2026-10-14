@@ -193,3 +193,80 @@ def test_client_set_email_unknown_client(home):
                          "--email", "x@y.test"])
     assert res.exit_code != 0
     assert "no client #42" in res.output
+
+
+def test_client_set_dunning_policy(home):
+    # Per-client dunning policies (v0.7.0): custom thresholds per stage,
+    # 0 disables a stage; `client list` shows the overrides.
+    r = CliRunner()
+    assert r.invoke(cli, ["client", "add", "--name", "Initech",
+                          "--email", "x@y.test"]).exit_code == 0
+    res = r.invoke(cli, ["client", "set-dunning-policy", "1",
+                         "--day1", "3", "--day15", "0"])
+    assert res.exit_code == 0, res.output
+    assert "day1=3" in res.output
+    assert "day7=7" in res.output  # untouched flags keep defaults
+    assert "day15=off" in res.output
+    out = r.invoke(cli, ["client", "list"]).output
+    assert "[dunning day1=3 day15=off]" in out
+
+
+def test_client_set_dunning_policy_rejects_bad_order(home):
+    r = CliRunner()
+    r.invoke(cli, ["client", "add", "--name", "Initech"])
+    res = r.invoke(cli, ["client", "set-dunning-policy", "1",
+                         "--day1", "10", "--day7", "5"])
+    assert res.exit_code != 0
+    assert "escalation must stay" in res.output
+    # nothing was written on validation failure
+    assert "[dunning" not in r.invoke(cli, ["client", "list"]).output
+
+
+def test_client_set_dunning_policy_rejects_negative(home):
+    r = CliRunner()
+    r.invoke(cli, ["client", "add", "--name", "Initech"])
+    res = r.invoke(cli, ["client", "set-dunning-policy", "1", "--day7", "-2"])
+    assert res.exit_code != 0
+
+
+def test_client_set_dunning_policy_reset(home):
+    r = CliRunner()
+    r.invoke(cli, ["client", "add", "--name", "Initech"])
+    assert r.invoke(cli, ["client", "set-dunning-policy", "1",
+                          "--day1", "3"]).exit_code == 0
+    res = r.invoke(cli, ["client", "set-dunning-policy", "1", "--reset"])
+    assert res.exit_code == 0, res.output
+    assert "day1=1, day7=7, day15=15" in res.output
+    assert "[dunning" not in r.invoke(cli, ["client", "list"]).output
+
+
+def test_client_set_dunning_policy_unknown_client(home):
+    r = CliRunner()
+    res = r.invoke(cli, ["client", "set-dunning-policy", "42", "--day1", "3"])
+    assert res.exit_code != 0
+    assert "no client #42" in res.output
+
+
+def test_check_due_reports_disabled_dunning_client(home):
+    # All stages disabled for a client: check-due prints a skipped line
+    # (nothing sent, nothing recorded).
+    from datetime import date, timedelta
+
+    (home / "config.yaml").write_text(
+        "smtp:\n  host: smtp.acme.test\n  port: 587\n  username: u\n"
+        "  password: p\n  from_addr: me@acme.test\n  use_tls: false\n")
+    r = CliRunner()
+    r.invoke(cli, ["client", "add", "--name", "VIP",
+                   "--email", "vip@acme.test"])
+    r.invoke(cli, ["client", "set-dunning-policy", "1",
+                   "--day1", "0", "--day7", "0", "--day15", "0"])
+    r.invoke(cli, ["project", "create", "--client", "VIP",
+                   "--title", "Work", "--amount", "100"])
+    db = DB(home / "invoiceguard.db")
+    due = (date.today() - timedelta(days=30)).isoformat()
+    db.add_invoice(1, "deposit", 10_000, "USD", status="sent", due_date=due)
+    db.close()
+    res = r.invoke(cli, ["check-due"])
+    assert res.exit_code == 0, res.output
+    assert "skipped dunning (invoice #1)" in res.output
+    assert "dunning disabled for this client" in res.output

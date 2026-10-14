@@ -5,6 +5,10 @@ description: InvoiceGuard release history — newest first, no fluff.
 ---
 InvoiceGuard follows semver. Newest first.
 
+## [0.7.0] - 2026-10-14
+
+Per-client dunning policies — the first agency-mode slice. Each client can now have its own dunning stage thresholds via `invoiceguard client set-dunning-policy <id> [--day1 N] [--day7 N] [--day15 N] [--reset]`: a positive number sets a custom days-overdue threshold, `0` disables the stage for that client, and thresholds must keep escalation order (day1 → day7 → day15). `check-due` resolves the policy per invoice, so one client can escalate faster while another is never auto-dunned; an invoice whose client has every stage disabled is reported as `skipped dunning (invoice #N)` instead of silently vanishing. `client list` shows a `[dunning ...]` marker for clients with overrides. Existing databases are migrated additively on connect (new columns, NULL = global default). Only *when* a stage fires changes — templates, subjects, and idempotency are untouched; multi-freelancer workspaces remain unshipped.
+
 ## [0.6.5] - 2026-10-13
 
 Dunning send-failure isolation: one invoice's email send failing no longer aborts the whole `check-due` run. Verified: a transient SMTP failure on the first overdue invoice propagated out and killed the run, so every other overdue invoice never got its stage. Now a failed send is reported as `send_error`, nothing is recorded for that invoice (the stage retries on the next run), and the rest of the batch still goes out.

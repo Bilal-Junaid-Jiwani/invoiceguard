@@ -13,8 +13,8 @@ from . import __version__
 from .config import (CONFIG_TEMPLATE, config_path, db_path, load_config,
                      templates_dir)
 from .contracts import render_contract
-from .db import DB
-from .dunning import check_due, money
+from .db import DB, resolve_dunning_policy
+from .dunning import STAGES, check_due, money
 from .late_fees import late_fee_summary
 from .messaging import (message_channel, messaging_configured,
                         messaging_from_config, normalize_phone,
@@ -153,6 +153,58 @@ def client_set_phone(client_id, phone):
                f"{normalized or '(cleared)'}")
 
 
+def _format_policy(policy: dict) -> str:
+    return ", ".join(
+        f"{s}={'off' if policy[s] is None else policy[s]}"
+        for s in STAGES)
+
+
+@client.command("set-dunning-policy")
+@click.argument("client_id", type=int)
+@click.option("--day1", type=int, default=None,
+              help="Days overdue before the polite nudge fires "
+                   "(0 disables the stage)")
+@click.option("--day7", type=int, default=None,
+              help="Days overdue before the firm reminder fires "
+                   "(0 disables the stage)")
+@click.option("--day15", type=int, default=None,
+              help="Days overdue before the formal notice fires "
+                   "(0 disables the stage)")
+@click.option("--reset", is_flag=True,
+              help="Clear custom thresholds back to the global defaults")
+def client_set_dunning_policy(client_id, day1, day7, day15, reset):
+    """Set a client's dunning stage thresholds (agency mode).
+
+    Each --dayN takes the days-overdue threshold for that stage; 0
+    disables the stage for this client; omit a flag to leave it unchanged.
+    Thresholds must keep escalation order (day1 -> day7 -> day15).
+    """
+    db = _db()
+    if not db.get_client(client_id):
+        db.close()
+        raise click.ClickException(f"no client #{client_id}")
+    if reset:
+        if any(v is not None for v in (day1, day7, day15)):
+            db.close()
+            raise click.ClickException(
+                "--reset cannot be combined with --day1/--day7/--day15")
+        policy = db.reset_client_dunning_policy(client_id)
+    else:
+        if all(v is None for v in (day1, day7, day15)):
+            db.close()
+            raise click.ClickException(
+                "nothing to change — pass --day1, --day7, --day15, or --reset")
+        try:
+            policy = db.set_client_dunning_policy(
+                client_id, day1=day1, day7=day7, day15=day15)
+        except ValueError as e:
+            db.close()
+            raise click.ClickException(str(e))
+    db.close()
+    click.echo(f"client #{client_id}: dunning policy "
+               f"{_format_policy(policy)}")
+
+
 @client.command("list")
 def client_list():
     """List clients."""
@@ -160,8 +212,15 @@ def client_list():
     rows = db.list_clients()
     db.close()
     for r in rows:
+        policy = resolve_dunning_policy(r)
+        overrides = [
+            f"{s}={'off' if policy[s] is None else policy[s]}"
+            for s in STAGES
+            if r["dunning_" + s] is not None
+        ]
+        marker = f"  [dunning {' '.join(overrides)}]" if overrides else ""
         click.echo(f"#{r['id']:>3}  {r['name']:<30} {r['email'] or '':<28} "
-                   f"{r['phone'] or ''}")
+                   f"{r['phone'] or ''}{marker}")
 
 
 # -- project --------------------------------------------------------------
@@ -659,7 +718,8 @@ def check_due_cmd():
         click.echo("nothing due — no emails sent")
     for r in results:
         if r.get("skipped"):
-            click.echo(f"skipped {r['stage']} (invoice #{r['invoice_id']}): "
+            click.echo(f"skipped {r['stage'] or 'dunning'} "
+                       f"(invoice #{r['invoice_id']}): "
                        f"{r['skipped']}")
             continue
         if r.get("send_error"):

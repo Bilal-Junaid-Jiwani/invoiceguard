@@ -8,6 +8,12 @@ Stages (by days overdue):
 Idempotent: each stage is sent at most once per invoice (dunning_events).
 Meant to run from cron (e.g. hourly or daily). Only invoices with a
 status of 'sent' or 'overdue' and a due_date in the past are considered.
+
+Per-client policies (v0.7.0, first agency-mode slice): each client may
+override the stage thresholds — a positive int is a custom days-overdue
+threshold, 0 disables the stage for that client, NULL keeps the global
+default. Resolved by db.resolve_dunning_policy() and applied here per
+invoice; stage names and idempotency are unchanged.
 """
 
 from __future__ import annotations
@@ -16,7 +22,7 @@ from datetime import date
 from pathlib import Path
 
 from .config import templates_dir
-from .db import DB
+from .db import DB, resolve_dunning_policy
 from .late_fees import late_fee_summary
 from .mail import send_email
 from .messaging import (message_channel, messaging_configured, render_message,
@@ -54,16 +60,25 @@ def render_template(path: Path, context: dict) -> str:
         ) from e
 
 
-def stage_for(days_overdue: int, sent: set[str]) -> str | None:
+def stage_for(days_overdue: int, sent: set[str],
+              thresholds: dict | None = None) -> str | None:
     """Pick the next escalation stage.
 
     The earliest stage whose threshold is met and that has not been sent
     yet (escalation order: day1 polite -> day7 firm -> day15 formal).
     Returns None when no stage is due yet, or when all due stages were
     already sent (idempotency). One email per invoice per run.
+
+    thresholds maps stage -> days-overdue threshold, or None to disable a
+    stage for this client (per-client policy); when omitted the global
+    STAGE_THRESHOLDS apply.
     """
+    th = STAGE_THRESHOLDS if thresholds is None else thresholds
     for s in STAGES:
-        if days_overdue >= STAGE_THRESHOLDS[s] and s not in sent:
+        t = th.get(s)
+        if t is None:
+            continue  # stage disabled for this client
+        if days_overdue >= t and s not in sent:
             return s
     return None
 
@@ -88,6 +103,14 @@ def check_due(db: DB, smtp_cfg: dict,
     continues with the rest — one bad send no longer aborts the whole
     collections run. A failed stage is simply retried on the next run.
 
+    Per-client dunning policies (v0.7.0): each invoice's client may
+    override the stage thresholds (`invoiceguard client
+    set-dunning-policy`); the resolved policy is applied per invoice, so
+    one client can escalate faster while another is never auto-dunned.
+    An invoice whose client has every stage disabled is reported as
+    skipped (nothing recorded), making the opt-out visible in the output
+    instead of silently vanishing.
+
     When messaging_cfg is configured (Twilio credentials present), the
     day-15 stage additionally goes out as an SMS/WhatsApp message to
     clients with a phone number on file — recorded in message_events,
@@ -102,8 +125,18 @@ def check_due(db: DB, smtp_cfg: dict,
         due = date.fromisoformat(inv["due_date"])
         days_overdue = (today - due).days
         sent = db.sent_stages(inv["id"])
-        stage = stage_for(days_overdue, sent)
+        thresholds = resolve_dunning_policy(inv)
+        stage = stage_for(days_overdue, sent, thresholds)
         if stage is None:
+            if all(t is None for t in thresholds.values()):
+                results.append({
+                    "invoice_id": inv["id"],
+                    "stage": None,
+                    "to": inv["client_email"],
+                    "skipped": "dunning disabled for this client "
+                               "(per-client policy — change it with "
+                               "`invoiceguard client set-dunning-policy`)",
+                })
             continue
 
         if not inv.get("client_email"):

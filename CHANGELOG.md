@@ -2,6 +2,19 @@
 
 Every release, newest first. InvoiceGuard follows semver.
 
+## [0.7.0] - 2026-10-14
+
+Per-client dunning policies: the first agency-mode slice — each client can now have its own dunning stage thresholds.
+
+### Added
+- `clients` table gains `dunning_day1`, `dunning_day7`, `dunning_day15` (additive migration — existing databases get the columns on connect; NULL = global default, 0 = stage disabled for that client).
+- `invoiceguard client set-dunning-policy <id> [--day1 N] [--day7 N] [--day15 N] [--reset]` — set per-client days-overdue thresholds; `0` disables a stage for that client; `--reset` restores the global defaults (1/7/15). Thresholds must keep escalation order (day1 -> day7 -> day15); negative values are rejected and nothing is written on validation failure.
+- `check-due` resolves each invoice's client policy per invoice: custom thresholds fire at the custom day, disabled stages are skipped in escalation, and an invoice whose client has every stage disabled is reported as `skipped dunning (invoice #N)` — nothing recorded, so the opt-out stays visible instead of silently vanishing.
+- `client list` prints a `[dunning ...]` marker for clients with overrides (e.g. `[dunning day1=3 day15=off]`).
+
+### Honest scope (0.7.0)
+- Only *when* (or whether) a stage fires changes: stage names, subjects, templates, and idempotency are untouched. The day-15 SMS/WhatsApp escalation still follows the `day15` stage — with a custom threshold it fires at the custom day. Multi-freelancer workspaces (the other half of agency mode) are still unshipped.
+
 ## [0.6.5] - 2026-10-13
 
 Dunning send-failure isolation: one invoice's email send failing no longer aborts the whole `check-due` run.

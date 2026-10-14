@@ -109,6 +109,8 @@
 </li>
 <li><a href="#failed-sends-are-isolated">Failed sends are isolated</a>
 </li>
+<li><a href="#per-client-dunning-policies-v070">Per-client dunning policies (v0.7.0)</a>
+</li>
 <li><a href="#cron-setup">Cron setup</a>
 </li>
 <li><a href="#email-templates">Email templates</a>
@@ -136,6 +138,17 @@
 <pre class="codeblock" data-lang="bash"><code>failed day1 (invoice #2): email send failed: 421 transient failure from relay — stage not recorded, will retry next run
 </code></pre>
 <p>Nothing is recorded for a failed invoice (no <code>dunning_events</code> row, no status flip), so the stage is simply retried on the next run, and every other overdue invoice still gets its stage.</p>
+<h2 id="per-client-dunning-policies-v070">Per-client dunning policies (v0.7.0)</h2>
+<p>The first slice of agency mode: each client can have its own stage thresholds. A positive number sets a custom days-overdue threshold, <code>0</code> disables the stage for that client, and omitting a flag (or <code>--reset</code>) keeps the global default (1 / 7 / 15):</p>
+<pre class="codeblock" data-lang="bash"><code>invoiceguard client set-dunning-policy 4 --day1 3 --day7 10 --day15 20
+invoiceguard client set-dunning-policy 4 --day15 0     # never send the formal notice to this client
+invoiceguard client set-dunning-policy 4 --reset       # back to the global defaults
+</code></pre>
+<p>Thresholds must keep escalation order — <code>day1 → day7 → day15</code> ascending — and negative values are rejected (nothing is written on validation failure). Only <em>when</em> (or whether) a stage fires changes: stage names, templates, subjects, and idempotency are untouched, and the day-15 SMS/WhatsApp escalation still follows the <code>day15</code> stage — with a custom threshold it fires at the custom day.</p>
+<p>An overdue invoice whose client has every stage disabled is not silently dropped — <code>check-due</code> reports it so the opt-out stays visible:</p>
+<pre class="codeblock" data-lang="bash"><code>skipped dunning (invoice #12): dunning disabled for this client (per-client policy — change it with `invoiceguard client set-dunning-policy`)
+</code></pre>
+<p><code>client list</code> shows a <code>[dunning day1=3 day15=off]</code> marker next to clients with overrides.</p>
 <h2 id="cron-setup">Cron setup</h2>
 <pre class="codeblock" data-lang="cron"><code>0 9 * * * /path/to/venv/bin/invoiceguard check-due &gt;&gt; ~/.invoiceguard/check-due.log 2&gt;&amp;1
 </code></pre>
@@ -181,6 +194,8 @@
 <li><a href="#skipped-invoices">Skipped invoices</a>
 </li>
 <li><a href="#failed-sends-are-isolated">Failed sends are isolated</a>
+</li>
+<li><a href="#per-client-dunning-policies-v070">Per-client dunning policies (v0.7.0)</a>
 </li>
 <li><a href="#cron-setup">Cron setup</a>
 </li>

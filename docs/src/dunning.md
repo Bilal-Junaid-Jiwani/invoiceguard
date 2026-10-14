@@ -39,6 +39,26 @@ failed day1 (invoice #2): email send failed: 421 transient failure from relay �
 
 Nothing is recorded for a failed invoice (no `dunning_events` row, no status flip), so the stage is simply retried on the next run, and every other overdue invoice still gets its stage.
 
+## Per-client dunning policies (v0.7.0)
+
+The first slice of agency mode: each client can have its own stage thresholds. A positive number sets a custom days-overdue threshold, `0` disables the stage for that client, and omitting a flag (or `--reset`) keeps the global default (1 / 7 / 15):
+
+```bash
+invoiceguard client set-dunning-policy 4 --day1 3 --day7 10 --day15 20
+invoiceguard client set-dunning-policy 4 --day15 0     # never send the formal notice to this client
+invoiceguard client set-dunning-policy 4 --reset       # back to the global defaults
+```
+
+Thresholds must keep escalation order — `day1 → day7 → day15` ascending — and negative values are rejected (nothing is written on validation failure). Only *when* (or whether) a stage fires changes: stage names, templates, subjects, and idempotency are untouched, and the day-15 SMS/WhatsApp escalation still follows the `day15` stage — with a custom threshold it fires at the custom day.
+
+An overdue invoice whose client has every stage disabled is not silently dropped — `check-due` reports it so the opt-out stays visible:
+
+```bash
+skipped dunning (invoice #12): dunning disabled for this client (per-client policy — change it with `invoiceguard client set-dunning-policy`)
+```
+
+`client list` shows a `[dunning day1=3 day15=off]` marker next to clients with overrides.
+
 ## Cron setup
 
 ```cron
