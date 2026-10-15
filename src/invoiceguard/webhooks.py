@@ -33,9 +33,37 @@ def verify_event(payload: bytes, sig_header: str, webhook_secret: str) -> dict:
 def handle_event(db: DB, event: dict) -> str:
     """Apply a verified Stripe event to the DB.
 
+    Idempotent on event id: a retried delivery of an already-processed
+    event is ignored ("ignored:duplicate_event"), so a replayed
+    partial-payment event can never double-record a payment and flip
+    an invoice to fully-paid early. Distinct events on the same invoice
+    are still processed.
+
     Returns a short action label: 'invoice_paid', 'invoice_voided', or
     'ignored:<type>'.
     """
+    event_id = event.get("id")
+    if event_id and db.webhook_event_seen(event_id):
+        return "ignored:duplicate_event"
+    invoice_id = _invoice_id_from(event)
+    action = _apply_event(db, event)
+    if event_id:
+        db.mark_webhook_event_processed(
+            event_id, event.get("type", ""), invoice_id
+        )
+    return action
+
+
+def _invoice_id_from(event: dict) -> int | None:
+    obj = (event.get("data") or {}).get("object") or {}
+    raw = (obj.get("metadata") or {}).get("invoiceguard_invoice_id")
+    try:
+        return int(raw) if raw is not None else None
+    except (TypeError, ValueError):
+        return None
+
+
+def _apply_event(db: DB, event: dict) -> str:
     etype = event.get("type", "")
     obj = (event.get("data") or {}).get("object") or {}
 

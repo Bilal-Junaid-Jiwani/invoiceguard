@@ -35,6 +35,8 @@ Placeholder values (`whsec_...`, anything ending in `...`) count as **unconfigur
 
 Already-paid invoices are left alone (`ignored:already_paid`); **void** invoices are likewise ignored — void is terminal, so a webhook never resurrects one; events without invoice metadata are ignored.
 
+**Idempotent on event id (v0.7.1):** every processed event's Stripe id is recorded in a `webhook_events` table, so a retried delivery (Stripe resends events until it gets a 2xx) returns `ignored:duplicate_event` instead of re-recording. Before this, replaying the same partial-payment event recorded a second payment row — enough retries could mark an invoice fully-paid on half the money. Distinct events for the same invoice are still processed normally.
+
 ## Offline smoke test
 
 Signature verification uses real `stripe.Webhook.construct_event` HMAC checks and works with no network:

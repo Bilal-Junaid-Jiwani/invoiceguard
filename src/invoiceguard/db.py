@@ -98,6 +98,12 @@ CREATE TABLE IF NOT EXISTS message_events(
 );
 CREATE INDEX IF NOT EXISTS idx_message_events_invoice
     ON message_events(invoice_id, stage, channel);
+CREATE TABLE IF NOT EXISTS webhook_events(
+    event_id TEXT PRIMARY KEY,
+    event_type TEXT NOT NULL,
+    invoice_id INTEGER REFERENCES invoices(id),
+    received_at TEXT NOT NULL
+);
 """
 
 
@@ -479,6 +485,30 @@ class DB:
         d["outstanding_cents"] = d["amount_cents"] - d["paid_cents"]
         d["payments"] = self.payments(invoice_id)
         return d
+
+    # -- webhook idempotency -------------------------------------------
+    def webhook_event_seen(self, event_id: str) -> bool:
+        """True if this Stripe event id was already processed.
+
+        Lets the webhook handler drop retried deliveries (Stripe resends
+        events until it gets a 2xx) so a replayed partial-payment event
+        can never record the same payment twice.
+        """
+        return self.conn.execute(
+            "SELECT 1 FROM webhook_events WHERE event_id = ?",
+            (event_id,),
+        ).fetchone() is not None
+
+    def mark_webhook_event_processed(self, event_id: str, event_type: str,
+                                     invoice_id: int | None = None) -> None:
+        """Record that a Stripe event id was handled. Idempotent."""
+        self.conn.execute(
+            "INSERT OR IGNORE INTO webhook_events"
+            "(event_id, event_type, invoice_id, received_at) "
+            "VALUES (?, ?, ?, ?)",
+            (event_id, event_type, invoice_id, now_iso()),
+        )
+        self.conn.commit()
 
     # -- payments ----------------------------------------------------
     def payments(self, invoice_id: int) -> list[dict]:

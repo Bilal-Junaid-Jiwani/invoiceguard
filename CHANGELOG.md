@@ -2,6 +2,14 @@
 
 Every release, newest first. InvoiceGuard follows semver.
 
+## [0.7.1] - 2026-10-15
+
+Stripe webhook idempotency: processed Stripe event ids are now recorded in a `webhook_events` table, so a retried delivery of an already-handled event is ignored (`ignored:duplicate_event`) instead of re-recorded.
+
+### Fixed
+- A retried `checkout.session.completed` webhook for a *partial* payment recorded a second payment row — replaying the same half-payment event could mark the invoice fully-paid on half the money. Same event id delivered twice is now a no-op on the second delivery; distinct event ids for the same invoice are still processed normally.
+- Existing databases get the `webhook_events` table additively on connect (no manual migration).
+
 ## [0.7.0] - 2026-10-14
 
 Per-client dunning policies: the first agency-mode slice — each client can now have its own dunning stage thresholds.

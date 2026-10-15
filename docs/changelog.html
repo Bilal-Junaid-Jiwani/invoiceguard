@@ -93,6 +93,8 @@
         <details>
           <summary>On this page</summary>
           <ul class="toc-list">
+<li><a href="#071---2026-10-15">[0.7.1] - 2026-10-15</a>
+</li>
 <li><a href="#070---2026-10-14">[0.7.0] - 2026-10-14</a>
 </li>
 <li><a href="#065---2026-10-13">[0.6.5] - 2026-10-13</a>
@@ -139,6 +141,8 @@
         </details>
       </div>
       <p>InvoiceGuard follows semver. Newest first.</p>
+<h2 id="071---2026-10-15">[0.7.1] - 2026-10-15</h2>
+<p>Stripe webhook idempotency: processed Stripe event ids are now recorded in a <code>webhook_events</code> table, so a retried delivery of an already-handled event is ignored (<code>ignored:duplicate_event</code>) instead of re-recorded. A retried partial-payment webhook previously recorded a second payment row — replaying the same half-payment event could mark the invoice fully-paid on half the money. Distinct event ids for the same invoice are still processed normally. Existing databases get the table additively on connect.</p>
 <h2 id="070---2026-10-14">[0.7.0] - 2026-10-14</h2>
 <p>Per-client dunning policies — the first agency-mode slice. Each client can now have its own dunning stage thresholds via <code>invoiceguard client set-dunning-policy &lt;id&gt; [--day1 N] [--day7 N] [--day15 N] [--reset]</code>: a positive number sets a custom days-overdue threshold, <code>0</code> disables the stage for that client, and thresholds must keep escalation order (day1 → day7 → day15). <code>check-due</code> resolves the policy per invoice, so one client can escalate faster while another is never auto-dunned; an invoice whose client has every stage disabled is reported as <code>skipped dunning (invoice #N)</code> instead of silently vanishing. <code>client list</code> shows a <code>[dunning ...]</code> marker for clients with overrides. Existing databases are migrated additively on connect (new columns, NULL = global default). Only <em>when</em> a stage fires changes — templates, subjects, and idempotency are untouched; multi-freelancer workspaces remain unshipped.</p>
 <h2 id="065---2026-10-13">[0.6.5] - 2026-10-13</h2>
@@ -259,6 +263,8 @@
   <aside class="toc-side" aria-label="Table of contents">
     <p class="toc-label">On this page</p>
     <ul class="toc-list">
+<li><a href="#071---2026-10-15">[0.7.1] - 2026-10-15</a>
+</li>
 <li><a href="#070---2026-10-14">[0.7.0] - 2026-10-14</a>
 </li>
 <li><a href="#065---2026-10-13">[0.6.5] - 2026-10-13</a>

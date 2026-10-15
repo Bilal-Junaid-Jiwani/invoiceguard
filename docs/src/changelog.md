@@ -5,6 +5,10 @@ description: InvoiceGuard release history — newest first, no fluff.
 ---
 InvoiceGuard follows semver. Newest first.
 
+## [0.7.1] - 2026-10-15
+
+Stripe webhook idempotency: processed Stripe event ids are now recorded in a `webhook_events` table, so a retried delivery of an already-handled event is ignored (`ignored:duplicate_event`) instead of re-recorded. A retried partial-payment webhook previously recorded a second payment row — replaying the same half-payment event could mark the invoice fully-paid on half the money. Distinct event ids for the same invoice are still processed normally. Existing databases get the table additively on connect.
+
 ## [0.7.0] - 2026-10-14
 
 Per-client dunning policies — the first agency-mode slice. Each client can now have its own dunning stage thresholds via `invoiceguard client set-dunning-policy <id> [--day1 N] [--day7 N] [--day15 N] [--reset]`: a positive number sets a custom days-overdue threshold, `0` disables the stage for that client, and thresholds must keep escalation order (day1 → day7 → day15). `check-due` resolves the policy per invoice, so one client can escalate faster while another is never auto-dunned; an invoice whose client has every stage disabled is reported as `skipped dunning (invoice #N)` instead of silently vanishing. `client list` shows a `[dunning ...]` marker for clients with overrides. Existing databases are migrated additively on connect (new columns, NULL = global default). Only *when* a stage fires changes — templates, subjects, and idempotency are untouched; multi-freelancer workspaces remain unshipped.
