@@ -1,6 +1,6 @@
 Metadata-Version: 2.4
 Name: invoiceguard
-Version: 0.7.1
+Version: 0.8.0
 Summary: Freelancer payment enforcement: deposit links tied to a contract with a late-fee clause, then automated 3-stage collections.
 Author: InvoiceGuard contributors
 License: Apache-2.0
@@ -138,18 +138,21 @@ Send the pay link to the client. That's the whole pre-work flow.
 | `invoiceguard client set-email ID [--email billing@acme.com]` | Set or clear a client's email address (dunning) |
 | `invoiceguard client set-dunning-policy ID [--day1 N] [--day7 N] [--day15 N] [--reset]` | Per-client dunning thresholds (v0.7.0); `0` disables a stage |
 | `invoiceguard client list` | List clients (shows `[dunning ...]` overrides) |
+| `invoiceguard freelancer add --name N [--email E] [--phone +15551234567]` | Add a freelancer to the agency roster (v0.8.0) |
+| `invoiceguard freelancer set-email ID [--email E]` / `set-phone ID [--phone P]` / `list` | Manage or list freelancers (v0.8.0) |
 | `invoiceguard project create --client N --title T --amount 2000 [--deposit-pct 50] [--late-fee-pct 1.5] [--late-fee-grace-days 15] [--ack]` | Create project + generate contract markdown |
 | `invoiceguard project ack ID` | Record client acknowledgment of the contract (deposit-link path) |
 | `invoiceguard project sign-request ID` | Create a one-time e-signature link for the contract (`/sign/<token>`) |
 | `invoiceguard project sign-status ID` | Show pending/signed state, signer, timestamp, contract hash |
 | `invoiceguard project list` | List projects |
 | `invoiceguard invoice create --project ID --kind deposit\|milestone\|final [--amount X] [--due-days 7]` | Create a Stripe payment link (status → `sent`) |
-| `invoiceguard invoice list` | List invoices |
+| `invoiceguard invoice list [--freelancer ID]` | List invoices (shows the attributed freelancer) |
+| `invoiceguard invoice assign ID --freelancer ID` / `--none` | Attribute an invoice to a freelancer, or clear the attribution (v0.8.0; bookkeeping only) |
 | `invoiceguard invoice record-payment ID --amount 250 [--note "check #1"] [--method bank]` | Record a (partial) payment; clearing the balance marks the invoice `paid`, otherwise it becomes `partially-paid` |
 | `invoiceguard invoice mark-paid ID` | Manually mark paid (records the full outstanding balance in the payment ledger) |
 | `invoiceguard invoice void ID` | Void an invoice |
 | `invoiceguard invoice notify ID [--channel sms\|whatsapp] [--dry-run]` | Send an SMS/WhatsApp payment reminder now (`--dry-run` prints the message without sending) |
-| `invoiceguard invoice report [--as-of DATE] [--csv PATH] [--payments-csv PATH]` | Read-only receivables report: aging buckets, oldest debt first, per-client totals, accrued late fees; CSV export for accounting (`-` prints to stdout) |
+| `invoiceguard invoice report [--as-of DATE] [--freelancer ID] [--csv PATH] [--payments-csv PATH]` | Read-only receivables report: aging buckets, oldest debt first, per-client and per-freelancer totals, accrued late fees; CSV export for accounting (`-` prints to stdout) |
 | `invoiceguard check-due` | Run the dunning scan (cron target) |
 | `invoiceguard dashboard [--port 8000]` | Launch the local web dashboard (`http://127.0.0.1:8000`) — invoice list, detail with escalation timeline, Stripe webhook receiver |
 
@@ -245,7 +248,7 @@ python -m venv .venv && .venv/bin/pip install -r requirements.txt && .venv/bin/p
 .venv/bin/python -m pytest tests/ -q
 ```
 
-181 tests, all green (2026-10-14): contract clause rendering (incl. the e-signature sign-off wording and the contract deposit amount's Decimal half-up rounding, agreeing with the CLI quote and the deposit invoice), CLI money parsing (Decimal half-up amounts, deposit split, invalid/non-positive rejection), dunning stage selection + idempotency + email-less-client skip (no crash, reported reason, other invoices still sent; stage fires after `client set-email`) + dunning send-failure isolation (one failed send is reported, nothing recorded, rest of batch still sent; stage retries next run) + per-client dunning policies (custom thresholds fire at the custom day, disabled stages skipped in escalation, all-disabled client reported as `skipped dunning`, order/negative validation, additive migration on old DBs), `client set-email` (set/clear/unknown-client error), `client set-dunning-policy` (set/reset/validation/unknown-client), template rendering, webhook signature verification (real HMAC check, offline), Stripe link creation (mocked SDK, params asserted), CLI flows (incl. `project sign-request`/`sign-status`), e-signature DB ops (idempotent request, single-use token, tamper-evidence hash, ack flip) + full web signing flow (page render, validation, signed receipt, single-use enforcement), dashboard integration (page rendering + offline webhook checks incl. the `invoiceguard_invoice_id` metadata-key regression, the webhook-secret resolution regression, and the void-invoice webhook regression — a webhook for a voided invoice records nothing and leaves it void), SMS/WhatsApp messaging (phone normalization, Twilio payload with mocked HTTP, config resolution, day-15 escalation + `invoice notify` incl. dry-run), receivables aging report (bucket boundaries, dashboard-consistent outstanding totals, per-currency aggregation, late-fee agreement with the §3 calculator) + invoice/payment CSV exports, and a full end-to-end (init → client → project → invoice → `check-due` against a real local SMTP server → assert email captured + `dunning_events` row written).
+195 tests, all green (2026-10-16): contract clause rendering (incl. the e-signature sign-off wording and the contract deposit amount's Decimal half-up rounding, agreeing with the CLI quote and the deposit invoice), CLI money parsing (Decimal half-up amounts, deposit split, invalid/non-positive rejection), dunning stage selection + idempotency + email-less-client skip (no crash, reported reason, other invoices still sent; stage fires after `client set-email`) + dunning send-failure isolation (one failed send is reported, nothing recorded, rest of batch still sent; stage retries next run) + per-client dunning policies (custom thresholds fire at the custom day, disabled stages skipped in escalation, all-disabled client reported as `skipped dunning`, order/negative validation, additive migration on old DBs), `client set-email` (set/clear/unknown-client error), `client set-dunning-policy` (set/reset/validation/unknown-client), template rendering, webhook signature verification (real HMAC check, offline), Stripe link creation (mocked SDK, params asserted), CLI flows (incl. `project sign-request`/`sign-status`), e-signature DB ops (idempotent request, single-use token, tamper-evidence hash, ack flip) + full web signing flow (page render, validation, signed receipt, single-use enforcement), dashboard integration (page rendering + offline webhook checks incl. the `invoiceguard_invoice_id` metadata-key regression, the webhook-secret resolution regression, and the void-invoice webhook regression — a webhook for a voided invoice records nothing and leaves it void), SMS/WhatsApp messaging (phone normalization, Twilio payload with mocked HTTP, config resolution, day-15 escalation + `invoice notify` incl. dry-run), receivables aging report (bucket boundaries, dashboard-consistent outstanding totals, per-currency aggregation, late-fee agreement with the §3 calculator) + invoice/payment CSV exports, freelancer roster + invoice attribution (CRUD, assign/clear, unknown-id rejection, state untouched, old-DB migration, per-freelancer report + CSV column, CLI flows), and a full end-to-end (init → client → project → invoice → `check-due` against a real local SMTP server → assert email captured + `dunning_events` row written).
 
 ## Limits of v1
 
@@ -260,7 +263,7 @@ python -m venv .venv && .venv/bin/pip install -r requirements.txt && .venv/bin/p
 - ~~Real e-signature~~ — shipped in v0.3.0: `project sign-request` / `project sign-status`, one-time `/sign/<token>` page with typed-name + drawn-signature capture and SHA-256 tamper evidence.
 - ~~Late-fee accrual calculator~~ — shipped in v0.4.0: `invoice late-fees <id>` with monthly-compounding breakdown, dashboard "Accrued late fees" / "Total with fees" rows, `{late_fee_due}` / `{total_with_late_fees}` dunning variables.
 - ~~SMS / WhatsApp escalation~~ — shipped in v0.5.0: day-15 also goes out as an SMS/WhatsApp message via Twilio when configured (`invoice notify` sends one-off reminders).
-- **Agency mode** — multi-freelancer workspaces (unshipped); per-client dunning policies shipped in v0.7.0 (`invoiceguard client set-dunning-policy`).
+- **Agency mode** — multi-freelancer workspaces (unshipped); per-client dunning policies shipped in v0.7.0 (`invoiceguard client set-dunning-policy`); freelancer roster + invoice attribution shipped in v0.8.0 (`invoiceguard freelancer add`, `invoiceguard invoice assign`).
 - ~~Partial payments / payment plans~~ — shipped in v0.2.0.
 
 ## Changelog

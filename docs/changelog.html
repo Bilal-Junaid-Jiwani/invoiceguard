@@ -93,6 +93,8 @@
         <details>
           <summary>On this page</summary>
           <ul class="toc-list">
+<li><a href="#080---2026-10-16">[0.8.0] - 2026-10-16</a>
+</li>
 <li><a href="#071---2026-10-15">[0.7.1] - 2026-10-15</a>
 </li>
 <li><a href="#070---2026-10-14">[0.7.0] - 2026-10-14</a>
@@ -141,6 +143,8 @@
         </details>
       </div>
       <p>InvoiceGuard follows semver. Newest first.</p>
+<h2 id="080---2026-10-16">[0.8.0] - 2026-10-16</h2>
+<p>Freelancer roster + invoice attribution — the second agency-mode slice. <code>invoiceguard freelancer add/list/set-email/set-phone</code> manages the agency roster (name, email, phone); <code>invoiceguard invoice assign &lt;id&gt; --freelancer &lt;id&gt;</code> (or <code>--none</code> to clear) attributes an invoice to a freelancer. Attribution is pure bookkeeping — it never changes dunning, payments, or invoice status. <code>invoice list --freelancer ID</code> filters by freelancer, and <code>invoice report</code> gains a <code>--freelancer ID</code> filter plus a "by freelancer" breakdown; the invoice CSV gets a trailing <code>freelancer</code> column, and the dashboard shows the attributed freelancer on the invoice list and detail pages. Existing databases get the <code>freelancers</code> table and the <code>invoices.freelancer_id</code> column additively on connect (NULL = unattributed). Honest scope: no per-freelancer logins, permissions, or workspaces — the remaining half of agency mode (multi-freelancer workspaces) is still unshipped.</p>
 <h2 id="071---2026-10-15">[0.7.1] - 2026-10-15</h2>
 <p>Stripe webhook idempotency: processed Stripe event ids are now recorded in a <code>webhook_events</code> table, so a retried delivery of an already-handled event is ignored (<code>ignored:duplicate_event</code>) instead of re-recorded. A retried partial-payment webhook previously recorded a second payment row — replaying the same half-payment event could mark the invoice fully-paid on half the money. Distinct event ids for the same invoice are still processed normally. Existing databases get the table additively on connect.</p>
 <h2 id="070---2026-10-14">[0.7.0] - 2026-10-14</h2>
@@ -263,6 +267,8 @@
   <aside class="toc-side" aria-label="Table of contents">
     <p class="toc-label">On this page</p>
     <ul class="toc-list">
+<li><a href="#080---2026-10-16">[0.8.0] - 2026-10-16</a>
+</li>
 <li><a href="#071---2026-10-15">[0.7.1] - 2026-10-15</a>
 </li>
 <li><a href="#070---2026-10-14">[0.7.0] - 2026-10-14</a>

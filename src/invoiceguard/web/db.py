@@ -26,6 +26,13 @@ CREATE TABLE IF NOT EXISTS clients(
   email TEXT,
   created_at TEXT NOT NULL
 );
+CREATE TABLE IF NOT EXISTS freelancers(
+  id INTEGER PRIMARY KEY,
+  name TEXT NOT NULL,
+  email TEXT,
+  phone TEXT,
+  created_at TEXT NOT NULL
+);
 CREATE TABLE IF NOT EXISTS projects(
   id INTEGER PRIMARY KEY,
   client_id INTEGER NOT NULL REFERENCES clients(id),
@@ -47,6 +54,7 @@ CREATE TABLE IF NOT EXISTS invoices(
   amount_cents INTEGER NOT NULL,
   currency TEXT NOT NULL DEFAULT 'USD',
   status TEXT NOT NULL DEFAULT 'draft',
+  freelancer_id INTEGER REFERENCES freelancers(id),
   stripe_url TEXT,
   stripe_session_id TEXT,
   due_date TEXT,
@@ -174,6 +182,7 @@ def list_invoices(status: str | None = None) -> list[dict]:
                           WHERE p.invoice_id = i.id), 0) AS paid_cents,
                p.title AS project_title,
                c.name AS client_name,
+               f.name AS freelancer_name,
                (SELECT MAX(CASE de.stage
                             WHEN 'day1' THEN 1
                             WHEN 'day7' THEN 2
@@ -183,6 +192,7 @@ def list_invoices(status: str | None = None) -> list[dict]:
           FROM invoices i
           JOIN projects p ON p.id = i.project_id
           JOIN clients c ON c.id = p.client_id
+          LEFT JOIN freelancers f ON f.id = i.freelancer_id
         """
         params: list = []
         if status:
@@ -254,6 +264,7 @@ def get_invoice(invoice_id: int) -> dict | None:
                    p.currency AS project_currency, p.deposit_pct, p.late_fee_pct,
                    p.late_fee_grace_days, p.contract_ack, p.contract_ack_at,
                    c.name AS client_name, c.email AS client_email,
+                   f.name AS freelancer_name,
                    (SELECT MAX(CASE de.stage
                                 WHEN 'day1' THEN 1
                                 WHEN 'day7' THEN 2
@@ -263,6 +274,7 @@ def get_invoice(invoice_id: int) -> dict | None:
               FROM invoices i
               JOIN projects p ON p.id = i.project_id
               JOIN clients c ON c.id = p.client_id
+              LEFT JOIN freelancers f ON f.id = i.freelancer_id
              WHERE i.id = ?
             """,
             (invoice_id,),

@@ -24,6 +24,13 @@ CREATE TABLE IF NOT EXISTS clients(
     dunning_day7 INTEGER,
     dunning_day15 INTEGER
 );
+CREATE TABLE IF NOT EXISTS freelancers(
+    id INTEGER PRIMARY KEY,
+    name TEXT NOT NULL,
+    email TEXT,
+    phone TEXT,
+    created_at TEXT NOT NULL
+);
 CREATE TABLE IF NOT EXISTS projects(
     id INTEGER PRIMARY KEY,
     client_id INTEGER NOT NULL REFERENCES clients(id),
@@ -45,6 +52,7 @@ CREATE TABLE IF NOT EXISTS invoices(
     amount_cents INTEGER NOT NULL,
     currency TEXT NOT NULL DEFAULT 'USD',
     status TEXT NOT NULL DEFAULT 'draft',
+    freelancer_id INTEGER REFERENCES freelancers(id),
     stripe_url TEXT,
     stripe_session_id TEXT,
     due_date TEXT,
@@ -142,6 +150,21 @@ def migrate_clients_dunning_policy(conn: sqlite3.Connection) -> None:
             conn.commit()
 
 
+def migrate_invoices_freelancer_id(conn: sqlite3.Connection) -> None:
+    """Additive migration: invoices.freelancer_id (agency mode, v0.8.0).
+
+    NULL = unattributed (invoices created before v0.8.0, or never
+    assigned). Databases created before v0.8.0 get the column here.
+    Idempotent — safe to call on every connect.
+    """
+    cols = {r[1] for r in conn.execute("PRAGMA table_info(invoices)")}
+    if "freelancer_id" not in cols:
+        conn.execute(
+            "ALTER TABLE invoices ADD COLUMN freelancer_id INTEGER "
+            "REFERENCES freelancers(id)")
+        conn.commit()
+
+
 def resolve_dunning_policy(row) -> dict:
     """Resolved dunning thresholds for a client-like row.
 
@@ -198,6 +221,7 @@ class DB:
         self.conn.executescript(SCHEMA)
         migrate_clients_phone(self.conn)
         migrate_clients_dunning_policy(self.conn)
+        migrate_invoices_freelancer_id(self.conn)
         backfill_paid_ledger(self.conn)
 
     # -- clients -----------------------------------------------------
@@ -297,6 +321,67 @@ class DB:
         return self.conn.execute(
             "SELECT * FROM clients ORDER BY id"
         ).fetchall()
+
+    # -- freelancers (agency mode) ---------------------------------
+    def add_freelancer(self, name: str, email: str | None = None,
+                       phone: str | None = None) -> int:
+        """Add a freelancer (team member) to the agency roster."""
+        name = (name or "").strip()
+        if not name:
+            raise ValueError("freelancer name is required")
+        cur = self.conn.execute(
+            "INSERT INTO freelancers(name, email, phone, created_at) "
+            "VALUES (?, ?, ?, ?)",
+            (name, email, phone, now_iso()),
+        )
+        self.conn.commit()
+        return cur.lastrowid
+
+    def get_freelancer(self, freelancer_id: int) -> sqlite3.Row | None:
+        return self.conn.execute(
+            "SELECT * FROM freelancers WHERE id = ?", (freelancer_id,)
+        ).fetchone()
+
+    def list_freelancers(self) -> list[sqlite3.Row]:
+        return self.conn.execute(
+            "SELECT * FROM freelancers ORDER BY id"
+        ).fetchall()
+
+    def set_freelancer_email(self, freelancer_id: int,
+                             email: str | None) -> None:
+        self.conn.execute(
+            "UPDATE freelancers SET email = ? WHERE id = ?",
+            (email, freelancer_id),
+        )
+        self.conn.commit()
+
+    def set_freelancer_phone(self, freelancer_id: int,
+                             phone: str | None) -> None:
+        self.conn.execute(
+            "UPDATE freelancers SET phone = ? WHERE id = ?",
+            (phone, freelancer_id),
+        )
+        self.conn.commit()
+
+    def assign_invoice_freelancer(self, invoice_id: int,
+                                 freelancer_id: int | None) -> None:
+        """Attribute an invoice to a freelancer (or None to clear it).
+
+        Attribution is bookkeeping only: it never changes dunning,
+        payments, or invoice status. Raises ValueError when the invoice
+        or the freelancer does not exist.
+        """
+        inv = self.get_invoice(invoice_id)
+        if not inv:
+            raise ValueError(f"no invoice #{invoice_id}")
+        if freelancer_id is not None and not self.get_freelancer(
+                freelancer_id):
+            raise ValueError(f"no freelancer #{freelancer_id}")
+        self.conn.execute(
+            "UPDATE invoices SET freelancer_id = ? WHERE id = ?",
+            (freelancer_id, invoice_id),
+        )
+        self.conn.commit()
 
     # -- projects ----------------------------------------------------
     def add_project(self, client_id: int, title: str, amount_cents: int,
@@ -445,10 +530,12 @@ class DB:
 
     def list_invoices(self) -> list[sqlite3.Row]:
         return self.conn.execute(
-            """SELECT i.*, p.title AS project_title, c.name AS client_name
+            """SELECT i.*, p.title AS project_title, c.name AS client_name,
+                      f.name AS freelancer_name
                FROM invoices i
                JOIN projects p ON p.id = i.project_id
                JOIN clients c ON c.id = p.client_id
+               LEFT JOIN freelancers f ON f.id = i.freelancer_id
                ORDER BY i.id"""
         ).fetchall()
 
@@ -471,10 +558,12 @@ class DB:
                       p.late_fee_grace_days, p.contract_ack,
                       c.name AS client_name, c.email AS client_email,
                       c.phone AS client_phone,
-                      c.dunning_day1, c.dunning_day7, c.dunning_day15
+                      c.dunning_day1, c.dunning_day7, c.dunning_day15,
+                      f.name AS freelancer_name
                FROM invoices i
                JOIN projects p ON p.id = i.project_id
                JOIN clients c ON c.id = p.client_id
+               LEFT JOIN freelancers f ON f.id = i.freelancer_id
                WHERE i.id = ?""",
             (invoice_id,),
         ).fetchone()
@@ -656,11 +745,13 @@ class DB:
             """SELECT i.*, p.title AS project_title, p.late_fee_pct,
                       p.late_fee_grace_days, c.name AS client_name,
                       c.email AS client_email, c.phone AS client_phone,
+                      f.name AS freelancer_name,
                       COALESCE((SELECT SUM(p2.amount_cents) FROM payments p2
                                 WHERE p2.invoice_id = i.id), 0) AS paid_cents
                FROM invoices i
                JOIN projects p ON p.id = i.project_id
                JOIN clients c ON c.id = p.client_id
+               LEFT JOIN freelancers f ON f.id = i.freelancer_id
                WHERE i.status IN ('sent', 'overdue', 'partially-paid')
                ORDER BY (i.due_date IS NULL), i.due_date, i.id"""
         ).fetchall()

@@ -223,6 +223,85 @@ def client_list():
                    f"{r['phone'] or ''}{marker}")
 
 
+# -- freelancer (agency mode) -------------------------------------------
+@cli.group()
+def freelancer():
+    """Manage freelancers (agency roster)."""
+
+
+@freelancer.command("add")
+@click.option("--name", required=True, help="Freelancer name")
+@click.option("--email", default=None, help="Freelancer email")
+@click.option("--phone", default=None,
+              help="Freelancer phone in E.164 form, e.g. +15551234567")
+def freelancer_add(name, email, phone):
+    """Add a freelancer to the agency roster."""
+    if phone and not normalize_phone(phone):
+        raise click.ClickException(
+            f"invalid phone number {phone!r} — use E.164 form, "
+            f"e.g. +15551234567")
+    db = _db()
+    try:
+        fid = db.add_freelancer(
+            name, email, normalize_phone(phone) if phone else None)
+    except ValueError as e:
+        db.close()
+        raise click.ClickException(str(e))
+    db.close()
+    click.echo(f"freelancer #{fid}: {name} <{email or 'no email'}>"
+               + (f" phone {normalize_phone(phone)}" if phone else ""))
+
+
+@freelancer.command("set-email")
+@click.argument("freelancer_id", type=int)
+@click.option("--email", default=None,
+              help="Email address; omit (or pass empty) to clear it")
+def freelancer_set_email(freelancer_id, email):
+    """Set or clear a freelancer's email address."""
+    db = _db()
+    if not db.get_freelancer(freelancer_id):
+        db.close()
+        raise click.ClickException(f"no freelancer #{freelancer_id}")
+    normalized = email.strip() if email and email.strip() else None
+    db.set_freelancer_email(freelancer_id, normalized)
+    db.close()
+    click.echo(f"freelancer #{freelancer_id}: email "
+               f"{normalized or '(cleared)'}")
+
+
+@freelancer.command("set-phone")
+@click.argument("freelancer_id", type=int)
+@click.option("--phone", default=None,
+              help="Phone in E.164 form; omit (or pass empty) to clear it")
+def freelancer_set_phone(freelancer_id, phone):
+    """Set or clear a freelancer's phone number."""
+    db = _db()
+    if not db.get_freelancer(freelancer_id):
+        db.close()
+        raise click.ClickException(f"no freelancer #{freelancer_id}")
+    normalized = normalize_phone(phone) if phone else None
+    if phone and not normalized:
+        db.close()
+        raise click.ClickException(
+            f"invalid phone number {phone!r} — use E.164 form, "
+            f"e.g. +15551234567")
+    db.set_freelancer_phone(freelancer_id, normalized)
+    db.close()
+    click.echo(f"freelancer #{freelancer_id}: phone "
+               f"{normalized or '(cleared)'}")
+
+
+@freelancer.command("list")
+def freelancer_list():
+    """List freelancers."""
+    db = _db()
+    rows = db.list_freelancers()
+    db.close()
+    for r in rows:
+        click.echo(f"#{r['id']:>3}  {r['name']:<30} {r['email'] or '':<28} "
+                   f"{r['phone'] or ''}")
+
+
 # -- project --------------------------------------------------------------
 @cli.group()
 def project():
@@ -409,15 +488,57 @@ def invoice_create(project_id, kind, amount, due_days):
 
 
 @invoice.command("list")
-def invoice_list():
+@click.option("--freelancer", "freelancer_id", type=int, default=None,
+              help="Only show invoices attributed to freelancer ID")
+def invoice_list(freelancer_id):
     """List invoices."""
     db = _db()
+    if freelancer_id is not None and not db.get_freelancer(freelancer_id):
+        db.close()
+        raise click.ClickException(f"no freelancer #{freelancer_id}")
     rows = db.list_invoices()
     db.close()
+    if freelancer_id is not None:
+        rows = [r for r in rows if r["freelancer_id"] == freelancer_id]
     for r in rows:
+        fl = f" [{r['freelancer_name']}]" if r["freelancer_name"] else ""
         click.echo(f"#{r['id']:>3}  {r['kind']:<9} {r['status']:<14} "
                    f"{money(r['amount_cents'], r['currency']):>12}  "
-                   f"{r['project_title']:<30} due {r['due_date'] or '-'}")
+                   f"{r['project_title']:<30}{fl} due {r['due_date'] or '-'}")
+
+
+@invoice.command("assign")
+@click.argument("invoice_id", type=int)
+@click.option("--freelancer", "freelancer_id", type=int, default=None,
+              help="Freelancer ID to attribute the invoice to")
+@click.option("--none", "clear", is_flag=True, default=False,
+              help="Clear the freelancer attribution")
+def invoice_assign(invoice_id, freelancer_id, clear):
+    """Attribute an invoice to a freelancer (agency bookkeeping).
+
+    Attribution never changes dunning, payments, or invoice status —
+    it only records whose work the invoice belongs to, so reports can
+    break receivables down per freelancer.
+    """
+    if clear and freelancer_id is not None:
+        raise click.ClickException(
+            "--freelancer and --none are mutually exclusive")
+    if not clear and freelancer_id is None:
+        raise click.ClickException(
+            "pass --freelancer ID to attribute, or --none to clear")
+    db = _db()
+    try:
+        db.assign_invoice_freelancer(
+            invoice_id, None if clear else freelancer_id)
+    except ValueError as e:
+        db.close()
+        raise click.ClickException(str(e))
+    db.close()
+    if clear:
+        click.echo(f"invoice #{invoice_id}: freelancer attribution cleared")
+    else:
+        click.echo(f"invoice #{invoice_id}: attributed to "
+                   f"freelancer #{freelancer_id}")
 
 
 @invoice.command("record-payment")
@@ -597,6 +718,8 @@ def invoice_notify(invoice_id, channel, dry_run):
 @invoice.command("report")
 @click.option("--as-of", "as_of", default=None,
               help="Report date as YYYY-MM-DD (default: today)")
+@click.option("--freelancer", "freelancer_id", type=int, default=None,
+              help="Only include invoices attributed to freelancer ID")
 @click.option("--csv", "csv_path", default=None, metavar="PATH",
               help="Also write one CSV row per open invoice to PATH "
                    "('-' prints the CSV instead of the text report)")
@@ -604,13 +727,13 @@ def invoice_notify(invoice_id, channel, dry_run):
               metavar="PATH",
               help="Also write the full payment ledger as CSV to PATH "
                    "('-' prints it instead of the text report)")
-def invoice_report(as_of, csv_path, payments_csv_path):
+def invoice_report(as_of, freelancer_id, csv_path, payments_csv_path):
     """Read-only receivables report: who owes what, and how late.
 
-    Aging buckets, per-client totals, and accrued late fees over open
-    invoices (sent / overdue / partially-paid with a balance), using
-    the same outstanding-balance definition as the dashboard. Never
-    sends anything and never changes invoice state.
+    Aging buckets, per-client and per-freelancer totals, and accrued
+    late fees over open invoices (sent / overdue / partially-paid with
+    a balance), using the same outstanding-balance definition as the
+    dashboard. Never sends anything and never changes invoice state.
     """
     if csv_path == "-" and payments_csv_path == "-":
         raise click.ClickException(
@@ -623,7 +746,10 @@ def invoice_report(as_of, csv_path, payments_csv_path):
             raise click.ClickException(
                 f"bad --as-of date {as_of!r} — use YYYY-MM-DD")
     db = _db()
-    report = receivables_report(db, as_of=as_of)
+    if freelancer_id is not None and not db.get_freelancer(freelancer_id):
+        db.close()
+        raise click.ClickException(f"no freelancer #{freelancer_id}")
+    report = receivables_report(db, as_of=as_of, freelancer_id=freelancer_id)
     inv_csv = invoices_csv(report["rows"]) if csv_path else None
     pay_csv = payments_csv(db) if payments_csv_path else None
     db.close()
@@ -649,7 +775,10 @@ def invoice_report(as_of, csv_path, payments_csv_path):
         return
 
     rows = report["rows"]
-    click.echo(f"receivables report (as of {report['as_of']})")
+    click.echo(f"receivables report (as of {report['as_of']})"
+               + (f" — freelancer "
+                  f"#{freelancer_id}"
+                  if freelancer_id is not None else ""))
     if not rows:
         click.echo("  no open invoices — nothing outstanding")
     else:
@@ -694,6 +823,16 @@ def invoice_report(as_of, csv_path, payments_csv_path):
                        f"({money(c['fees_cents'], c['currency'])} fees,"
                        f" {money(c['total_cents'], c['currency'])}"
                        f" total due)")
+        if len(report["by_freelancer"]) > 1:
+            click.echo("")
+            click.echo("by freelancer:")
+            for f in report["by_freelancer"]:
+                click.echo(f"  {f['freelancer_name']:<20} {f['count']} invoice(s)  "
+                           f"{money(f['outstanding_cents'], f['currency'])}"
+                           f" outstanding  "
+                           f"({money(f['fees_cents'], f['currency'])} fees,"
+                           f" {money(f['total_cents'], f['currency'])}"
+                           f" total due)")
     for n in notes:
         click.echo(n)
 

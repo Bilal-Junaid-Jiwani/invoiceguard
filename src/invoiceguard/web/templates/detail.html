@@ -11,6 +11,7 @@
     </div>
     <dl class="facts">
       <div><dt>Client</dt><dd>{{ invoice.client_name }}{% if invoice.client_email %} <span class="muted">{{ invoice.client_email }}</span>{% endif %}</dd></div>
+      {% if invoice.freelancer_name %}<div><dt>Freelancer</dt><dd>{{ invoice.freelancer_name }}</dd></div>{% endif %}
       <div><dt>Project</dt><dd>{{ invoice.project_title }}</dd></div>
       <div><dt>Kind</dt><dd><span class="kind kind-{{ invoice.kind }}">{{ invoice.kind }}</span></dd></div>
       <div><dt>Amount</dt><dd class="mono big">{{ fmt(invoice.amount_cents, invoice.currency) }}</dd></div>

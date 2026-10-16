@@ -5,6 +5,10 @@ description: InvoiceGuard release history — newest first, no fluff.
 ---
 InvoiceGuard follows semver. Newest first.
 
+## [0.8.0] - 2026-10-16
+
+Freelancer roster + invoice attribution — the second agency-mode slice. `invoiceguard freelancer add/list/set-email/set-phone` manages the agency roster (name, email, phone); `invoiceguard invoice assign <id> --freelancer <id>` (or `--none` to clear) attributes an invoice to a freelancer. Attribution is pure bookkeeping — it never changes dunning, payments, or invoice status. `invoice list --freelancer ID` filters by freelancer, and `invoice report` gains a `--freelancer ID` filter plus a "by freelancer" breakdown; the invoice CSV gets a trailing `freelancer` column, and the dashboard shows the attributed freelancer on the invoice list and detail pages. Existing databases get the `freelancers` table and the `invoices.freelancer_id` column additively on connect (NULL = unattributed). Honest scope: no per-freelancer logins, permissions, or workspaces — the remaining half of agency mode (multi-freelancer workspaces) is still unshipped.
+
 ## [0.7.1] - 2026-10-15
 
 Stripe webhook idempotency: processed Stripe event ids are now recorded in a `webhook_events` table, so a retried delivery of an already-handled event is ignored (`ignored:duplicate_event`) instead of re-recorded. A retried partial-payment webhook previously recorded a second payment row — replaying the same half-payment event could mark the invoice fully-paid on half the money. Distinct event ids for the same invoice are still processed normally. Existing databases get the table additively on connect.

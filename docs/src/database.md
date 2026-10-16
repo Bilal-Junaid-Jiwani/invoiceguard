@@ -36,11 +36,20 @@ CREATE TABLE invoices(
   amount_cents INTEGER NOT NULL,
   currency TEXT NOT NULL DEFAULT 'USD',
   status TEXT NOT NULL DEFAULT 'draft',
+  freelancer_id INTEGER REFERENCES freelancers(id),
   stripe_url TEXT,
   stripe_session_id TEXT,
   due_date TEXT,
   sent_at TEXT,
   paid_at TEXT,
+  created_at TEXT NOT NULL
+);
+
+CREATE TABLE freelancers(
+  id INTEGER PRIMARY KEY,
+  name TEXT NOT NULL,
+  email TEXT,
+  phone TEXT,
   created_at TEXT NOT NULL
 );
 
@@ -96,3 +105,4 @@ CREATE TABLE message_events(
 - `seed_demo.py` (in the repo) seeds a demo database where every sample name carries a `(demo)` suffix so demo data can never be mistaken for real clients.
 - The `payments` table (v0.2.0) is the ledger: every `record-payment`, `mark-paid`, and Stripe webhook writes rows here. Databases created before v0.2.0 get a labeled backfill row for invoices already marked `paid`, so outstanding balances stay truthful without any manual migration.
 - `clients.phone` and the `message_events` table (v0.5.0) support SMS/WhatsApp escalation. Existing databases gain both automatically on first open (additive migration, same pattern as the payments backfill).
+- Per-client dunning columns (v0.7.0) and the `freelancers` table + `invoices.freelancer_id` (v0.8.0) follow the same additive-migration pattern: old databases get them on first open, NULL = no policy override / unattributed.

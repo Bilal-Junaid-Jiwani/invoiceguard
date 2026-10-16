@@ -2,6 +2,21 @@
 
 Every release, newest first. InvoiceGuard follows semver.
 
+## [0.8.0] - 2026-10-16
+
+Freelancer roster + invoice attribution — the second agency-mode slice.
+
+### Added
+- `freelancers` table: `invoiceguard freelancer add --name N [--email E] [--phone P]`, `list`, `set-email`, `set-phone` (mirrors the `client` commands; phone must be E.164).
+- `invoiceguard invoice assign <id> --freelancer <id>` attributes an invoice to a freelancer; `--none` clears it. Attribution is pure bookkeeping — it never changes dunning, payments, or invoice status.
+- `invoice list --freelancer ID` filters to one freelancer's invoices; the list shows the attributed freelancer's name.
+- `invoice report --freelancer ID` restricts the receivables report to one freelancer; the text report gains a "by freelancer" breakdown (shown when more than one attribution group has open invoices); the invoice CSV gains a trailing `freelancer` column.
+- The dashboard shows the attributed freelancer on the invoice list and the invoice detail page.
+- Existing databases get the `freelancers` table and `invoices.freelancer_id` additively on connect (NULL = unattributed, no data touched).
+
+### Honest scope (0.8.0)
+- No per-freelancer logins, permissions, or separate workspaces: attribution records *whose* work an invoice is so receivables can be broken down per freelancer. The remaining half of agency mode (multi-freelancer workspaces) is still unshipped.
+
 ## [0.7.1] - 2026-10-15
 
 Stripe webhook idempotency: processed Stripe event ids are now recorded in a `webhook_events` table, so a retried delivery of an already-handled event is ignored (`ignored:duplicate_event`) instead of re-recorded.

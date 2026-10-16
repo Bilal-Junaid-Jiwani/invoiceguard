@@ -29,6 +29,19 @@ invoiceguard client list
 - `set-dunning-policy` sets per-client dunning stage thresholds (v0.7.0, agency mode): each `--dayN` is the days-overdue threshold for that stage; `0` disables the stage for that client; omit a flag to leave it unchanged. Thresholds must stay in escalation order (day1 → day7 → day15); negative values are rejected. `--reset` clears overrides back to the global defaults (1/7/15).
 - `list` prints `#id  name  email  phone` rows, plus a `[dunning ...]` marker for clients with policy overrides.
 
+## `freelancer` (v0.8.0, agency mode)
+
+```bash
+invoiceguard freelancer add --name "Ali R." [--email ali@example.com] [--phone +15551234567]
+invoiceguard freelancer set-email 1 [--email ali@example.com]   # omit --email to clear
+invoiceguard freelancer set-phone 1 [--phone +15551234567]     # omit --phone to clear
+invoiceguard freelancer list
+```
+
+- The agency roster: one row per team member. `add` requires `--name`; `--phone` must be E.164 (invalid numbers are rejected).
+- `list` prints `#id  name  email  phone` rows.
+- Invoices are attributed to a freelancer with `invoice assign` (see below) — attribution is bookkeeping only and never changes dunning, payments, or invoice status.
+
 ## `project`
 
 ```bash
@@ -54,25 +67,27 @@ See [Contracts](contracts.html) for what the contract contains and the honest li
 
 ```bash
 invoiceguard invoice create --project 1 --kind deposit [--amount 1000] [--due-days 7]
-invoiceguard invoice list
+invoiceguard invoice list [--freelancer 1]
+invoiceguard invoice assign 1 --freelancer 1   # or: --none to clear
 invoiceguard invoice record-payment 1 --amount 250 [--note "check #1"] [--method bank]
 invoiceguard invoice mark-paid 1
 invoiceguard invoice void 1
 invoiceguard invoice late-fees 1 [--as-of 2026-10-06]
 invoiceguard invoice notify 1 [--channel sms|whatsapp] [--dry-run]
-invoiceguard invoice report [--as-of 2026-10-08] [--csv invoices.csv] [--payments-csv payments.csv]
+invoiceguard invoice report [--as-of 2026-10-08] [--freelancer 1] [--csv invoices.csv] [--payments-csv payments.csv]
 ```
 
 - `create` requires `--project` (id) and `--kind`: one of `deposit`, `milestone`, `final`.
 - Amount defaults by kind: `deposit` = `deposit_pct`% of the project total; `final` = the remainder after the deposit; `milestone` = the full project amount. `--amount` overrides in currency units.
 - `--due-days` defaults to 7; `0` or negative means "due today".
 - On success it creates a real Stripe payment link (test mode friendly), stores the URL, and sets status to `sent`. If the Stripe secret key is missing or still the placeholder, the command fails with a clear error — no invoice is left half-created.
-- `list` shows `#id  kind  status  amount  project  due-date`.
+- `list` shows `#id  kind  status  amount  project  [freelancer]  due-date`; `--freelancer ID` shows only that freelancer's invoices.
+- `assign` (v0.8.0, agency mode) attributes an invoice to a freelancer (`--freelancer ID`), or clears the attribution with `--none`. Pure bookkeeping: dunning, payments, and status are untouched.
 - `record-payment` records a (partial) payment in the ledger. A payment that clears the outstanding balance marks the invoice `paid`; otherwise the invoice becomes `partially-paid` and keeps dunning against the remaining balance. Overpaying is rejected.
 - `mark-paid` manually marks an invoice paid — since v0.2.0 it records the full outstanding balance in the ledger, and it errors on already-paid or void invoices. `void` voids it.
 - `late-fees` (v0.4.0) shows the accrued late fees for an invoice under contract §3: due date, grace window, monthly rate, months billed, accrued fees, and total due. `--as-of YYYY-MM-DD` computes as of a past date (default: today).
 - `notify` (v0.5.0) sends an SMS/WhatsApp payment reminder for one invoice right now (same text as the automatic day-15 message). `--dry-run` prints the rendered message without sending — no Twilio credentials needed, but the client needs a phone number.
-- `report` (v0.6.0) is a read-only receivables report: open invoices (sent / overdue / partially-paid with a balance) grouped into Current / 1-30 / 31-60 / 61-90 / 90+ day aging buckets, oldest debt first, with accrued late fees, per-client totals, and grand totals. `--as-of YYYY-MM-DD` pins the report date. `--csv PATH` exports one row per open invoice and `--payments-csv PATH` exports the full payment ledger for accounting; `-` as the path prints that CSV to stdout instead of the text report. It never sends anything or changes invoice state.
+- `report` (v0.6.0) is a read-only receivables report: open invoices (sent / overdue / partially-paid with a balance) grouped into Current / 1-30 / 31-60 / 61-90 / 90+ day aging buckets, oldest debt first, with accrued late fees, per-client totals, and grand totals. `--as-of YYYY-MM-DD` pins the report date. `--csv PATH` exports one row per open invoice and `--payments-csv PATH` exports the full payment ledger for accounting; `-` as the path prints that CSV to stdout instead of the text report. `--freelancer ID` (v0.8.0) restricts the report to one freelancer's invoices; the text report also prints a "by freelancer" breakdown when more than one attribution group has open invoices. It never sends anything or changes invoice state.
 
 ## `check-due`
 

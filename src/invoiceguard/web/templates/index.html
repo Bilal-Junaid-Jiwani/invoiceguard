@@ -43,6 +43,7 @@
         <span class="kind kind-{{ inv.kind }}">{{ inv.kind }}</span>
         <span>{{ inv.project_title }}</span>
         <span class="muted">#{{ inv.id }}</span>
+        {% if inv.freelancer_name %}<span class="muted">· {{ inv.freelancer_name }}</span>{% endif %}
       </div>
     </div>
     <div class="inv-amount mono">{{ fmt(inv.amount_cents, inv.currency) }}

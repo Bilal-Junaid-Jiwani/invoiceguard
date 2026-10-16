@@ -54,7 +54,8 @@ def aging_bucket(days_overdue: int | None) -> str:
     return "90+"
 
 
-def receivables_report(db: DB, as_of: str | date | None = None) -> dict:
+def receivables_report(db: DB, as_of: str | date | None = None,
+                       freelancer_id: int | None = None) -> dict:
     """Build the aging report over open invoices.
 
     Returns a dict with:
@@ -66,14 +67,24 @@ def receivables_report(db: DB, as_of: str | date | None = None) -> dict:
                     fees_cents, total_cents} for every bucket]}
         by_client — [{client_name, currency, count, outstanding_cents,
                     fees_cents, total_cents}] sorted by total due desc
+        by_freelancer — like by_client but per attributed freelancer
+                    (unattributed invoices are grouped under
+                    "unassigned")
         totals    — {currency: {count, outstanding_cents, fees_cents,
                     total_cents}}
     Aggregates are per currency — cents of different currencies are
     never added together.
+
+    Pass freelancer_id to restrict the report to invoices attributed to
+    one freelancer; rows for that filter still carry by_freelancer for
+    the single filtered freelancer.
     """
     today = _as_date(as_of) if as_of else date.today()
     rows = []
     for inv in db.open_invoices():
+        if (freelancer_id is not None
+                and inv.get("freelancer_id") != freelancer_id):
+            continue
         days = None
         if inv.get("due_date"):
             days = max(0, (today - _as_date(inv["due_date"])).days)
@@ -95,6 +106,7 @@ def receivables_report(db: DB, as_of: str | date | None = None) -> dict:
     buckets: dict[str, list[dict]] = {}
     totals: dict[str, dict] = {}
     clients: dict[tuple[str, str], dict] = {}
+    freelancers: dict[tuple[str, str], dict] = {}
     for row in rows:
         cur = row["currency"]
         if cur not in buckets:
@@ -102,7 +114,11 @@ def receivables_report(db: DB, as_of: str | date | None = None) -> dict:
                             for k, lbl in BUCKETS]
             totals[cur] = _blank()
         b = next(x for x in buckets[cur] if x["key"] == row["bucket"])
-        for agg in (b, totals[cur],
+        f_name = row.get("freelancer_name") or "unassigned"
+        f_agg = freelancers.setdefault(
+            (f_name, cur), dict({"freelancer_name": f_name,
+                                "currency": cur}, **_blank()))
+        for agg in (b, totals[cur], f_agg,
                     clients.setdefault((row["client_name"], cur),
                                        dict({"client_name": row["client_name"],
                                              "currency": cur}, **_blank()))):
@@ -112,11 +128,15 @@ def receivables_report(db: DB, as_of: str | date | None = None) -> dict:
             agg["total_cents"] += row["total_due_cents"]
     by_client = sorted(clients.values(),
                        key=lambda c: (-c["total_cents"], c["client_name"]))
+    by_freelancer = sorted(
+        freelancers.values(),
+        key=lambda c: (-c["total_cents"], c["freelancer_name"]))
     return {
         "as_of": today.isoformat(),
         "rows": rows,
         "buckets": buckets,
         "by_client": by_client,
+        "by_freelancer": by_freelancer,
         "totals": totals,
     }
 
@@ -129,7 +149,7 @@ def _units(cents: int) -> str:
 INVOICE_CSV_COLUMNS = [
     "invoice_id", "client", "project", "kind", "status", "currency",
     "amount", "paid", "outstanding", "late_fees", "total_due",
-    "due_date", "days_overdue",
+    "due_date", "days_overdue", "freelancer",
 ]
 
 
@@ -147,6 +167,7 @@ def invoices_csv(rows: list[dict]) -> str:
             _units(r["total_due_cents"]),
             r["due_date"] or "",
             "" if r["days_overdue"] is None else r["days_overdue"],
+            r.get("freelancer_name") or "",
         ])
     return buf.getvalue()
 

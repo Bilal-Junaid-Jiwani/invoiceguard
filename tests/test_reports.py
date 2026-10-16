@@ -132,7 +132,7 @@ def test_invoices_csv_rows(db, sample_project):
     assert rows[0] == ["invoice_id", "client", "project", "kind",
                        "status", "currency", "amount", "paid",
                        "outstanding", "late_fees", "total_due",
-                       "due_date", "days_overdue"]
+                       "due_date", "days_overdue", "freelancer"]
     assert len(rows) == 2
     r = rows[1]
     assert r[0] == str(mid) and r[1] == "Acme Corp"
