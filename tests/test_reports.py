@@ -212,3 +212,43 @@ def test_cli_report_bad_date_and_double_stdout(home):
                          "--payments-csv", "-"])
     assert res.exit_code != 0
     assert "only one CSV" in res.output
+
+
+def test_csv_formula_injection_neutralized(db, sample_project):
+    # A malicious client/project name must not become a live formula
+    # when the accountant opens the export in a spreadsheet.
+    evil_cid = db.add_client('=HYPERLINK("http://evil.test","x")',
+                             "evil@acme.test")
+    evil_pid = db.add_project(evil_cid, "-2+3", 100_000, "USD",
+                              50.0, 1.5, 15, "contract")
+    _invoice(db, evil_pid, 100_000, "2026-09-20")
+    _invoice(db, sample_project["id"], 100_000, "2026-09-20")
+    rep = receivables_report(db, as_of=AS_OF)
+    rows = _read_csv(invoices_csv(rep["rows"]))
+    evil = next(r for r in rows[1:] if r[2] == "'-2+3")
+    assert evil[1] == "'=HYPERLINK(\"http://evil.test\",\"x\")"
+    # Benign cells are untouched: no leading quote added.
+    plain = next(r for r in rows[1:] if r[1] == "Acme Corp")
+    assert plain[2] == "Website redesign"
+
+
+def test_csv_cell_quotes_all_formula_triggers():
+    from invoiceguard.reports import _csv_cell
+    for trigger in ("=cmd", "+cmd", "-cmd", "@cmd", "|cmd", "%cmd",
+                    "\tcmd", "\rcmd"):
+        assert _csv_cell(trigger) == "'" + trigger
+    for benign in ("Acme Corp", "1000.00", "", "cmd", None, 42):
+        assert _csv_cell(benign) == benign
+
+
+def test_payments_csv_neutralizes_note_and_method(db, sample_project):
+    iid = _invoice(db, sample_project["id"], 100_000, "2026-09-20")
+    db.record_payment(iid, 40_000, method="bank",
+                      note="=1+1+cmd|' /c calc'!A0")
+    db.record_payment(iid, 60_000, method="@weird", note="paid in full")
+    rows = _read_csv(payments_csv(db))
+    assert len(rows) == 3
+    assert rows[1][8] == "'=1+1+cmd|' /c calc'!A0"
+    assert rows[1][5] == "bank"
+    assert rows[2][5] == "'@weird"
+    assert rows[2][8] == "paid in full"

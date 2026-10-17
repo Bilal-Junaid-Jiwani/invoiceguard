@@ -2,6 +2,16 @@
 
 Every release, newest first. InvoiceGuard follows semver.
 
+## [0.8.1] - 2026-10-17
+
+CSV formula-injection fix: the `--csv` and `--payments-csv` exports now neutralize spreadsheet formula injection (OWASP).
+
+### Fixed
+- Verified: client names, project titles, payment methods, and payment notes are free text, and the invoice/payment CSV exports wrote them raw — a value like `=HYPERLINK("http://evil","x")` in a client name would execute as a live formula when the accountant opened the export in Excel/LibreOffice (classic CSV injection). Any exported cell whose first character is `=`, `+`, `-`, `@`, `|`, `%`, tab, or carriage return now gets a leading single quote (`'=HYPERLINK(...)`) — spreadsheet apps render it as plain text, so benign values are unchanged and only the formula interpretation is defused.
+
+### Honest scope (0.8.1)
+- Export-side only: the database, CLI parsing, and every other output (text report, dashboard) are untouched. The quote is a text marker that spreadsheet apps do not display; raw CSV readers see the literal leading `'`.
+
 ## [0.8.0] - 2026-10-16
 
 Freelancer roster + invoice attribution — the second agency-mode slice.

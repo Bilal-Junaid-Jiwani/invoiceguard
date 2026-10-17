@@ -146,6 +146,23 @@ def _units(cents: int) -> str:
     return f"{cents / 100:.2f}"
 
 
+# Characters that make spreadsheet apps treat a cell as a formula or
+# a command instead of text — see the OWASP "CSV Injection" cheat
+# sheet. Client names, project titles, payment methods, and notes are
+# free text, so a cell that *starts* with one of these gets a leading
+# single quote. Spreadsheet apps render the cell as plain text (the
+# quote is a text marker, not displayed), so nothing about a benign
+# value changes — only the formula interpretation is defused.
+_CSV_FORMULA_LEAD = ("=", "+", "-", "@", "|", "%", "\t", "\r")
+
+
+def _csv_cell(value):
+    """Neutralize CSV formula injection on one cell value."""
+    if isinstance(value, str) and value[:1] in _CSV_FORMULA_LEAD:
+        return "'" + value
+    return value
+
+
 INVOICE_CSV_COLUMNS = [
     "invoice_id", "client", "project", "kind", "status", "currency",
     "amount", "paid", "outstanding", "late_fees", "total_due",
@@ -154,12 +171,16 @@ INVOICE_CSV_COLUMNS = [
 
 
 def invoices_csv(rows: list[dict]) -> str:
-    """One CSV row per open invoice (the receivables_report rows)."""
+    """One CSV row per open invoice (the receivables_report rows).
+
+    Free-text cells (client, project, freelancer) are neutralized
+    against CSV formula injection (see `_csv_cell`).
+    """
     buf = io.StringIO()
     w = csv.writer(buf, lineterminator="\n")
     w.writerow(INVOICE_CSV_COLUMNS)
     for r in rows:
-        w.writerow([
+        w.writerow([_csv_cell(v) for v in [
             r["id"], r["client_name"], r["project_title"], r["kind"],
             r["status"], r["currency"],
             _units(r["amount_cents"]), _units(r["paid_cents"]),
@@ -168,7 +189,7 @@ def invoices_csv(rows: list[dict]) -> str:
             r["due_date"] or "",
             "" if r["days_overdue"] is None else r["days_overdue"],
             r.get("freelancer_name") or "",
-        ])
+        ]])
     return buf.getvalue()
 
 
@@ -181,14 +202,18 @@ PAYMENT_CSV_COLUMNS = [
 def payments_csv(db: DB) -> str:
     """The full payment ledger as CSV — every recorded payment,
     including payments against invoices that are now paid in full,
-    so the export reconciles against bank statements."""
+    so the export reconciles against bank statements.
+
+    Free-text cells (client, project, method, note) are neutralized
+    against CSV formula injection (see `_csv_cell`).
+    """
     buf = io.StringIO()
     w = csv.writer(buf, lineterminator="\n")
     w.writerow(PAYMENT_CSV_COLUMNS)
     for p in db.all_payments():
-        w.writerow([
+        w.writerow([_csv_cell(v) for v in [
             p["id"], p["invoice_id"], p["client_name"],
             p["project_title"], p["paid_at"], p["method"],
             _units(p["amount_cents"]), p["currency"], p["note"] or "",
-        ])
+        ]])
     return buf.getvalue()
