@@ -56,6 +56,7 @@ invoiceguard project sign-status 1    # pending / signed + signer + hash
 
 - `create` requires an existing client (matched by exact `--client` name) and `--title` and `--amount` (in currency units, e.g. `2000`).
 - Defaults: `--currency USD`, `--deposit-pct 50`, `--late-fee-pct 1.5`, `--late-fee-grace-days 15`.
+- Validation: `--deposit-pct` and `--late-fee-pct` must be between 0 and 100; `--late-fee-grace-days` must be 0 or more. Out-of-range values are refused before anything is written (the percentages also land in the generated contract text).
 - Prints the generated contract (with the late-fee clause) as a preview.
 - `--ack` records the contract as acknowledged by the client at creation time; without it, the contract shows `no-ack` until you run `project ack ID` after the client accepts the deposit link.
 - `list` shows `#id  title  client  amount  [ack|no-ack]`.

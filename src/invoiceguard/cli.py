@@ -46,6 +46,22 @@ def _amount_to_cents(raw: str) -> int:
     return int(cents)
 
 
+def _validate_percent(name: str, value: float) -> float:
+    """Validate a user-typed percentage (0–100 inclusive).
+
+    `project create` writes --deposit-pct / --late-fee-pct into the stored
+    project AND into the generated contract text, so an out-of-range value
+    (e.g. a 500% deposit, or a negative late-fee rate) would silently
+    produce nonsense money math and a nonsense legal clause. Raises
+    ClickException on anything outside [0, 100], before anything is
+    written.
+    """
+    if not 0 <= value <= 100:
+        raise click.ClickException(
+            f"{name} must be between 0 and 100 (got {value})")
+    return value
+
+
 def _pct_cents(cents: int, pct: float) -> int:
     """pct% of a cents amount, rounded half-up to the cent."""
     return int((Decimal(cents) * Decimal(str(pct)) / 100).quantize(
@@ -333,6 +349,12 @@ def project_create(client_name, title, amount, currency, deposit_pct,
         )
     client = clients[0]
     amount_cents = _amount_to_cents(amount)
+    _validate_percent("--deposit-pct", deposit_pct)
+    _validate_percent("--late-fee-pct", late_fee_pct)
+    if late_fee_grace_days < 0:
+        raise click.ClickException(
+            f"--late-fee-grace-days must be 0 or more "
+            f"(got {late_fee_grace_days})")
     contract = render_contract(
         client["name"], client["email"], title, amount_cents, currency,
         deposit_pct, late_fee_pct, late_fee_grace_days,

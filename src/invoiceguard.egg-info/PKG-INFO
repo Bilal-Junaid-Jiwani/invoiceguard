@@ -1,6 +1,6 @@
 Metadata-Version: 2.4
 Name: invoiceguard
-Version: 0.8.1
+Version: 0.8.2
 Summary: Freelancer payment enforcement: deposit links tied to a contract with a late-fee clause, then automated 3-stage collections.
 Author: InvoiceGuard contributors
 License: Apache-2.0

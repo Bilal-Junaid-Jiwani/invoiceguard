@@ -114,6 +114,42 @@ def test_amounts_reject_garbage_and_nonpositive(home):
     db.close()
 
 
+def test_project_create_rejects_out_of_range_percents(home):
+    # Percentages flow into the stored project AND the generated contract
+    # text, so out-of-range values must be refused before anything is
+    # written (a 500% deposit or negative late-fee rate is nonsense).
+    r = CliRunner()
+    r.invoke(cli, ["client", "add", "--name", "Hooli"])
+    base = ["project", "create", "--client", "Hooli", "--title", "T",
+            "--amount", "1000"]
+    for flag, val in (("--deposit-pct", "101"), ("--deposit-pct", "-1"),
+                      ("--late-fee-pct", "-0.5"), ("--late-fee-pct", "250"),
+                      ("--late-fee-grace-days", "-3")):
+        res = r.invoke(cli, base + [flag, val])
+        assert res.exit_code != 0, (flag, val, res.output)
+        assert "must be between" in res.output or "must be 0 or more" \
+            in res.output
+    db = DB(home / "invoiceguard.db")
+    assert db.list_projects() == []  # nothing was written
+    db.close()
+
+
+def test_project_create_accepts_percent_boundaries(home):
+    r = CliRunner()
+    r.invoke(cli, ["client", "add", "--name", "Hooli"])
+    res = r.invoke(cli, ["project", "create", "--client", "Hooli",
+                         "--title", "T", "--amount", "1000",
+                         "--deposit-pct", "0", "--late-fee-pct", "100",
+                         "--late-fee-grace-days", "0"])
+    assert res.exit_code == 0, res.output
+    db = DB(home / "invoiceguard.db")
+    proj = db.get_project(1)
+    assert proj["deposit_pct"] == 0
+    assert proj["late_fee_pct"] == 100
+    assert proj["late_fee_grace_days"] == 0
+    db.close()
+
+
 def test_record_payment_rounds_half_up(home, monkeypatch):
     r = _seed(home, monkeypatch)
     r.invoke(cli, ["invoice", "create", "--project", "1", "--kind", "deposit"])

@@ -2,6 +2,16 @@
 
 Every release, newest first. InvoiceGuard follows semver.
 
+## [0.8.2] - 2026-10-20
+
+`project create` now validates its financial options: `--deposit-pct` and `--late-fee-pct` must be within 0–100, and `--late-fee-grace-days` must be 0 or more. Out-of-range values are refused with a clear error before anything is written.
+
+### Fixed
+- The percentages flow into the stored project *and* the generated contract text, so values like `--deposit-pct 500` or `--late-fee-pct -3` previously produced nonsense money math and a nonsense late-fee clause in a legal document. They are now rejected up front (closes the remaining CLI financial-validation audit finding; `--amount` already validated, dunning thresholds already validated).
+
+### Honest scope (0.8.2)
+- Validation is CLI-side only: projects created by older versions with odd values are untouched (no migration, no rewrite of stored data).
+
 ## [0.8.1] - 2026-10-17
 
 CSV formula-injection fix: the `--csv` and `--payments-csv` exports now neutralize spreadsheet formula injection (OWASP).
