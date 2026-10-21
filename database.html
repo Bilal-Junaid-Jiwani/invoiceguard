@@ -139,11 +139,20 @@ CREATE TABLE invoices(
   amount_cents INTEGER NOT NULL,
   currency TEXT NOT NULL DEFAULT 'USD',
   status TEXT NOT NULL DEFAULT 'draft',
+  freelancer_id INTEGER REFERENCES freelancers(id),
   stripe_url TEXT,
   stripe_session_id TEXT,
   due_date TEXT,
   sent_at TEXT,
   paid_at TEXT,
+  created_at TEXT NOT NULL
+);
+
+CREATE TABLE freelancers(
+  id INTEGER PRIMARY KEY,
+  name TEXT NOT NULL,
+  email TEXT,
+  phone TEXT,
   created_at TEXT NOT NULL
 );
 
@@ -169,10 +178,14 @@ CREATE TABLE signatures(
   status TEXT NOT NULL DEFAULT 'pending',
   signer_name TEXT,
   signature_image TEXT,
+  contract_md TEXT,
   contract_hash TEXT,
   signed_at TEXT,
   created_at TEXT NOT NULL
 );
+
+- `signatures.contract_md` (v0.8.3): frozen contract snapshot taken at
+  `sign-request` time; NULL = request created before v0.8.3.
 
 CREATE TABLE message_events(
   id INTEGER PRIMARY KEY,
@@ -206,6 +219,8 @@ CREATE TABLE message_events(
 <li>The <code>payments</code> table (v0.2.0) is the ledger: every <code>record-payment</code>, <code>mark-paid</code>, and Stripe webhook writes rows here. Databases created before v0.2.0 get a labeled backfill row for invoices already marked <code>paid</code>, so outstanding balances stay truthful without any manual migration.
 </li>
 <li><code>clients.phone</code> and the <code>message_events</code> table (v0.5.0) support SMS/WhatsApp escalation. Existing databases gain both automatically on first open (additive migration, same pattern as the payments backfill).
+</li>
+<li>Per-client dunning columns (v0.7.0) and the <code>freelancers</code> table + <code>invoices.freelancer_id</code> (v0.8.0) follow the same additive-migration pattern: old databases get them on first open, NULL = no policy override / unattributed.
 </li>
 </ul>
       <nav class="prev-next" aria-label="Previous and next pages">

@@ -121,7 +121,7 @@
 </li>
 <li><strong>Late-fee clause</strong> — if an invoice is unpaid after the grace period, a late fee of <code>late_fee_pct</code>% per month applies on the overdue balance, compounding monthly until paid.
 </li>
-<li><strong>Sign-off</strong> — the client signs electronically (typed name + drawn signature); the exact signed text is hashed (SHA-256) and stored as tamper evidence.
+<li><strong>Sign-off</strong> — the client signs electronically (typed name + drawn signature); the contract text is frozen at link-creation time and its SHA-256 is stored as tamper evidence.
 </li>
 </ul>
 <p>Defaults: 50% deposit, 1.5%/month late fee, 15-day grace — all adjustable per project with <code>--deposit-pct</code>, <code>--late-fee-pct</code>, <code>--late-fee-grace-days</code>.</p>
@@ -131,13 +131,13 @@
 # send the link to the client while `invoiceguard dashboard` is running
 invoiceguard project sign-status 3      # pending / signed + signer + hash
 </code></pre>
-<p>The signing page (<code>/sign/&lt;token&gt;</code>) renders the contract, and the client types their full name and draws a signature (mouse or touch). On submit, InvoiceGuard stores:</p>
+<p>The signing page (<code>/sign/&lt;token&gt;</code>) renders the contract <strong>as it was frozen when the link was created</strong> — edits made afterwards don't change what the client sees or signs. On submit, InvoiceGuard stores:</p>
 <ul>
 <li>the signer's typed name,
 </li>
 <li>the drawn signature image (PNG data URL),
 </li>
-<li>the <strong>SHA-256 of the exact contract text at signing time</strong> — tamper evidence proving <em>what</em> was signed,
+<li>the <strong>SHA-256 of the frozen contract snapshot</strong> — tamper evidence proving <em>what</em> was signed,
 </li>
 <li>the signing timestamp.
 </li>
