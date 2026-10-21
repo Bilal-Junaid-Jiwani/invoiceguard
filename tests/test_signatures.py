@@ -53,8 +53,23 @@ def test_sign_contract_happy_path(db, sample_project):
     assert proj["contract_ack_at"] == res["signed_at"]
 
 
-def test_sign_contract_hash_covers_signed_text(db, sample_project):
-    """The hash must be of the contract text as it exists at signing time."""
+def test_create_request_freezes_contract_snapshot(db, sample_project):
+    """create_signature_request freezes the contract text at creation."""
+    pid = sample_project["id"]
+    token = db.create_signature_request(pid)
+    row = db.get_signature_by_token(token)
+    assert row["contract_md"] == sample_project["contract_md"]
+    # editing the project afterwards must not move the snapshot
+    db.conn.execute("UPDATE projects SET contract_md = ? WHERE id = ?",
+                    ("# edited contract", pid))
+    db.conn.commit()
+    row = db.get_signature_by_token(token)
+    assert row["contract_md"] == sample_project["contract_md"]
+
+
+def test_sign_contract_hash_covers_frozen_snapshot(db, sample_project):
+    """The hash must cover the frozen snapshot, not text edited after
+    the link was created — this is what the client actually saw and signed."""
     pid = sample_project["id"]
     token = db.create_signature_request(pid)
     db.conn.execute("UPDATE projects SET contract_md = ? WHERE id = ?",
@@ -62,7 +77,43 @@ def test_sign_contract_hash_covers_signed_text(db, sample_project):
     db.conn.commit()
     res = db.sign_contract(token, "Jane", FAKE_IMAGE)
     assert res["contract_hash"] == hashlib.sha256(
+        sample_project["contract_md"].encode("utf-8")).hexdigest()
+
+
+def test_sign_contract_legacy_row_without_snapshot(db, sample_project):
+    """Rows created before v0.8.3 have no snapshot: fall back to the
+    current project text."""
+    pid = sample_project["id"]
+    db.conn.execute(
+        "INSERT INTO signatures(project_id, token, status, created_at) "
+        "VALUES (?, 'legacy-token', 'pending', ?)",
+        (pid, "2026-01-01T00:00:00"))
+    db.conn.commit()
+    db.conn.execute("UPDATE projects SET contract_md = ? WHERE id = ?",
+                    ("# edited contract", pid))
+    db.conn.commit()
+    res = db.sign_contract("legacy-token", "Jane", FAKE_IMAGE)
+    assert res["contract_hash"] == hashlib.sha256(
         b"# edited contract").hexdigest()
+
+
+def test_migrate_signatures_contract_md_adds_column(tmp_path):
+    """Old databases (no contract_md column) get it idempotently."""
+    import sqlite3
+    p = tmp_path / "old.db"
+    conn = sqlite3.connect(str(p))
+    conn.executescript(
+        "CREATE TABLE signatures(id INTEGER PRIMARY KEY, "
+        "project_id INTEGER, token TEXT, status TEXT, "
+        "signer_name TEXT, signature_image TEXT, contract_hash TEXT, "
+        "signed_at TEXT, created_at TEXT);")
+    conn.commit()
+    from invoiceguard.db import migrate_signatures_contract_md
+    migrate_signatures_contract_md(conn)
+    migrate_signatures_contract_md(conn)  # idempotent
+    cols = {r[1] for r in conn.execute("PRAGMA table_info(signatures)")}
+    assert "contract_md" in cols
+    conn.close()
 
 
 def test_sign_contract_single_use(db, sample_project):
@@ -105,6 +156,33 @@ def _make_request(web_client, monkeypatch=None):
     token = core.create_signature_request(pid)
     core.close()
     return pid, token
+
+
+def test_sign_page_renders_frozen_snapshot(web_client):
+    """After the contract text is edited, the signing page still shows
+    the snapshot frozen at link-creation time."""
+    import hashlib as _hashlib
+    pid, token = _make_request(web_client)
+    from invoiceguard.db import DB
+    core = DB(os.environ["INVOICEGUARD_DB"])
+    core.conn.execute("UPDATE projects SET contract_md = ? WHERE id = ?",
+                      ("# EDITED AFTER LINK CREATED", pid))
+    core.conn.commit()
+    core.close()
+    r = web_client.get(f"/sign/{token}")
+    assert r.status_code == 200
+    assert "Freelance Services Agreement" in r.text
+    assert "EDITED AFTER LINK CREATED" not in r.text
+    # the web sign path hashes the same frozen snapshot
+    r = web_client.post(f"/sign/{token}",
+                        data={"signer_name": "Jane Client",
+                              "signature_image": FAKE_IMAGE})
+    assert r.status_code == 200
+    core = DB(os.environ["INVOICEGUARD_DB"])
+    row = core.get_signature_by_token(token)
+    assert row["contract_hash"] == _hashlib.sha256(
+        b"# Freelance Services Agreement").hexdigest()
+    core.close()
 
 
 def test_sign_page_unknown_token(web_client):

@@ -17,7 +17,7 @@ import sqlite3
 from datetime import date, datetime, timezone
 from pathlib import Path
 
-from ..db import backfill_paid_ledger
+from ..db import backfill_paid_ledger, migrate_signatures_contract_md
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS clients(
@@ -85,6 +85,7 @@ CREATE TABLE IF NOT EXISTS signatures(
   status TEXT NOT NULL DEFAULT 'pending',
   signer_name TEXT,
   signature_image TEXT,
+  contract_md TEXT,
   contract_hash TEXT,
   signed_at TEXT,
   created_at TEXT NOT NULL
@@ -123,6 +124,7 @@ def init_db() -> None:
     try:
         conn.executescript(SCHEMA)
         backfill_paid_ledger(conn)
+        migrate_signatures_contract_md(conn)
         conn.commit()
     finally:
         conn.close()
@@ -428,7 +430,7 @@ def get_signature_request(token: str) -> dict | None:
     try:
         row = conn.execute(
             """SELECT s.*, p.title AS project_title,
-                      p.contract_md AS contract_md,
+                      COALESCE(s.contract_md, p.contract_md) AS contract_md,
                       c.name AS client_name, c.email AS client_email
                FROM signatures s
                JOIN projects p ON p.id = s.project_id
@@ -446,8 +448,10 @@ def sign_contract(token: str, signer_name: str,
     """Record a signature on the web signing page.
 
     Same semantics as the core DB method: validates the pending request,
-    stores name + drawn image + SHA-256 of the contract text at signing
-    time, and flips the project's contract_ack. Raises ValueError on
+    stores name + drawn image + SHA-256 of the frozen contract snapshot
+    (what the client actually saw — tamper evidence), and flips the
+    project's contract_ack. Rows created before v0.8.3 have no snapshot
+    and fall back to the current project text. Raises ValueError on
     unknown/used token or invalid input.
     """
     signer_name = (signer_name or "").strip()
@@ -460,7 +464,8 @@ def sign_contract(token: str, signer_name: str,
     conn = get_conn()
     try:
         row = conn.execute(
-            "SELECT s.*, p.contract_md FROM signatures s "
+            "SELECT s.*, p.contract_md AS live_contract_md "
+            "FROM signatures s "
             "JOIN projects p ON p.id = s.project_id "
             "WHERE s.token = ?",
             (token,),
@@ -469,8 +474,11 @@ def sign_contract(token: str, signer_name: str,
             raise ValueError("signature request not found or expired")
         if row["status"] != "pending":
             raise ValueError("this signature request was already used")
+        # Hash the frozen snapshot the client saw, not the live project
+        # text (which may have been edited after the link was created).
+        signed_text = row["contract_md"] or row["live_contract_md"]
         contract_hash = hashlib.sha256(
-            row["contract_md"].encode("utf-8")).hexdigest()
+            signed_text.encode("utf-8")).hexdigest()
         signed_at = now_iso()
         conn.execute(
             "UPDATE signatures SET status = 'signed', signer_name = ?, "

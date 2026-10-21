@@ -2,6 +2,16 @@
 
 Every release, newest first. InvoiceGuard follows semver.
 
+## [0.8.3] - 2026-10-21
+
+E-signature contract snapshot: the signing flow now freezes the contract text at the moment the link is created.
+
+### Fixed
+- Verified: `sign-request` hashed and rendered the project's *live* contract text — so if the contract was edited after the signing link was created but before the client signed, the SHA-256 tamper-evidence hash covered text the client never saw (and the signing page itself showed the edited text). The project's contract markdown is now snapshotted into the signature request row at creation time (`signatures.contract_md`); the signing page renders that snapshot and the signature hash covers it. Requests created before v0.8.3 have no snapshot and fall back to the current project text; existing databases get the new column additively on connect (closes the e-signature TOCTOU audit finding).
+
+### Honest scope (0.8.3)
+- Snapshot-side only: nothing about token lifecycle, signature capture, or acknowledgment semantics changed. Re-running `sign-request` while a request is pending still returns the existing link with its original snapshot.
+
 ## [0.8.2] - 2026-10-20
 
 `project create` now validates its financial options: `--deposit-pct` and `--late-fee-pct` must be within 0–100, and `--late-fee-grace-days` must be 0 or more. Out-of-range values are refused with a clear error before anything is written.

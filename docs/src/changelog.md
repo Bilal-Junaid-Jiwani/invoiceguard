@@ -5,6 +5,10 @@ description: InvoiceGuard release history — newest first, no fluff.
 ---
 InvoiceGuard follows semver. Newest first.
 
+## [0.8.3] - 2026-10-21
+
+E-signature contract snapshot: `sign-request` now freezes the project's contract text into the signature request at link-creation time. The signing page renders that snapshot and the SHA-256 tamper-evidence hash covers it — previously the page and the hash used the live project text, so a contract edited after the link was created (but before signing) produced a hash over text the client never saw. Requests created before v0.8.3 have no snapshot and fall back to the current project text; existing databases get the new `signatures.contract_md` column additively on connect.
+
 ## [0.8.0] - 2026-10-16
 
 Freelancer roster + invoice attribution — the second agency-mode slice. `invoiceguard freelancer add/list/set-email/set-phone` manages the agency roster (name, email, phone); `invoiceguard invoice assign <id> --freelancer <id>` (or `--none` to clear) attributes an invoice to a freelancer. Attribution is pure bookkeeping — it never changes dunning, payments, or invoice status. `invoice list --freelancer ID` filters by freelancer, and `invoice report` gains a `--freelancer ID` filter plus a "by freelancer" breakdown; the invoice CSV gets a trailing `freelancer` column, and the dashboard shows the attributed freelancer on the invoice list and detail pages. Existing databases get the `freelancers` table and the `invoices.freelancer_id` column additively on connect (NULL = unattributed). Honest scope: no per-freelancer logins, permissions, or workspaces — the remaining half of agency mode (multi-freelancer workspaces) is still unshipped.

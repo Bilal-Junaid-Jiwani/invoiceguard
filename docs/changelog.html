@@ -93,6 +93,8 @@
         <details>
           <summary>On this page</summary>
           <ul class="toc-list">
+<li><a href="#083---2026-10-21">[0.8.3] - 2026-10-21</a>
+</li>
 <li><a href="#080---2026-10-16">[0.8.0] - 2026-10-16</a>
 </li>
 <li><a href="#071---2026-10-15">[0.7.1] - 2026-10-15</a>
@@ -143,6 +145,8 @@
         </details>
       </div>
       <p>InvoiceGuard follows semver. Newest first.</p>
+<h2 id="083---2026-10-21">[0.8.3] - 2026-10-21</h2>
+<p>E-signature contract snapshot: <code>sign-request</code> now freezes the project's contract text into the signature request at link-creation time. The signing page renders that snapshot and the SHA-256 tamper-evidence hash covers it — previously the page and the hash used the live project text, so a contract edited after the link was created (but before signing) produced a hash over text the client never saw. Requests created before v0.8.3 have no snapshot and fall back to the current project text; existing databases get the new <code>signatures.contract_md</code> column additively on connect.</p>
 <h2 id="080---2026-10-16">[0.8.0] - 2026-10-16</h2>
 <p>Freelancer roster + invoice attribution — the second agency-mode slice. <code>invoiceguard freelancer add/list/set-email/set-phone</code> manages the agency roster (name, email, phone); <code>invoiceguard invoice assign &lt;id&gt; --freelancer &lt;id&gt;</code> (or <code>--none</code> to clear) attributes an invoice to a freelancer. Attribution is pure bookkeeping — it never changes dunning, payments, or invoice status. <code>invoice list --freelancer ID</code> filters by freelancer, and <code>invoice report</code> gains a <code>--freelancer ID</code> filter plus a "by freelancer" breakdown; the invoice CSV gets a trailing <code>freelancer</code> column, and the dashboard shows the attributed freelancer on the invoice list and detail pages. Existing databases get the <code>freelancers</code> table and the <code>invoices.freelancer_id</code> column additively on connect (NULL = unattributed). Honest scope: no per-freelancer logins, permissions, or workspaces — the remaining half of agency mode (multi-freelancer workspaces) is still unshipped.</p>
 <h2 id="071---2026-10-15">[0.7.1] - 2026-10-15</h2>
@@ -267,6 +271,8 @@
   <aside class="toc-side" aria-label="Table of contents">
     <p class="toc-label">On this page</p>
     <ul class="toc-list">
+<li><a href="#083---2026-10-21">[0.8.3] - 2026-10-21</a>
+</li>
 <li><a href="#080---2026-10-16">[0.8.0] - 2026-10-16</a>
 </li>
 <li><a href="#071---2026-10-15">[0.7.1] - 2026-10-15</a>

@@ -87,6 +87,7 @@ CREATE TABLE IF NOT EXISTS signatures(
     status TEXT NOT NULL DEFAULT 'pending',
     signer_name TEXT,
     signature_image TEXT,
+    contract_md TEXT,
     contract_hash TEXT,
     signed_at TEXT,
     created_at TEXT NOT NULL
@@ -165,6 +166,22 @@ def migrate_invoices_freelancer_id(conn: sqlite3.Connection) -> None:
         conn.commit()
 
 
+def migrate_signatures_contract_md(conn: sqlite3.Connection) -> None:
+    """Additive migration: signatures.contract_md (frozen contract snapshot, v0.8.3).
+
+    The signing page renders the contract text the client actually saw,
+    and the SHA-256 tamper-evidence hash covers that frozen snapshot —
+    not the (possibly later-edited) live project text. Databases created
+    before v0.8.3 get the column here; rows created before the column
+    existed fall back to the current project text. Idempotent — safe to
+    call on every connect.
+    """
+    cols = {r[1] for r in conn.execute("PRAGMA table_info(signatures)")}
+    if "contract_md" not in cols:
+        conn.execute("ALTER TABLE signatures ADD COLUMN contract_md TEXT")
+        conn.commit()
+
+
 def resolve_dunning_policy(row) -> dict:
     """Resolved dunning thresholds for a client-like row.
 
@@ -222,6 +239,7 @@ class DB:
         migrate_clients_phone(self.conn)
         migrate_clients_dunning_policy(self.conn)
         migrate_invoices_freelancer_id(self.conn)
+        migrate_signatures_contract_md(self.conn)
         backfill_paid_ledger(self.conn)
 
     # -- clients -----------------------------------------------------
@@ -426,8 +444,14 @@ class DB:
         Returns the token. Only one pending request per project: if one
         already exists its token is returned, so re-running the command
         doesn't orphan old links.
+
+        The project's contract text is frozen into the row at creation
+        time: the signing page renders this snapshot and the signature
+        hash covers it, so later contract edits can't change what the
+        client actually signed.
         """
-        if not self.get_project(project_id):
+        proj = self.get_project(project_id)
+        if not proj:
             raise ValueError(f"no project #{project_id}")
         row = self.conn.execute(
             "SELECT token FROM signatures WHERE project_id = ? "
@@ -438,9 +462,9 @@ class DB:
             return row["token"]
         token = secrets.token_urlsafe(32)
         self.conn.execute(
-            "INSERT INTO signatures(project_id, token, status, created_at) "
-            "VALUES (?, ?, 'pending', ?)",
-            (project_id, token, now_iso()),
+            "INSERT INTO signatures(project_id, token, status, created_at, "
+            "contract_md) VALUES (?, ?, 'pending', ?, ?)",
+            (project_id, token, now_iso(), proj["contract_md"]),
         )
         self.conn.commit()
         return token
@@ -466,9 +490,12 @@ class DB:
         """Record a signature against the pending request identified by token.
 
         Stores the signer's typed name, the drawn-signature image (data URL),
-        and the SHA-256 of the project's contract text at the moment of
-        signing (tamper evidence: proves *what* was signed). Also flips the
-        project's contract_ack to 1 — a signed contract IS the acknowledgment.
+        and the SHA-256 of the contract text the client actually signed
+        (tamper evidence: proves *what* was signed). The hashed text is the
+        frozen snapshot stored on the signature request at creation time —
+        rows created before v0.8.3 have no snapshot and fall back to the
+        current project text. Also flips the project's contract_ack to 1 —
+        a signed contract IS the acknowledgment.
 
         Raises ValueError on unknown/used token or invalid input.
         """
@@ -486,8 +513,11 @@ class DB:
         if len(signature_image) > 1_000_000:
             raise ValueError("signature image is too large")
         proj = self.get_project(req["project_id"])
+        # Hash the frozen snapshot the client saw, not the live project
+        # text (which may have been edited after the link was created).
+        signed_text = req.get("contract_md") or proj["contract_md"]
         contract_hash = hashlib.sha256(
-            proj["contract_md"].encode("utf-8")).hexdigest()
+            signed_text.encode("utf-8")).hexdigest()
         signed_at = now_iso()
         self.conn.execute(
             "UPDATE signatures SET status = 'signed', signer_name = ?, "

@@ -75,10 +75,14 @@ CREATE TABLE signatures(
   status TEXT NOT NULL DEFAULT 'pending',
   signer_name TEXT,
   signature_image TEXT,
+  contract_md TEXT,
   contract_hash TEXT,
   signed_at TEXT,
   created_at TEXT NOT NULL
 );
+
+- `signatures.contract_md` (v0.8.3): frozen contract snapshot taken at
+  `sign-request` time; NULL = request created before v0.8.3.
 
 CREATE TABLE message_events(
   id INTEGER PRIMARY KEY,

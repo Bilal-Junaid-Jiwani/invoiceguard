@@ -172,13 +172,15 @@ invoiceguard project sign-status 1    # pending / signed + signer + hash
 </li>
 <li>Defaults: <code>--currency USD</code>, <code>--deposit-pct 50</code>, <code>--late-fee-pct 1.5</code>, <code>--late-fee-grace-days 15</code>.
 </li>
+<li>Validation: <code>--deposit-pct</code> and <code>--late-fee-pct</code> must be between 0 and 100; <code>--late-fee-grace-days</code> must be 0 or more. Out-of-range values are refused before anything is written (the percentages also land in the generated contract text).
+</li>
 <li>Prints the generated contract (with the late-fee clause) as a preview.
 </li>
 <li><code>--ack</code> records the contract as acknowledged by the client at creation time; without it, the contract shows <code>no-ack</code> until you run <code>project ack ID</code> after the client accepts the deposit link.
 </li>
 <li><code>list</code> shows <code>#id  title  client  amount  [ack|no-ack]</code>.
 </li>
-<li><code>sign-request</code> creates a one-time, single-use signing link (<code>/sign/&lt;token&gt;</code>, served by the dashboard) for the client to type their name and draw a signature; the signed contract text is hashed (SHA-256) and stored as tamper evidence. Re-running while a request is pending returns the same link. <code>sign-status</code> shows the request state.
+<li><code>sign-request</code> creates a one-time, single-use signing link (<code>/sign/&lt;token&gt;</code>, served by the dashboard) for the client to type their name and draw a signature; the contract text is frozen at link-creation time and its SHA-256 is stored as tamper evidence. Re-running while a request is pending returns the same link (with its original frozen text). <code>sign-status</code> shows the request state.
 </li>
 </ul>
 <p>See <a href="contracts.html">Contracts</a> for what the contract contains and the honest limits of the e-signature.</p>
@@ -214,7 +216,7 @@ invoiceguard invoice report [--as-of 2026-10-08] [--freelancer 1] [--csv invoice
 </li>
 <li><code>notify</code> (v0.5.0) sends an SMS/WhatsApp payment reminder for one invoice right now (same text as the automatic day-15 message). <code>--dry-run</code> prints the rendered message without sending — no Twilio credentials needed, but the client needs a phone number.
 </li>
-<li><code>report</code> (v0.6.0) is a read-only receivables report: open invoices (sent / overdue / partially-paid with a balance) grouped into Current / 1-30 / 31-60 / 61-90 / 90+ day aging buckets, oldest debt first, with accrued late fees, per-client totals, and grand totals. <code>--as-of YYYY-MM-DD</code> pins the report date. <code>--csv PATH</code> exports one row per open invoice and <code>--payments-csv PATH</code> exports the full payment ledger for accounting; <code>-</code> as the path prints that CSV to stdout instead of the text report. <code>--freelancer ID</code> (v0.8.0) restricts the report to one freelancer's invoices; the text report also prints a "by freelancer" breakdown when more than one attribution group has open invoices. It never sends anything or changes invoice state.
+<li><code>report</code> (v0.6.0) is a read-only receivables report: open invoices (sent / overdue / partially-paid with a balance) grouped into Current / 1-30 / 31-60 / 61-90 / 90+ day aging buckets, oldest debt first, with accrued late fees, per-client totals, and grand totals. <code>--as-of YYYY-MM-DD</code> pins the report date. <code>--csv PATH</code> exports one row per open invoice and <code>--payments-csv PATH</code> exports the full payment ledger for accounting; <code>-</code> as the path prints that CSV to stdout instead of the text report. <code>--freelancer ID</code> (v0.8.0) restricts the report to one freelancer's invoices; the text report also prints a "by freelancer" breakdown when more than one attribution group has open invoices. It never sends anything or changes invoice state. CSV exports (v0.8.1) neutralize spreadsheet formula injection: any exported cell starting with <code>=</code>, <code>+</code>, <code>-</code>, <code>@</code>, <code>|</code>, or <code>%</code> is prefixed with a single quote so it opens as plain text (OWASP CSV-injection guidance).
 </li>
 </ul>
 <h2 id="check-due"><code>check-due</code></h2>
