@@ -133,7 +133,7 @@
 <h2 id="dashboard-shows-an-empty-invoice-list">Dashboard shows an empty invoice list</h2>
 <p>It's reading a different database than your CLI. Check <code>INVOICEGUARD_DB</code> in the dashboard's environment — the default is <code>~/.invoiceguard/invoiceguard.db</code> for both.</p>
 <h2 id="paid-invoice-still-shows-as-sent">Paid invoice still shows as "sent"</h2>
-<p>Either the webhook isn't configured (see above), the event wasn't <code>checkout.session.completed</code>, or the payment link's metadata doesn't carry the invoice id (links created by v0.1.0 always do). Use <code>invoiceguard invoice mark-paid &lt;id&gt;</code> as the manual fallback.</p>
+<p>Either the webhook isn't configured (see above), the event wasn't <code>checkout.session.completed</code>, or the payment link's metadata doesn't carry the invoice id (links created by v0.1.0 always do). One more possibility since 0.8.4: the client paid with a delayed method (ACH) and the session's <code>payment_status</code> is still <code>unpaid</code> — the invoice is marked paid when <code>checkout.session.async_payment_succeeded</code> arrives, so make sure that event is selected on the endpoint too. (On versions before 0.8.4 with stripe&gt;=15 installed, the webhook silently never recorded payments at all — upgrade.) Use <code>invoiceguard invoice mark-paid &lt;id&gt;</code> as the manual fallback.</p>
 <h2 id="limits-of-v1">Limits of v1</h2>
 <p>Honest boundaries, not bugs:</p>
 <ul>

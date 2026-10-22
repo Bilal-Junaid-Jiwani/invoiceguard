@@ -120,7 +120,7 @@
 </ul>
         </details>
       </div>
-      <p>The CLI entry point is <code>invoiceguard</code> (installed by pip). All commands below are from v0.1.0 — run <code>invoiceguard --help</code> or <code>invoiceguard &lt;group&gt; --help</code> for the same text locally.</p>
+      <p>The CLI entry point is <code>invoiceguard</code> (installed by pip). All commands below are from v0.8.4 — run <code>invoiceguard --help</code> or <code>invoiceguard &lt;group&gt; --help</code> for the same text locally.</p>
 <h2 id="init"><code>init</code></h2>
 <pre class="codeblock" data-lang="bash"><code>invoiceguard init
 </code></pre>
@@ -180,7 +180,7 @@ invoiceguard project sign-status 1    # pending / signed + signer + hash
 </li>
 <li><code>list</code> shows <code>#id  title  client  amount  [ack|no-ack]</code>.
 </li>
-<li><code>sign-request</code> creates a one-time, single-use signing link (<code>/sign/&lt;token&gt;</code>, served by the dashboard) for the client to type their name and draw a signature; the contract text is frozen at link-creation time and its SHA-256 is stored as tamper evidence. Re-running while a request is pending returns the same link (with its original frozen text). <code>sign-status</code> shows the request state.
+<li><code>sign-request</code> creates a one-time, single-use signing link (<code>/sign/&lt;token&gt;</code>, served by the dashboard) for the client to type their name and draw a signature; the contract text is frozen at link-creation time and its SHA-256 is stored as tamper evidence. Re-running while a request is pending returns the same link (with its original frozen text). <code>sign-status</code> shows both tracks: the e-signature state <em>and</em> the deposit-link acknowledgment (<code>project ack</code> / <code>--ack</code>) — an acknowledged project with a signature still outstanding says so, instead of only reporting "awaiting signature" (0.8.4).
 </li>
 </ul>
 <p>See <a href="contracts.html">Contracts</a> for what the contract contains and the honest limits of the e-signature.</p>
@@ -210,9 +210,9 @@ invoiceguard invoice report [--as-of 2026-10-08] [--freelancer 1] [--csv invoice
 </li>
 <li><code>record-payment</code> records a (partial) payment in the ledger. A payment that clears the outstanding balance marks the invoice <code>paid</code>; otherwise the invoice becomes <code>partially-paid</code> and keeps dunning against the remaining balance. Overpaying is rejected.
 </li>
-<li><code>mark-paid</code> manually marks an invoice paid — since v0.2.0 it records the full outstanding balance in the ledger, and it errors on already-paid or void invoices. <code>void</code> voids it.
+<li><code>mark-paid</code> manually marks an invoice paid — since v0.2.0 it records the full outstanding balance in the ledger, and it errors on already-paid or void invoices. <code>void</code> voids an unpaid invoice; a <strong>paid</strong> invoice cannot be voided (0.8.4 — its ledger payments stand; refund through Stripe instead), and voiding an already-void invoice errors too.
 </li>
-<li><code>late-fees</code> (v0.4.0) shows the accrued late fees for an invoice under contract §3: due date, grace window, monthly rate, months billed, accrued fees, and total due. <code>--as-of YYYY-MM-DD</code> computes as of a past date (default: today).
+<li><code>late-fees</code> (v0.4.0) shows the accrued late fees for an invoice under contract §3: due date, grace window, monthly rate, months billed, accrued fees, and total due. One fee is billed per <strong>full monthly period elapsed</strong> since accrual started (0.8.4 — see the changelog for why started-calendar-month counting was wrong). <code>--as-of YYYY-MM-DD</code> computes as of a past date (default: today).
 </li>
 <li><code>notify</code> (v0.5.0) sends an SMS/WhatsApp payment reminder for one invoice right now (same text as the automatic day-15 message). <code>--dry-run</code> prints the rendered message without sending — no Twilio credentials needed, but the client needs a phone number.
 </li>
@@ -228,7 +228,7 @@ invoiceguard invoice report [--as-of 2026-10-08] [--freelancer 1] [--csv invoice
 </code></pre>
 <p>Launches the localhost web UI (uvicorn serving the FastAPI app). Binds to <code>127.0.0.1</code> by default — keep it that way unless you know what you're doing. See <a href="dashboard.html">Dashboard</a>.</p>
 <h2 id="exit-behavior">Exit behavior</h2>
-<p>Errors print a one-line message (<code>Error: ...</code>) and exit non-zero. Destructive operations (<code>void</code>, <code>mark-paid</code>) act on explicit ids only — there is no bulk mode in v0.1.0.</p>
+<p>Errors print a one-line message (<code>Error: ...</code>) and exit non-zero. Destructive operations (<code>void</code>, <code>mark-paid</code>) act on explicit ids only — there is no bulk mode in v0.8.4.</p>
       <nav class="prev-next" aria-label="Previous and next pages">
         <a class="page-prev" href="configuration.html"><span class="prev-next-label">Previous</span><span class="prev-next-title">&larr; Configuration</span></a>
         <a class="page-next" href="dashboard.html"><span class="prev-next-label">Next</span><span class="prev-next-title">Dashboard &rarr;</span></a>
