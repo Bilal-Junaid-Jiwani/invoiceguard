@@ -68,8 +68,21 @@ def test_invoice_list_mark_paid_void(home, monkeypatch):
     assert "sent" in r.invoke(cli, ["invoice", "list"]).output
     assert r.invoke(cli, ["invoice", "mark-paid", "1"]).exit_code == 0
     assert "paid" in r.invoke(cli, ["invoice", "list"]).output
-    assert r.invoke(cli, ["invoice", "void", "1"]).exit_code == 0
+    # 0.8.4: a paid invoice can no longer be voided — its payments are
+    # in the ledger; voiding would corrupt the books.
+    res = r.invoke(cli, ["invoice", "void", "1"])
+    assert res.exit_code != 0
+    assert "already paid" in res.output
+    db = DB(home / "invoiceguard.db")
+    assert db.get_invoice(1)["status"] == "paid"
+    db.close()
+    # Void still works on an unpaid invoice (and not twice).
+    r.invoke(cli, ["invoice", "create", "--project", "1", "--kind", "final"])
+    assert r.invoke(cli, ["invoice", "void", "2"]).exit_code == 0
     assert "void" in r.invoke(cli, ["invoice", "list"]).output
+    res = r.invoke(cli, ["invoice", "void", "2"])
+    assert res.exit_code != 0
+    assert "already void" in res.output
 
 
 def test_project_ack(home):

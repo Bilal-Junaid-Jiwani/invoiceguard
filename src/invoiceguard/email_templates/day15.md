@@ -1,5 +1,3 @@
-Subject: Final notice: {project_title} invoice {days_overdue} days overdue
-
 Hi {client_name},
 
 FINAL NOTICE — your invoice of **{amount}** for "{project_title}" is now

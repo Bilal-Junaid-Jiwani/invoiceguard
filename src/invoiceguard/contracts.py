@@ -39,8 +39,9 @@ also serves as the client's acknowledgment of this agreement: paying the deposit
 
 ## 3. Late fees
 If any invoice remains unpaid {grace_days} days after its due date, a late
-fee of **{late_fee_pct}% per month** on the overdue balance will apply from
-day {grace_days} + 1, compounding monthly until the balance is paid in full.
+fee of **{late_fee_pct}% per month** on the overdue balance will apply:
+one month's fee for each full month the balance remains unpaid after the
+grace period, compounding monthly until the balance is paid in full.
 The client acknowledges this clause by accepting the deposit link.
 
 > Late-fee clause: {late_fee_pct}% per month on overdue balances after {grace_days} days, client acknowledges by accepting the deposit link.

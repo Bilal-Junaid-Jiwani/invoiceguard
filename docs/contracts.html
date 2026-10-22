@@ -119,7 +119,7 @@
 </li>
 <li><strong>Fee and deposit</strong> — total fee, deposit percentage and amount. The deposit is collected through a Stripe payment link.
 </li>
-<li><strong>Late-fee clause</strong> — if an invoice is unpaid after the grace period, a late fee of <code>late_fee_pct</code>% per month applies on the overdue balance, compounding monthly until paid.
+<li><strong>Late-fee clause</strong> — if an invoice is unpaid after the grace period, a late fee of <code>late_fee_pct</code>% per month applies on the overdue balance: one fee per full month the balance remains unpaid after the grace period, compounding monthly until paid.
 </li>
 <li><strong>Sign-off</strong> — the client signs electronically (typed name + drawn signature); the contract text is frozen at link-creation time and its SHA-256 is stored as tamper evidence.
 </li>

@@ -1,5 +1,3 @@
-Subject: Quick nudge: your invoice for {project_title} is due
-
 Hi {client_name},
 
 Just a quick, friendly nudge — your invoice of **{amount}** for

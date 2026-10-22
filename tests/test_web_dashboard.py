@@ -68,9 +68,15 @@ def _signed(secret: str, payload: dict, tamper: bool = False) -> tuple[bytes, st
 
 
 def _event(session_id: str, etype: str = "checkout.session.completed",
-           metadata: dict | None = None) -> dict:
+           metadata: dict | None = None,
+           payment_status: str | None = None,
+           amount_total: int | None = None) -> dict:
     session = {"id": session_id, "object": "checkout.session",
                "metadata": metadata or {}}
+    if payment_status is not None:
+        session["payment_status"] = payment_status
+    if amount_total is not None:
+        session["amount_total"] = amount_total
     return {"id": "evt_test_1", "object": "event", "type": etype,
             "data": {"object": session}}
 
@@ -185,6 +191,75 @@ def test_webhook_idempotent_when_already_paid(client):
                         metadata={"invoiceguard_invoice_id": str(iid)}))
     assert r.status_code == 200
     assert _status(db, iid)[1] == first_paid_at  # not re-marked
+
+
+def _seed_plink_invoice(db_path, session_ref="plink_test_999"):
+    """Insert an invoice the way the CLI leaves it: stripe_session_id
+    holds the Payment Link id (plink_...), NOT a checkout session id."""
+    conn = sqlite3.connect(db_path)
+    pid = conn.execute("SELECT id FROM projects LIMIT 1").fetchone()[0]
+    cur = conn.execute(
+        """INSERT INTO invoices(project_id, kind, amount_cents, currency,
+               status, stripe_session_id, due_date, sent_at, paid_at,
+               created_at)
+           VALUES (?,?,?,?,?,?,?,?,?,?)""",
+        (pid, "deposit", 75000, "USD", "sent", session_ref, "2026-10-07",
+         "2026-09-20T09:00:00+00:00", None, "2026-09-20T09:00:00+00:00"),
+    )
+    conn.commit()
+    iid = cur.lastrowid
+    conn.close()
+    return iid
+
+
+def test_webhook_records_payment_for_plink_invoice(client):
+    """THE 0.8.4 regression (external review, reproduced live with
+    stripe 15.6.1): in production the CLI stores the payment-link id
+    (plink_...) in stripe_session_id while the webhook carries the
+    checkout session id (cs_...) — the session-id fallback can NEVER
+    match. The only bridge is the metadata invoice id, but the old
+    handler dropped it under stripe>=15 because StripeObject metadata
+    fails isinstance(metadata, dict). The older tests missed it
+    because they seeded stripe_session_id with the cs_ id itself.
+    """
+    tc, seeded, db = client
+    iid = _seed_plink_invoice(db)
+    r = post(tc, _event("cs_test_live_999",
+                        metadata={"invoiceguard_invoice_id": str(iid)},
+                        payment_status="paid", amount_total=75000))
+    assert r.status_code == 200
+    assert r.json()["marked_invoice_id"] == iid
+    status, paid_at = _status(db, iid)
+    assert status == "paid" and paid_at is not None
+    conn = sqlite3.connect(db)
+    sid = conn.execute("SELECT stripe_session_id FROM invoices "
+                       "WHERE id = ?", (iid,)).fetchone()[0]
+    pays = conn.execute("SELECT COUNT(*) FROM payments "
+                        "WHERE invoice_id = ?", (iid,)).fetchone()[0]
+    conn.close()
+    assert sid == "cs_test_live_999"  # session id recorded on payment
+    assert pays == 1
+
+
+def test_webhook_unpaid_payment_status_records_nothing(client):
+    """checkout.session.completed with payment_status=unpaid (delayed
+    methods like ACH) must NOT mark the invoice paid — the money has
+    not arrived. The async_payment_succeeded follow-up does."""
+    tc, seeded, db = client
+    iid = _seed_plink_invoice(db, "plink_test_ach")
+    r = post(tc, _event("cs_test_ach_1",
+                        metadata={"invoiceguard_invoice_id": str(iid)},
+                        payment_status="unpaid", amount_total=75000))
+    assert r.status_code == 200
+    assert r.json()["marked_invoice_id"] is None
+    assert _status(db, iid)[0] == "sent"
+    r = post(tc, _event("cs_test_ach_1",
+                        etype="checkout.session.async_payment_succeeded",
+                        metadata={"invoiceguard_invoice_id": str(iid)},
+                        payment_status="paid", amount_total=75000))
+    assert r.status_code == 200
+    assert r.json()["marked_invoice_id"] == iid
+    assert _status(db, iid)[0] == "paid"
 
 
 def test_webhook_no_secret_configured(tmp_path, monkeypatch):

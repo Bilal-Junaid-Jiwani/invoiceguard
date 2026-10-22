@@ -24,7 +24,7 @@ from pathlib import Path
 from .config import templates_dir
 from .db import DB, resolve_dunning_policy
 from .late_fees import late_fee_summary
-from .mail import send_email
+from .mail import send_email, to_plain_text
 from .messaging import (message_channel, messaging_configured, render_message,
                         send_message)
 
@@ -170,7 +170,11 @@ def check_due(db: DB, smtp_cfg: dict,
             "total_with_late_fees": money(late["total_cents"], inv["currency"]),
             "pay_url": inv["stripe_url"] or "(no payment link yet)",
         }
-        body = render_template(template_path, context)
+        # Plain-text cleanup: the template's legacy "Subject:" header
+        # line must not leak into the body, and markdown ** emphasis
+        # must not reach a plain-text inbox literally (send_email
+        # re-applies the same cleanup as a final guard).
+        body = to_plain_text(render_template(template_path, context))
         subject = SUBJECTS[stage].format(**context)
 
         # Per-invoice delivery isolation: a send failure for this invoice

@@ -1,5 +1,3 @@
-Subject: Reminder: your invoice for {project_title} is {days_overdue} days overdue
-
 Hi {client_name},
 
 This is a firm reminder that your invoice of **{amount}** for

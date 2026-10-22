@@ -3,7 +3,7 @@ title: CLI reference
 eyebrow: User guide
 description: Every InvoiceGuard command and option — init, client, project, invoice, check-due, dashboard.
 ---
-The CLI entry point is `invoiceguard` (installed by pip). All commands below are from v0.1.0 — run `invoiceguard --help` or `invoiceguard <group> --help` for the same text locally.
+The CLI entry point is `invoiceguard` (installed by pip). All commands below are from v0.8.4 — run `invoiceguard --help` or `invoiceguard <group> --help` for the same text locally.
 
 ## `init`
 
@@ -60,7 +60,7 @@ invoiceguard project sign-status 1    # pending / signed + signer + hash
 - Prints the generated contract (with the late-fee clause) as a preview.
 - `--ack` records the contract as acknowledged by the client at creation time; without it, the contract shows `no-ack` until you run `project ack ID` after the client accepts the deposit link.
 - `list` shows `#id  title  client  amount  [ack|no-ack]`.
-- `sign-request` creates a one-time, single-use signing link (`/sign/<token>`, served by the dashboard) for the client to type their name and draw a signature; the contract text is frozen at link-creation time and its SHA-256 is stored as tamper evidence. Re-running while a request is pending returns the same link (with its original frozen text). `sign-status` shows the request state.
+- `sign-request` creates a one-time, single-use signing link (`/sign/<token>`, served by the dashboard) for the client to type their name and draw a signature; the contract text is frozen at link-creation time and its SHA-256 is stored as tamper evidence. Re-running while a request is pending returns the same link (with its original frozen text). `sign-status` shows both tracks: the e-signature state *and* the deposit-link acknowledgment (`project ack` / `--ack`) — an acknowledged project with a signature still outstanding says so, instead of only reporting "awaiting signature" (0.8.4).
 
 See [Contracts](contracts.html) for what the contract contains and the honest limits of the e-signature.
 
@@ -85,8 +85,8 @@ invoiceguard invoice report [--as-of 2026-10-08] [--freelancer 1] [--csv invoice
 - `list` shows `#id  kind  status  amount  project  [freelancer]  due-date`; `--freelancer ID` shows only that freelancer's invoices.
 - `assign` (v0.8.0, agency mode) attributes an invoice to a freelancer (`--freelancer ID`), or clears the attribution with `--none`. Pure bookkeeping: dunning, payments, and status are untouched.
 - `record-payment` records a (partial) payment in the ledger. A payment that clears the outstanding balance marks the invoice `paid`; otherwise the invoice becomes `partially-paid` and keeps dunning against the remaining balance. Overpaying is rejected.
-- `mark-paid` manually marks an invoice paid — since v0.2.0 it records the full outstanding balance in the ledger, and it errors on already-paid or void invoices. `void` voids it.
-- `late-fees` (v0.4.0) shows the accrued late fees for an invoice under contract §3: due date, grace window, monthly rate, months billed, accrued fees, and total due. `--as-of YYYY-MM-DD` computes as of a past date (default: today).
+- `mark-paid` manually marks an invoice paid — since v0.2.0 it records the full outstanding balance in the ledger, and it errors on already-paid or void invoices. `void` voids an unpaid invoice; a **paid** invoice cannot be voided (0.8.4 — its ledger payments stand; refund through Stripe instead), and voiding an already-void invoice errors too.
+- `late-fees` (v0.4.0) shows the accrued late fees for an invoice under contract §3: due date, grace window, monthly rate, months billed, accrued fees, and total due. One fee is billed per **full monthly period elapsed** since accrual started (0.8.4 — see the changelog for why started-calendar-month counting was wrong). `--as-of YYYY-MM-DD` computes as of a past date (default: today).
 - `notify` (v0.5.0) sends an SMS/WhatsApp payment reminder for one invoice right now (same text as the automatic day-15 message). `--dry-run` prints the rendered message without sending — no Twilio credentials needed, but the client needs a phone number.
 - `report` (v0.6.0) is a read-only receivables report: open invoices (sent / overdue / partially-paid with a balance) grouped into Current / 1-30 / 31-60 / 61-90 / 90+ day aging buckets, oldest debt first, with accrued late fees, per-client totals, and grand totals. `--as-of YYYY-MM-DD` pins the report date. `--csv PATH` exports one row per open invoice and `--payments-csv PATH` exports the full payment ledger for accounting; `-` as the path prints that CSV to stdout instead of the text report. `--freelancer ID` (v0.8.0) restricts the report to one freelancer's invoices; the text report also prints a "by freelancer" breakdown when more than one attribution group has open invoices. It never sends anything or changes invoice state. CSV exports (v0.8.1) neutralize spreadsheet formula injection: any exported cell starting with `=`, `+`, `-`, `@`, `|`, or `%` is prefixed with a single quote so it opens as plain text (OWASP CSV-injection guidance).
 
@@ -108,4 +108,4 @@ Launches the localhost web UI (uvicorn serving the FastAPI app). Binds to `127.0
 
 ## Exit behavior
 
-Errors print a one-line message (`Error: ...`) and exit non-zero. Destructive operations (`void`, `mark-paid`) act on explicit ids only — there is no bulk mode in v0.1.0.
+Errors print a one-line message (`Error: ...`) and exit non-zero. Destructive operations (`void`, `mark-paid`) act on explicit ids only — there is no bulk mode in v0.8.4.

@@ -77,6 +77,8 @@ skipped dunning (invoice #12): dunning disabled for this client (per-client poli
 
 Edit them freely; `check-due` picks up changes on the next run. If a template references an unknown variable, the run fails loudly instead of sending a broken email. If a template file is missing, the command tells you to re-run `invoiceguard init`.
 
+Emails go out as **plain text**: markdown emphasis (`**...**`) is stripped at send time so clients never see literal asterisks, and a legacy `Subject:` first line in a template file is ignored — the subject always comes from the defaults below (0.8.4).
+
 Default subjects:
 
 - day1: `Quick nudge: invoice for {project_title} is due`

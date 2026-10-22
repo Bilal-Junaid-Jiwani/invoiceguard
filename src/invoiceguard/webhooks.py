@@ -1,8 +1,10 @@
 """Stripe webhook handling (payment confirmations are recorded in the payment
 ledger; a payment that clears the balance marks the invoice paid).
 
-Used by the FastAPI dashboard app (POST /webhooks/stripe) and testable
-offline: stripe.Webhook.construct_event does real signature verification
+This module is the standalone, embeddable handler (verify + apply);
+the FastAPI dashboard app (POST /webhooks/stripe) applies the same
+rules in its own handler in web/main.py. Testable offline:
+stripe.Webhook.construct_event does real signature verification
 with a test secret, no network needed.
 """
 
@@ -30,8 +32,31 @@ def verify_event(payload: bytes, sig_header: str, webhook_secret: str) -> dict:
     return event
 
 
+def _as_plain_dict(event):
+    """Normalize a Stripe event to a plain dict.
+
+    verify_event() returns whatever stripe.Webhook.construct_event
+    returns: a StripeObject Event under stripe>=8. StripeObject is not
+    a dict and has no .get(), so handlers written against dict access
+    break on real events (they only ever saw dicts in tests). Its
+    .to_dict() recursively converts nested objects (session, metadata)
+    to plain dicts. Plain dicts pass through unchanged.
+    """
+    if isinstance(event, dict):
+        return event
+    to_dict = getattr(event, "to_dict", None)
+    if callable(to_dict):
+        converted = to_dict()
+        if isinstance(converted, dict):
+            return converted
+    return {}
+
+
 def handle_event(db: DB, event: dict) -> str:
     """Apply a verified Stripe event to the DB.
+
+    Accepts either a plain dict or the StripeObject Event returned by
+    verify_event() (normalized via _as_plain_dict).
 
     Idempotent on event id: a retried delivery of an already-processed
     event is ignored ("ignored:duplicate_event"), so a replayed
@@ -42,6 +67,7 @@ def handle_event(db: DB, event: dict) -> str:
     Returns a short action label: 'invoice_paid', 'invoice_voided', or
     'ignored:<type>'.
     """
+    event = _as_plain_dict(event)
     event_id = event.get("id")
     if event_id and db.webhook_event_seen(event_id):
         return "ignored:duplicate_event"
@@ -63,11 +89,25 @@ def _invoice_id_from(event: dict) -> int | None:
         return None
 
 
+# Session payment states in which the money is actually ours. A
+# checkout.session.completed with payment_status="unpaid" means a
+# delayed method (ACH debit, bank transfer, ...) has only *started*;
+# Stripe follows it with checkout.session.async_payment_succeeded once
+# the funds clear. A missing payment_status (older payloads/fixtures)
+# is treated as paid for backward compatibility.
+_PAYABLE_STATUSES = (None, "paid", "no_payment_required")
+
+
 def _apply_event(db: DB, event: dict) -> str:
     etype = event.get("type", "")
     obj = (event.get("data") or {}).get("object") or {}
 
-    if etype == "checkout.session.completed":
+    if etype in ("checkout.session.completed",
+                 "checkout.session.async_payment_succeeded"):
+        if obj.get("payment_status") not in _PAYABLE_STATUSES:
+            # Delayed payment still pending — record nothing. The
+            # async_payment_succeeded event applies the payment later.
+            return "ignored:payment_unpaid"
         invoice_id = (obj.get("metadata") or {}).get("invoiceguard_invoice_id")
         if invoice_id:
             inv = db.get_invoice(int(invoice_id))

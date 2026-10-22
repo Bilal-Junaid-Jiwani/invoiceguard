@@ -70,12 +70,16 @@ def test_report_buckets_outstanding_and_fees(db, sample_project):
     assert expected["fees_cents"] > 0
     assert old_row["late_fees_cents"] == expected["fees_cents"]
     assert old_row["total_due_cents"] == 200_000 + expected["fees_cents"]
-    # the 18-day invoice is also past its 15-day grace: 1 month billed
+    # the 18-day invoice is past its 15-day grace (accrual started
+    # 2026-10-06) but no FULL monthly period has elapsed by 2026-10-08,
+    # so 0.8.4's elapsed-months accrual charges it nothing yet — under
+    # the pre-0.8.4 started-calendar-month math it billed a full month
+    # for those 2 days, which is exactly the bug that was fixed.
     mid_row = next(r for r in rep["rows"] if r["id"] == mid)
     mid_expected = late_fee_summary(db.invoice_full(mid), as_of=AS_OF)
-    assert mid_row["late_fees_cents"] == mid_expected["fees_cents"] > 0
-    assert totals["fees_cents"] == (expected["fees_cents"]
-                                    + mid_expected["fees_cents"])
+    assert mid_expected["accrual_start"] == "2026-10-06"
+    assert mid_row["late_fees_cents"] == mid_expected["fees_cents"] == 0
+    assert totals["fees_cents"] == expected["fees_cents"]
     assert totals["total_cents"] == (totals["outstanding_cents"]
                                      + totals["fees_cents"])
 

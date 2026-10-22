@@ -192,6 +192,37 @@ async def sign_submit(request: Request, token: str):
     return templates.TemplateResponse(request, "signed.html", ctx)
 
 
+def _metadata_dict(metadata) -> dict:
+    """Normalize Stripe session metadata to a plain dict.
+
+    stripe>=15 returns metadata as a StripeObject, which is NOT a dict
+    (isinstance check fails) and has no .get() — the pre-0.8.4 handler
+    tested isinstance(metadata, dict), silently dropped the invoice-id
+    hint under stripe>=15, and recorded no payment at all. StripeObject
+    exposes .to_dict(); plain dicts (older SDKs, fixtures) pass through.
+    """
+    if isinstance(metadata, dict):
+        return metadata
+    to_dict = getattr(metadata, "to_dict", None)
+    if callable(to_dict):
+        try:
+            converted = to_dict()
+        except Exception:
+            return {}
+        return converted if isinstance(converted, dict) else {}
+    return {}
+
+
+# Session payment states in which the money is actually ours. A
+# checkout.session.completed with payment_status="unpaid" means a
+# delayed method (ACH debit, bank transfer, ...) has only *started* —
+# Stripe follows it with checkout.session.async_payment_succeeded once
+# the funds clear, and that event is handled by the same path below.
+# A missing payment_status (older payloads/fixtures) is treated as paid
+# for backward compatibility.
+_PAYABLE_STATUSES = (None, "paid", "no_payment_required")
+
+
 @app.post("/webhooks/stripe")
 async def stripe_webhook(request: Request):
     """Stripe webhook receiver.
@@ -199,9 +230,13 @@ async def stripe_webhook(request: Request):
     Verifies the Stripe-Signature header against the signing secret
     resolved by webhook_secret() (INVOICEGUARD_STRIPE_WEBHOOK_SECRET env,
     config file, or legacy STRIPE_WEBHOOK_SECRET env). On
-    checkout.session.completed, records the payment in the ledger and marks the
-    matching invoice paid (or partially-paid when the session amount is less
-    than the outstanding balance).
+    checkout.session.completed with the payment actually settled
+    (payment_status paid / no_payment_required / absent), records the
+    payment in the ledger and marks the matching invoice paid (or
+    partially-paid when the session amount is less than the
+    outstanding balance). A completed session whose payment is still
+    unpaid (delayed methods) records nothing; the follow-up
+    checkout.session.async_payment_succeeded event marks it paid.
     Returns 400 on bad signature, 500 when no secret is configured.
     """
     secret = webhook_secret()
@@ -223,11 +258,14 @@ async def stripe_webhook(request: Request):
 
     marked: int | None = None
     # stripe>=8 returns an Event object (not a dict); use attribute access.
-    if getattr(event, "type", None) == "checkout.session.completed":
+    if getattr(event, "type", None) in (
+        "checkout.session.completed",
+        "checkout.session.async_payment_succeeded",
+    ):
         session = event.data.object
-        metadata = getattr(session, "metadata", None) or {}
-        hint = None
-        if isinstance(metadata, dict):
+        if getattr(session, "payment_status", None) in _PAYABLE_STATUSES:
+            metadata = _metadata_dict(getattr(session, "metadata", None))
+            hint = None
             # Must match the key the CLI writes in create_payment_link().
             # 'invoiceguard_invoice_id' is canonical; 'invoice_id' is a
             # tolerated legacy alias.
@@ -236,11 +274,11 @@ async def stripe_webhook(request: Request):
                 hint = int(raw) if raw is not None else None
             except (TypeError, ValueError):
                 hint = None
-        session_amount = getattr(session, "amount_total", None)
-        marked = db.mark_invoice_paid(
-            stripe_session_id=getattr(session, "id", ""),
-            invoice_id_hint=hint,
-            amount_cents=int(session_amount) if session_amount is not None else None,
-        )
+            session_amount = getattr(session, "amount_total", None)
+            marked = db.mark_invoice_paid(
+                stripe_session_id=getattr(session, "id", ""),
+                invoice_id_hint=hint,
+                amount_cents=int(session_amount) if session_amount is not None else None,
+            )
 
     return JSONResponse({"received": True, "marked_invoice_id": marked})

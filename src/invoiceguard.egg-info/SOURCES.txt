@@ -39,6 +39,7 @@ tests/test_freelancers.py
 tests/test_late_fees.py
 tests/test_messaging.py
 tests/test_partial_payments.py
+tests/test_release_084.py
 tests/test_reports.py
 tests/test_signatures.py
 tests/test_stripe.py

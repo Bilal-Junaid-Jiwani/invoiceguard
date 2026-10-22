@@ -577,6 +577,30 @@ class DB:
         )
         self.conn.commit()
 
+    def delete_invoice(self, invoice_id: int) -> bool:
+        """Delete an invoice — ONLY a fresh draft with no payments.
+
+        Exists to roll back `invoice create` when Stripe payment-link
+        creation fails after the draft row was inserted (before 0.8.4
+        each failure left an orphan draft behind). The guard makes the
+        rollback safe to call unconditionally: anything that has left
+        draft state or has money recorded against it is refused.
+        Returns True when a row was deleted.
+        """
+        row = self.get_invoice(invoice_id)
+        if row is None or row["status"] != "draft":
+            return False
+        paid = self.conn.execute(
+            "SELECT COUNT(*) FROM payments WHERE invoice_id = ?",
+            (invoice_id,),
+        ).fetchone()[0]
+        if paid:
+            return False
+        self.conn.execute(
+            "DELETE FROM invoices WHERE id = ?", (invoice_id,))
+        self.conn.commit()
+        return True
+
     def invoice_full(self, invoice_id: int) -> dict | None:
         """Invoice joined with project + client, as a plain dict.
 

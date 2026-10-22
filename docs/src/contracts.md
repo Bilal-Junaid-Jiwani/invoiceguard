@@ -9,7 +9,7 @@ description: The InvoiceGuard contract generator — late-fee clause, deposit ac
 
 - **Parties and scope** — client name/email, project title, date.
 - **Fee and deposit** — total fee, deposit percentage and amount. The deposit is collected through a Stripe payment link.
-- **Late-fee clause** — if an invoice is unpaid after the grace period, a late fee of `late_fee_pct`% per month applies on the overdue balance, compounding monthly until paid.
+- **Late-fee clause** — if an invoice is unpaid after the grace period, a late fee of `late_fee_pct`% per month applies on the overdue balance: one fee per full month the balance remains unpaid after the grace period, compounding monthly until paid.
 - **Sign-off** — the client signs electronically (typed name + drawn signature); the contract text is frozen at link-creation time and its SHA-256 is stored as tamper evidence.
 
 Defaults: 50% deposit, 1.5%/month late fee, 15-day grace — all adjustable per project with `--deposit-pct`, `--late-fee-pct`, `--late-fee-grace-days`.

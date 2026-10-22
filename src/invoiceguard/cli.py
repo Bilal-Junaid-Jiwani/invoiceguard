@@ -429,7 +429,15 @@ def project_sign_request(project_id):
 @project.command("sign-status")
 @click.argument("project_id", type=int)
 def project_sign_status(project_id):
-    """Show the e-signature status of a project's contract."""
+    """Show the acknowledgment + e-signature status of a contract.
+
+    Two tracks lead to an acknowledged contract (see contracts.py):
+    the deposit-link acknowledgment (`project ack` / `project create
+    --ack`, or paying the deposit) and the formal e-signature. This
+    command reports both — before 0.8.4 it looked only at the
+    signature track, so an already-acknowledged project misleadingly
+    reported "awaiting signature" with no mention of the ack.
+    """
     db = _db()
     proj = db.get_project(project_id)
     if not proj:
@@ -437,17 +445,30 @@ def project_sign_status(project_id):
         raise click.ClickException(f"no project #{project_id}")
     sig = db.get_signature_for_project(project_id)
     db.close()
-    if not sig:
-        click.echo(f"project #{project_id}: no signature request yet — "
-                   f"run `invoiceguard project sign-request {project_id}`")
-    elif sig["status"] == "signed":
+    acked = bool(proj["contract_ack"])
+    ack_at = proj["contract_ack_at"]
+    if sig and sig["status"] == "signed":
         click.echo(f"project #{project_id}: SIGNED")
         click.echo(f"  signer:      {sig['signer_name']}")
         click.echo(f"  signed at:   {sig['signed_at']}")
         click.echo(f"  contract sha256: {sig['contract_hash']}")
-    else:
+    elif sig:
         click.echo(f"project #{project_id}: awaiting signature")
         click.echo(f"  signing link: http://127.0.0.1:8000/sign/{sig['token']}")
+        if acked:
+            click.echo(f"  contract acknowledged: yes — deposit-link "
+                       f"acknowledgment ({ack_at}); the e-signature is "
+                       f"still outstanding")
+        else:
+            click.echo("  contract acknowledged: no")
+    elif acked:
+        click.echo(f"project #{project_id}: acknowledged via deposit "
+                   f"link ({ack_at}) — no e-signature requested yet; "
+                   f"run `invoiceguard project sign-request "
+                   f"{project_id}` for a formal e-signature")
+    else:
+        click.echo(f"project #{project_id}: no signature request yet — "
+                   f"run `invoiceguard project sign-request {project_id}`")
 
 
 # -- invoice --------------------------------------------------------------
@@ -492,7 +513,13 @@ def invoice_create(project_id, kind, amount, due_days):
     try:
         inv = db.invoice_full(iid)
         url, link_id = create_payment_link(inv, cfg.get("stripe_secret_key", ""))
-    except ValueError as e:
+    except Exception as e:
+        # Roll the draft back: a failed create must not leave an orphan
+        # draft invoice behind (before 0.8.4, N failed runs left N
+        # drafts). delete_invoice only removes a payment-less draft,
+        # so this is safe even if state changed in between. StripeError
+        # (API failure) lands here too, not just ValueError (no key).
+        db.delete_invoice(iid)
         db.close()
         raise click.ClickException(str(e))
 
@@ -625,12 +652,21 @@ def invoice_mark_paid(invoice_id):
 @invoice.command("void")
 @click.argument("invoice_id", type=int)
 def invoice_void(invoice_id):
-    """Void an invoice."""
+    """Void an invoice. Paid invoices cannot be voided."""
     db = _db()
     inv = db.get_invoice(invoice_id)
     if not inv:
         db.close()
         raise click.ClickException(f"no invoice #{invoice_id}")
+    if inv["status"] == "paid":
+        db.close()
+        raise click.ClickException(
+            f"invoice #{invoice_id} is already paid — a paid invoice "
+            f"cannot be voided (its payments are recorded in the "
+            f"ledger; refund through Stripe instead)")
+    if inv["status"] == "void":
+        db.close()
+        raise click.ClickException(f"invoice #{invoice_id} is already void")
     db.update_invoice(invoice_id, status="void")
     db.close()
     click.echo(f"invoice #{invoice_id} voided")
@@ -644,8 +680,8 @@ def invoice_late_fees(invoice_id, as_of):
     """Show accrued late fees for an invoice (contract §3).
 
     Fees accrue at the project's monthly rate, compounding monthly,
-    starting the day after the grace period ends. A partial month
-    counts as a full month.
+    starting the day after the grace period ends: one fee per full
+    monthly period elapsed since accrual started.
     """
     db = _db()
     full = db.invoice_full(invoice_id)

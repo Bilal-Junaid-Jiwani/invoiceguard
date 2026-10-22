@@ -2,6 +2,30 @@
 
 Every release, newest first. InvoiceGuard follows semver.
 
+## [0.8.4] - 2026-10-22
+
+Every fix in this release comes from an external hands-on review: the reviewer installed the package with stripe 15.6.1 and ran it live. The headline bug was critical — under stripe>=15 the webhook silently never recorded payments, so paid clients kept receiving dunning notices.
+
+### Fixed
+- **CRITICAL — Stripe webhook never recorded payments under stripe>=15.** The dashboard handler tested `isinstance(metadata, dict)`; stripe 15 returns session metadata as a `StripeObject` (not a dict, no `.get()`), so the invoice-id hint was silently dropped. The fallback could not save it either: the CLI stores the Payment Link id (`plink_...`) in `stripe_session_id`, while the webhook looks up the checkout session id (`cs_...`), which never matches. The webhook still returned 200, Stripe never retried, the invoice stayed `sent`, and dunning kept emailing clients who had paid. Metadata is now normalized via `.to_dict()` when needed (dict payloads from older SDKs pass through), in both the dashboard handler and `webhooks.handle_event` (which also crashed with `AttributeError` on a real `StripeObject` event — it had only ever been fed dicts by tests). The pre-0.8.4 test suite missed all of this because its seeded invoices stored the `cs_...` id it later looked up; the new regression test seeds the production shape (`plink_...` stored, `cs_...` in the event). The stripe pin was *not* narrowed — the code fix is robust across stripe 12–15.
+- **`payment_status` was never checked.** A `checkout.session.completed` event with `payment_status=unpaid` (delayed methods such as ACH, where the money has not arrived) marked the invoice paid. Both webhook paths now record a payment only when `payment_status` is `paid` / `no_payment_required` (or absent, for older payloads), and `checkout.session.async_payment_succeeded` — the event Stripe sends when a delayed payment actually clears — is handled by the same path.
+- **Late fees doubled at month-end.** Accrual counted *started calendar months*: an accrual starting Jan 31 charged two months of fees on Feb 1 (2.02x for one day), and a 12-month span could be charged 13 fees — more than contract §3's "% per month" promises. Accrual now counts *full monthly periods elapsed* since the accrual start, anchored on the start day (month-end clamped): Jan 31 → 1 month on Feb 28, exactly 12 in a year. Contract §3 wording, the CLI `late-fees` text, and the docs now describe the same math.
+- **`sign-status` contradicted the acknowledgment state.** It reported only the e-signature track, so a project already acknowledged via the deposit link (`--ack` / `project ack`) still showed a bare "awaiting signature" / "no signature request yet". It now reports both tracks: signature state plus the deposit-link acknowledgment (with its timestamp).
+- **Failed `invoice create` left orphan drafts.** The draft row was inserted before the Stripe payment link was created; every failure (missing key, Stripe API error) left a draft behind (3 failures → 3 drafts), and API errors surfaced as a traceback. The draft is now rolled back on any link-creation failure (`DB.delete_invoice`, guarded to payment-less drafts only) and the error prints as a clean one-line CLI message.
+- **A paid invoice could be voided.** `invoice void` had no status check. It now refuses paid invoices (their ledger payments stand; refund through Stripe) and already-void invoices, with a clear error.
+- **Dunning emails leaked template markup.** Bodies contained the template file's literal `Subject:` line, and plain-text emails showed literal markdown (`**$1,250.00**`). Bodies are now cleaned at send time (`mail.to_plain_text`: legacy `Subject:` line dropped, `**` emphasis stripped — existing user templates in `~/.invoiceguard/templates` are fixed without re-running `init`), and the shipped templates no longer carry a `Subject:` line at all (subjects live in `dunning.SUBJECTS`).
+
+### Added
+- `scripts/smoke_install.py` — fresh-install smoke check: builds the wheel, installs it into a clean venv, and runs a real flow (init → client → project → invoice create with Stripe mocked at the SDK boundary → a genuinely signed webhook event verified through `stripe.Webhook.construct_event`). This is the class of check that would have caught the stripe-15 webhook bug; the repo has no CI workflows to wire it into, so it is a script to run before releases (it was run for this one — see the release notes).
+
+### Docs
+- Version/test-count drift corrected (README test paragraph, docs CLI/install pages that still said v0.1.0, site test count). Webhook docs now cover the `async_payment_succeeded` event and the delayed-payment behavior; the endpoint setup step lists both events.
+
+### Honest scope (0.8.4)
+- The `stripe>=12,<16` range is unchanged: the fix makes the code correct under every supported major instead of pinning around the bug.
+- Late-fee change is prospective math, not a migration: previously computed *displays* change (fees are computed on read, never stored), and a balance inside its first accrual month now shows 0 fees until the first full month elapses — that is the contract's "% per month" read literally.
+- The dashboard keeps its own inline webhook handler (web/main.py) alongside the standalone `webhooks.handle_event`; both paths got the same metadata + payment_status fixes and both are covered by regression tests.
+
 ## [0.8.3] - 2026-10-21
 
 E-signature contract snapshot: the signing flow now freezes the contract text at the moment the link is created.

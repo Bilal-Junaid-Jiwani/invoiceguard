@@ -37,7 +37,7 @@ It's reading a different database than your CLI. Check `INVOICEGUARD_DB` in the 
 
 ## Paid invoice still shows as "sent"
 
-Either the webhook isn't configured (see above), the event wasn't `checkout.session.completed`, or the payment link's metadata doesn't carry the invoice id (links created by v0.1.0 always do). Use `invoiceguard invoice mark-paid <id>` as the manual fallback.
+Either the webhook isn't configured (see above), the event wasn't `checkout.session.completed`, or the payment link's metadata doesn't carry the invoice id (links created by v0.1.0 always do). One more possibility since 0.8.4: the client paid with a delayed method (ACH) and the session's `payment_status` is still `unpaid` — the invoice is marked paid when `checkout.session.async_payment_succeeded` arrives, so make sure that event is selected on the endpoint too. (On versions before 0.8.4 with stripe>=15 installed, the webhook silently never recorded payments at all — upgrade.) Use `invoiceguard invoice mark-paid <id>` as the manual fallback.
 
 ## Limits of v1
 

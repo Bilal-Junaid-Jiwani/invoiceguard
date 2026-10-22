@@ -158,6 +158,7 @@ invoiceguard client set-dunning-policy 4 --reset       # back to the global defa
 <p><code>{client_name}</code> <code>{project_title}</code> <code>{amount}</code> <code>{paid}</code> <code>{outstanding}</code> <code>{due_date}</code> <code>{days_overdue}</code> <code>{late_fee_pct}</code> <code>{late_fee_due}</code> <code>{total_with_late_fees}</code> <code>{pay_url}</code></p>
 <p><code>{amount}</code> is the original invoice amount; <code>{paid}</code> and <code>{outstanding}</code> come from the payment ledger (v0.2.0). <code>{late_fee_due}</code> and <code>{total_with_late_fees}</code> (v0.4.0) come from the late-fee accrual calculator, computed off the current outstanding balance.</p>
 <p>Edit them freely; <code>check-due</code> picks up changes on the next run. If a template references an unknown variable, the run fails loudly instead of sending a broken email. If a template file is missing, the command tells you to re-run <code>invoiceguard init</code>.</p>
+<p>Emails go out as <strong>plain text</strong>: markdown emphasis (<code>**...**</code>) is stripped at send time so clients never see literal asterisks, and a legacy <code>Subject:</code> first line in a template file is ignored — the subject always comes from the defaults below (0.8.4).</p>
 <p>Default subjects:</p>
 <ul>
 <li>day1: <code>Quick nudge: invoice for {project_title} is due</code>
