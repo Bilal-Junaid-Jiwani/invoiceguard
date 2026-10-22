@@ -1,21 +1,243 @@
-# InvoiceGuard — website + docs (static, published to GitHub Pages)
+# InvoiceGuard
 
-This branch is the published output. Source lives on `main` in `docs/` and `site/`.
+<p align="center">
+  <img src="https://raw.githubusercontent.com/Bilal-Junaid-Jiwani/invoiceguard/main/docs/assets/img/logo.svg" width="96" height="96" alt="InvoiceGuard logo — a shield with an invoice and checkmark">
+</p>
 
-## Structure
+[![PyPI](https://img.shields.io/pypi/v/invoiceguard.svg)](https://pypi.org/project/invoiceguard/)
+[![Python](https://img.shields.io/pypi/pyversions/invoiceguard.svg)](https://pypi.org/project/invoiceguard/)
+[![License](https://img.shields.io/github/license/Bilal-Junaid-Jiwani/invoiceguard.svg)](https://github.com/Bilal-Junaid-Jiwani/invoiceguard/blob/main/LICENSE)
+[![Docs](https://img.shields.io/badge/docs-website-12805C)](https://bilal-junaid-jiwani.github.io/invoiceguard/)
+[![Website](https://img.shields.io/badge/website-live-A8802F)](https://bilal-junaid-jiwani.github.io/invoiceguard/site/)
 
-- `/` — documentation site home (title "invoiceguard docs"): 13 pages built from
-  `docs/src/*.md` by `docs/build.py` (ledger-paper theme, client-side search,
-  sitemap, llms.txt)
-- `/site/` — marketing website (distinct design, real dashboard screenshots)
-- `404.html` — themed not-found page
-- `.nojekyll` — present (empty), so Pages serves files as-is
+**Freelancer payment enforcement: deposit links tied to a contract with a late-fee clause — then automated, escalating collections.**
 
-## Rebuilding
+Solo freelancers don't get paid. A Kaplan Group report (April 2026) found **85% of freelancers experience late payment**; a Freelancers Union survey found **91%** have experienced late/overdue payments, with 54% waiting 3+ months. InvoiceGuard's wedge:
+
+1. **Before work starts:** generate a contract with a late-fee clause, create a Stripe deposit payment link. The client acknowledges the contract by accepting (paying) the deposit link.
+2. **After the due date:** an automated 3-stage email escalation — day-1 polite nudge → day-7 firm reminder → day-15 formal notice quoting the late-fee clause (also sent as an SMS/WhatsApp message when Twilio messaging is configured) — until a Stripe webhook marks the invoice paid.
+
+Local-first (SQLite), open-source (Apache-2.0), works alongside your existing invoicing tools via Stripe. No platform switch required.
+
+> **Honest scope:** contracts are signed electronically in the browser (typed name + drawn signature, SHA-256 hash of the signed text stored as tamper evidence) — a captured signature, not a qualified third-party e-signature service. See [Limits of v1](#limits-of-v1).
+
+![InvoiceGuard dashboard — invoice list with escalation stages](https://raw.githubusercontent.com/Bilal-Junaid-Jiwani/invoiceguard/main/docs/assets/img/dashboard-list.png)
+
+---
+
+## 5-minute quickstart
+
+**0. Install**
 
 ```bash
-cd docs && python3 build.py   # regenerates *.html, sitemap.xml, llms.txt, search index
+pip install invoiceguard
+# or, from a local clone:  pip install -r requirements.txt && pip install -e .
+invoiceguard init               # creates ~/.invoiceguard (config template, DB, email templates)
 ```
 
-Then publish this branch's root from the rebuilt `docs/` output and `/site/`
-from the `site/` source.
+**1. Add your Stripe test key** (~2 min)
+
+1. Go to <https://dashboard.stripe.com/test/apikeys> (toggle **Test mode** on).
+2. **Developers → API keys → Create secret key**, copy the `sk_test_...` value.
+3. Paste it into `~/.invoiceguard/config.yaml` as `stripe_secret_key`, **or** export it:
+   ```bash
+   export INVOICEGUARD_STRIPE_SECRET_KEY="sk_test_..."
+   ```
+
+**2. Add your SMTP details** (~2 min) — how dunning emails are sent. In `~/.invoiceguard/config.yaml`:
+
+```yaml
+smtp:
+  host: "smtp.gmail.com"
+  port: 587
+  username: "you@example.com"
+  password: "YOUR_GMAIL_APP_PASSWORD"   # or export INVOICEGUARD_SMTP_PASSWORD
+  from_addr: "you@example.com"
+  use_tls: true
+```
+
+(Gmail: create an **App Password** at Google Account → Security → 2-Step Verification → App passwords. Any SMTP provider works.)
+
+**3. Create a client, project, and deposit link** (~1 min)
+
+```bash
+invoiceguard client add --name "Acme Corp" --email "billing@acme.com"
+
+invoiceguard project create --client "Acme Corp" --title "Website redesign" \
+  --amount 2000 --deposit-pct 50 --late-fee-pct 1.5 --ack
+# ^ generates the contract markdown (with the late-fee clause) and records
+#   client acknowledgment (--ack = client accepted the deposit link)
+
+invoiceguard invoice create --project 1 --kind deposit
+# => invoice #1 (deposit): $1,000.00
+#    pay link: https://buy.stripe.com/...
+#    due: 2026-10-07   status: sent
+```
+
+Send the pay link to the client. That's the whole pre-work flow.
+
+**4. Let collections run themselves**
+
+```bash
+# add to your crontab (runs the dunning scan every morning at 9:00):
+0 9 * * * /path/to/venv/bin/invoiceguard check-due >> ~/.invoiceguard/check-due.log 2>&1
+```
+
+`invoiceguard check-due` scans invoices past their due date and sends the next escalation stage (day1 → day7 → day15), using the editable markdown templates in `~/.invoiceguard/templates/`. It's idempotent — a stage is never sent twice for the same invoice. Per-client dunning policies (v0.7.0) let each client override the 1/7/15 thresholds or disable stages entirely (`invoiceguard client set-dunning-policy`) — useful for VIP clients or agency workspaces with different collections rhythms. When the client pays, Stripe's webhook flips the invoice to `paid` automatically. An invoice whose client has no email on file is skipped with a clear reason (one email-less client no longer crashes the whole run); add the email with `invoiceguard client set-email` and the stage goes out on the next run. Likewise, if one invoice's email *send* fails (transient SMTP error), the failure is isolated — reported as a `failed` line, nothing recorded for that invoice, and the rest of the batch still goes out; the stage retries on the next run.
+
+**5. Stripe webhook (so payments mark invoices paid)**
+
+1. In the Stripe dashboard: **Developers → Webhooks → Add endpoint**.
+2. URL: `https://YOUR-HOST/webhooks/stripe` (the dashboard app serves this; see below).
+3. Select event: `checkout.session.completed`.
+4. Copy the **Signing secret** (`whsec_...`) into `stripe_webhook_secret` in the config (or export `INVOICEGUARD_STRIPE_WEBHOOK_SECRET`). The dashboard webhook reads the secret from the env var first, then the config file, then the legacy `STRIPE_WEBHOOK_SECRET` env var.
+
+> ⭐ If InvoiceGuard helped you, a star means a lot — it helps other developers find the project.
+
+---
+
+## CLI reference
+
+| Command | What it does |
+|---|---|
+| `invoiceguard init` | Create `~/.invoiceguard/` (config template, DB, email templates) |
+| `invoiceguard client add --name N --email E [--phone +15551234567]` | Add a client (phone enables SMS/WhatsApp escalation) |
+| `invoiceguard client set-phone ID [--phone +15551234567]` | Set or clear a client's phone number |
+| `invoiceguard client set-email ID [--email billing@acme.com]` | Set or clear a client's email address (dunning) |
+| `invoiceguard client set-dunning-policy ID [--day1 N] [--day7 N] [--day15 N] [--reset]` | Per-client dunning thresholds (v0.7.0); `0` disables a stage |
+| `invoiceguard client list` | List clients (shows `[dunning ...]` overrides) |
+| `invoiceguard freelancer add --name N [--email E] [--phone +15551234567]` | Add a freelancer to the agency roster (v0.8.0) |
+| `invoiceguard freelancer set-email ID [--email E]` / `set-phone ID [--phone P]` / `list` | Manage or list freelancers (v0.8.0) |
+| `invoiceguard project create --client N --title T --amount 2000 [--deposit-pct 50] [--late-fee-pct 1.5] [--late-fee-grace-days 15] [--ack]` | Create project + generate contract markdown |
+| `invoiceguard project ack ID` | Record client acknowledgment of the contract (deposit-link path) |
+| `invoiceguard project sign-request ID` | Create a one-time e-signature link for the contract (`/sign/<token>`) |
+| `invoiceguard project sign-status ID` | Show acknowledgment + signature state: deposit-link ack, pending/signed, signer, timestamp, contract hash |
+| `invoiceguard project list` | List projects |
+| `invoiceguard invoice create --project ID --kind deposit\|milestone\|final [--amount X] [--due-days 7]` | Create a Stripe payment link (status → `sent`) |
+| `invoiceguard invoice list [--freelancer ID]` | List invoices (shows the attributed freelancer) |
+| `invoiceguard invoice assign ID --freelancer ID` / `--none` | Attribute an invoice to a freelancer, or clear the attribution (v0.8.0; bookkeeping only) |
+| `invoiceguard invoice record-payment ID --amount 250 [--note "check #1"] [--method bank]` | Record a (partial) payment; clearing the balance marks the invoice `paid`, otherwise it becomes `partially-paid` |
+| `invoiceguard invoice mark-paid ID` | Manually mark paid (records the full outstanding balance in the payment ledger) |
+| `invoiceguard invoice void ID` | Void an invoice |
+| `invoiceguard invoice notify ID [--channel sms\|whatsapp] [--dry-run]` | Send an SMS/WhatsApp payment reminder now (`--dry-run` prints the message without sending) |
+| `invoiceguard invoice report [--as-of DATE] [--freelancer ID] [--csv PATH] [--payments-csv PATH]` | Read-only receivables report: aging buckets, oldest debt first, per-client and per-freelancer totals, accrued late fees; CSV export for accounting (`-` prints to stdout) |
+| `invoiceguard check-due` | Run the dunning scan (cron target) |
+| `invoiceguard dashboard [--port 8000]` | Launch the local web dashboard (`http://127.0.0.1:8000`) — invoice list, detail with escalation timeline, Stripe webhook receiver |
+
+Kind defaults: `deposit` = `deposit_pct`% of project total; `final` = remainder after deposit; `milestone` = full amount unless `--amount` overrides.
+
+## Configuration
+
+`~/.invoiceguard/config.yaml` (override path with `$INVOICEGUARD_CONFIG`; DB with `$INVOICEGUARD_DB`):
+
+```yaml
+stripe_secret_key: "sk_test_..."        # or INVOICEGUARD_STRIPE_SECRET_KEY
+stripe_webhook_secret: "whsec_..."       # or INVOICEGUARD_STRIPE_WEBHOOK_SECRET
+smtp:
+  host: "smtp.gmail.com"
+  port: 587
+  username: "you@example.com"
+  password: "APP_PASSWORD"              # or INVOICEGUARD_SMTP_PASSWORD
+  from_addr: "you@example.com"
+  use_tls: true
+app:
+  base_url: "http://localhost:8000"
+# Optional SMS/WhatsApp escalation via Twilio (day-15 + `invoice notify`):
+# messaging:
+#   channel: "sms"                      # or "whatsapp"
+#   account_sid: "AC_..."               # or INVOICEGUARD_TWILIO_ACCOUNT_SID
+#   auth_token: "your-auth-token"       # or INVOICEGUARD_TWILIO_AUTH_TOKEN
+#   from_number: "+10000000000"         # or INVOICEGUARD_TWILIO_FROM_NUMBER
+```
+
+Keys come **only** from config/env — never hardcoded, never committed (`.gitignore` covers `config.yaml`, `.env`, `*.key`, and the local DB).
+
+## Dunning templates
+
+`~/.invoiceguard/templates/day1.md`, `day7.md`, `day15.md` — plain markdown with `{variables}`:
+
+`{client_name}` `{project_title}` `{amount}` `{paid}` `{outstanding}` `{due_date}` `{days_overdue}` `{late_fee_pct}` `{pay_url}`
+
+`{amount}` is the original invoice amount; `{paid}` / `{outstanding}` track the payment ledger so a client who already paid part of the bill sees their remaining balance. Edit them freely; `check-due` picks them up on the next run. Stage timing: day1 fires at ≥1 day overdue, day7 at ≥7, day15 at ≥15 — earliest unsent due stage wins, one email per invoice per run. Invoices stay in dunning until the outstanding balance is zero (`sent`/`overdue`/`partially-paid` with `due_date` in the past).
+
+**SMS / WhatsApp escalation (v0.5.0):** when the `messaging:` config section is set (Twilio credentials + from-number) and the client has a phone number on file, the day-15 stage also goes out as a short SMS or WhatsApp message — same amounts, pay link included. Sends are recorded in the `message_events` ledger, at most once per stage per invoice, and a failed message never blocks the email. `invoiceguard invoice notify <id>` sends the same reminder on demand (`--dry-run` previews it). Without messaging config, dunning stays email-only.
+
+## Database schema (contract with the dashboard app)
+
+SQLite, default `~/.invoiceguard/invoiceguard.db`. The dashboard app reads/writes these exact tables — column names and types are frozen; additive migrations only:
+
+```sql
+CREATE TABLE clients(id INTEGER PRIMARY KEY, name TEXT NOT NULL, email TEXT, phone TEXT, created_at TEXT NOT NULL);
+CREATE TABLE projects(id INTEGER PRIMARY KEY, client_id INTEGER NOT NULL REFERENCES clients(id), title TEXT NOT NULL, amount_cents INTEGER NOT NULL, currency TEXT NOT NULL DEFAULT 'USD', deposit_pct REAL NOT NULL DEFAULT 50.0, late_fee_pct REAL NOT NULL DEFAULT 1.5, late_fee_grace_days INTEGER NOT NULL DEFAULT 15, contract_md TEXT NOT NULL, contract_ack INTEGER NOT NULL DEFAULT 0, contract_ack_at TEXT, created_at TEXT NOT NULL);
+CREATE TABLE invoices(id INTEGER PRIMARY KEY, project_id INTEGER NOT NULL REFERENCES projects(id), kind TEXT NOT NULL, amount_cents INTEGER NOT NULL, currency TEXT NOT NULL DEFAULT 'USD', status TEXT NOT NULL DEFAULT 'draft', stripe_url TEXT, stripe_session_id TEXT, due_date TEXT, sent_at TEXT, paid_at TEXT, created_at TEXT NOT NULL);
+CREATE TABLE dunning_events(id INTEGER PRIMARY KEY, invoice_id INTEGER NOT NULL REFERENCES invoices(id), stage TEXT NOT NULL, sent_at TEXT NOT NULL);
+CREATE TABLE payments(id INTEGER PRIMARY KEY, invoice_id INTEGER NOT NULL REFERENCES invoices(id), amount_cents INTEGER NOT NULL CHECK (amount_cents > 0), method TEXT NOT NULL DEFAULT 'manual', note TEXT, paid_at TEXT NOT NULL);
+CREATE TABLE signatures(id INTEGER PRIMARY KEY, project_id INTEGER NOT NULL REFERENCES projects(id), token TEXT NOT NULL UNIQUE, status TEXT NOT NULL DEFAULT 'pending', signer_name TEXT, signature_image TEXT, contract_hash TEXT, signed_at TEXT, created_at TEXT NOT NULL);
+CREATE TABLE message_events(id INTEGER PRIMARY KEY, invoice_id INTEGER NOT NULL REFERENCES invoices(id), channel TEXT NOT NULL DEFAULT 'sms', stage TEXT NOT NULL, to_addr TEXT NOT NULL, provider_sid TEXT, sent_at TEXT NOT NULL);
+```
+
+kinds: `deposit | milestone | final`. statuses: `draft | sent | partially-paid | paid | overdue | void`. stages: `day1 | day7 | day15`.
+
+The `payments` ledger (added in v0.2.0) records every payment — `record-payment`, `mark-paid`, and Stripe webhooks all write rows here, so outstanding balances are always derivable. Databases created before v0.2.0 get an automatic, labeled backfill row for invoices already marked paid.
+
+## Web dashboard
+
+`invoiceguard dashboard` launches the web dashboard for real — uvicorn serving
+`invoiceguard.web.main:app` (default `http://127.0.0.1:8000`, `--port` to
+change it). It shares this SQLite database: invoice list with status filters
+(including `partially-paid`) and escalation stages, per-invoice detail with
+paid/outstanding amounts, a payments ledger, a chronological timeline, and
+the `POST /webhooks/stripe` endpoint that records the payment when Stripe
+reports a completed checkout session (a session for less than the balance
+leaves the invoice `partially-paid`).
+
+Quick webhook smoke test (no network — the payload is signed locally):
+
+```bash
+INVOICEGUARD_DB=/tmp/ig-demo.db .venv/bin/python seed_demo.py --fresh
+INVOICEGUARD_DB=/tmp/ig-demo.db INVOICEGUARD_STRIPE_WEBHOOK_SECRET=whsec_test_x \
+  .venv/bin/invoiceguard dashboard
+# -> http://127.0.0.1:8000/  (Ctrl-C to stop)
+```
+
+## Docker
+
+```bash
+docker compose up -d                 # CLI container, data in the invoiceguard-data volume
+docker compose run --rm app check-due # one-off dunning scan
+```
+
+Put secrets in a `.env` file next to `docker-compose.yml` (never committed): `INVOICEGUARD_STRIPE_SECRET_KEY`, `INVOICEGUARD_STRIPE_WEBHOOK_SECRET`, `INVOICEGUARD_SMTP_PASSWORD`. Port 8000 is exposed for the dashboard.
+
+## Running tests
+
+```bash
+python -m venv .venv && .venv/bin/pip install -r requirements.txt && .venv/bin/pip install -e .
+.venv/bin/python -m pytest tests/ -q
+```
+
+227 tests, all green (2026-10-22): contract clause rendering (incl. the e-signature sign-off wording and the contract deposit amount's Decimal half-up rounding, agreeing with the CLI quote and the deposit invoice), CLI money parsing (Decimal half-up amounts, deposit split, invalid/non-positive rejection; `--deposit-pct`/`--late-fee-pct` 0–100 and `--late-fee-grace-days` >= 0 rejected before write), dunning stage selection + idempotency + email-less-client skip (no crash, reported reason, other invoices still sent; stage fires after `client set-email`) + dunning send-failure isolation (one failed send is reported, nothing recorded, rest of batch still sent; stage retries next run) + per-client dunning policies (custom thresholds fire at the custom day, disabled stages skipped in escalation, all-disabled client reported as `skipped dunning`, order/negative validation, additive migration on old DBs), `client set-email` (set/clear/unknown-client error), `client set-dunning-policy` (set/reset/validation/unknown-client), template rendering, webhook signature verification (real HMAC check, offline), Stripe link creation (mocked SDK, params asserted), CLI flows (incl. `project sign-request`/`sign-status`), e-signature DB ops (idempotent request, single-use token, frozen contract snapshot at request time + tamper-evidence hash over the snapshot, legacy-row fallback, old-DB migration, ack flip) + full web signing flow (page render incl. frozen snapshot, validation, signed receipt, single-use enforcement), dashboard integration (page rendering + offline webhook checks incl. the `invoiceguard_invoice_id` metadata-key regression, the webhook-secret resolution regression, and the void-invoice webhook regression — a webhook for a voided invoice records nothing and leaves it void), SMS/WhatsApp messaging (phone normalization, Twilio payload with mocked HTTP, config resolution, day-15 escalation + `invoice notify` incl. dry-run), receivables aging report (bucket boundaries, dashboard-consistent outstanding totals, per-currency aggregation, late-fee agreement with the §3 calculator) + invoice/payment CSV exports + CSV formula-injection neutralization, freelancer roster + invoice attribution (CRUD, assign/clear, unknown-id rejection, state untouched, old-DB migration, per-freelancer report + CSV column, CLI flows), freelancer earnings (per-currency billed/collected/outstanding from the payment ledger, drafts/voids/unassigned excluded, `freelancer show` incl. unknown-id error), a full end-to-end (init → client → project → invoice → `check-due` against a real local SMTP server → assert email captured + `dunning_events` row written), and the 0.8.4 external-review regressions (dashboard webhook recording a payment for a `plink_`-stored invoice from a real stripe-15 StripeObject event, `payment_status=unpaid` recording nothing until `async_payment_succeeded`, late-fee elapsed-month accrual incl. the Jan-31 month-end case, failed `invoice create` leaving no orphan draft on either the no-key or the Stripe-API-error path, `void` refused on paid invoices, `sign-status` reporting the deposit-link acknowledgment alongside the signature state, and dunning email bodies free of the template `Subject:` line and literal `**` markdown).
+
+## Limits of v1
+
+- **No live Stripe call was verified in this build environment** — Stripe's connector isn't connected here. `invoice create` was verified with a mocked `stripe` SDK asserting the exact `PaymentLink.create` params (line items, price data, metadata); webhook handling was verified with **real** `stripe.Webhook.construct_event` signature verification using a test secret (works offline). You add your own test key (2 min, above) and the live path is standard Stripe API.
+- **E-signature is browser-captured, not qualified.** `project sign-request` gives the client a one-time signing link: typed name + drawn signature on the contract, with the exact signed text hashed (SHA-256) and stored as tamper evidence. It is NOT a qualified third-party e-signature service (DocuSign/HelloSign); legal weight varies by jurisdiction. The older acknowledgment path still exists: paying the deposit link, or `project ack`.
+- **Email deliverability is yours.** InvoiceGuard sends via *your* SMTP. Use a reputable provider (Gmail App Password, SendGrid, etc.) and warm up new addresses; check spam folders in testing.
+- **Messaging needs your own Twilio account.** SMS/WhatsApp escalation sends through Twilio with your credentials and your Twilio number (WhatsApp needs a Twilio-approved WhatsApp sender). Sends were verified with the HTTP layer mocked — no live Twilio call was made in the build environment. Only message clients who agreed to be contacted; consent rules vary by jurisdiction.
+- **Late-fee enforceability varies by jurisdiction.** The clause is a contractual starting point, not legal advice. Adjust `late_fee_pct` / grace days per project.
+
+## Roadmap
+
+- ~~Real e-signature~~ — shipped in v0.3.0: `project sign-request` / `project sign-status`, one-time `/sign/<token>` page with typed-name + drawn-signature capture and SHA-256 tamper evidence.
+- ~~Late-fee accrual calculator~~ — shipped in v0.4.0: `invoice late-fees <id>` with monthly-compounding breakdown, dashboard "Accrued late fees" / "Total with fees" rows, `{late_fee_due}` / `{total_with_late_fees}` dunning variables.
+- ~~SMS / WhatsApp escalation~~ — shipped in v0.5.0: day-15 also goes out as an SMS/WhatsApp message via Twilio when configured (`invoice notify` sends one-off reminders).
+- **Agency mode** — multi-freelancer workspaces (unshipped); per-client dunning policies shipped in v0.7.0 (`invoiceguard client set-dunning-policy`); freelancer roster + invoice attribution shipped in v0.8.0 (`invoiceguard freelancer add`, `invoiceguard invoice assign`); freelancer earnings shipped in v0.9.0 (`invoiceguard freelancer show`, per-currency billed/collected/outstanding).
+- ~~Partial payments / payment plans~~ — shipped in v0.2.0.
+
+## Changelog
+
+Release history lives in [CHANGELOG.md](CHANGELOG.md) — newest first, no fluff.
+
+## License
+
+Apache-2.0 — see [LICENSE](LICENSE).

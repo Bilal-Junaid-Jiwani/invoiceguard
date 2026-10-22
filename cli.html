@@ -120,7 +120,7 @@
 </ul>
         </details>
       </div>
-      <p>The CLI entry point is <code>invoiceguard</code> (installed by pip). All commands below are from v0.8.4 — run <code>invoiceguard --help</code> or <code>invoiceguard &lt;group&gt; --help</code> for the same text locally.</p>
+      <p>The CLI entry point is <code>invoiceguard</code> (installed by pip). All commands below are from v0.9.0 — run <code>invoiceguard --help</code> or <code>invoiceguard &lt;group&gt; --help</code> for the same text locally.</p>
 <h2 id="init"><code>init</code></h2>
 <pre class="codeblock" data-lang="bash"><code>invoiceguard init
 </code></pre>
@@ -149,11 +149,14 @@ invoiceguard client list
 invoiceguard freelancer set-email 1 [--email ali@example.com]   # omit --email to clear
 invoiceguard freelancer set-phone 1 [--phone +15551234567]     # omit --phone to clear
 invoiceguard freelancer list
+invoiceguard freelancer show 1          # v0.9.0
 </code></pre>
 <ul>
 <li>The agency roster: one row per team member. <code>add</code> requires <code>--name</code>; <code>--phone</code> must be E.164 (invalid numbers are rejected).
 </li>
 <li><code>list</code> prints <code>#id  name  email  phone</code> rows.
+</li>
+<li><code>show</code> (v0.9.0) prints contact details, per-currency earnings — billed (attributed invoices in a real state; drafts and voids excluded), collected (payment-ledger sums), outstanding — and the attributed invoice lines with collected/outstanding per invoice. Read-only.
 </li>
 <li>Invoices are attributed to a freelancer with <code>invoice assign</code> (see below) — attribution is bookkeeping only and never changes dunning, payments, or invoice status.
 </li>
