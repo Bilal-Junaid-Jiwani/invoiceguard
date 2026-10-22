@@ -13,7 +13,7 @@ Requires Python 3.10 or newer. Verify:
 
 ```bash
 invoiceguard --version
-# invoiceguard, version 0.8.4
+# invoiceguard, version 0.9.0
 ```
 
 ## From source

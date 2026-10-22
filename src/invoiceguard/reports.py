@@ -199,6 +199,54 @@ PAYMENT_CSV_COLUMNS = [
 ]
 
 
+def freelancer_earnings(db: DB, freelancer_id: int | None = None) -> list[dict]:
+    """Per-freelancer billed / collected / outstanding, per currency.
+
+    *Billed* is the sum of amount_cents over the freelancer's attributed
+    invoices in a real state — drafts (not yet bills) and voids (cancelled)
+    are excluded. *Collected* is the payment-ledger sum recorded against
+    those invoices; *outstanding* is billed minus collected. Currencies
+    are never mixed: a freelancer with invoices in two currencies gets
+    one row per currency, sorted with the largest collected total first.
+
+    Every roster freelancer appears, even with no billable invoices (a
+    single row with currency None and zero amounts). Unattributed
+    invoices belong to nobody and are not counted anywhere. Read-only.
+
+    Pass freelancer_id to get just one freelancer's rows; raises
+    ValueError when the freelancer does not exist.
+    """
+    if freelancer_id is not None and not db.get_freelancer(freelancer_id):
+        raise ValueError(f"no freelancer #{freelancer_id}")
+    cur = db.conn.execute(
+        """SELECT f.id AS freelancer_id, f.name AS freelancer_name,
+                  f.email, f.phone,
+                  i.currency,
+                  COUNT(i.id) AS invoice_count,
+                  COALESCE(SUM(i.amount_cents), 0) AS invoiced_cents,
+                  COALESCE(SUM(
+                      (SELECT COALESCE(SUM(p.amount_cents), 0)
+                       FROM payments p WHERE p.invoice_id = i.id)
+                  ), 0) AS collected_cents
+           FROM freelancers f
+           LEFT JOIN invoices i
+             ON i.freelancer_id = f.id
+            AND i.status NOT IN ('draft', 'void')
+           WHERE f.id = COALESCE(?, f.id)
+           GROUP BY f.id, i.currency
+           ORDER BY f.name ASC""",
+        (freelancer_id,),
+    )
+    rows = []
+    for r in cur.fetchall():
+        d = dict(r)
+        d["outstanding_cents"] = d["invoiced_cents"] - d["collected_cents"]
+        rows.append(d)
+    rows.sort(key=lambda r: (-r["collected_cents"], r["freelancer_name"],
+                             r["currency"] or ""))
+    return rows
+
+
 def payments_csv(db: DB) -> str:
     """The full payment ledger as CSV — every recorded payment,
     including payments against invoices that are now paid in full,

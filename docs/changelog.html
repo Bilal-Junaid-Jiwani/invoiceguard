@@ -93,6 +93,8 @@
         <details>
           <summary>On this page</summary>
           <ul class="toc-list">
+<li><a href="#090---2026-10-22">[0.9.0] - 2026-10-22</a>
+</li>
 <li><a href="#084---2026-10-22">[0.8.4] - 2026-10-22</a>
 </li>
 <li><a href="#083---2026-10-21">[0.8.3] - 2026-10-21</a>
@@ -147,6 +149,8 @@
         </details>
       </div>
       <p>InvoiceGuard follows semver. Newest first.</p>
+<h2 id="090---2026-10-22">[0.9.0] - 2026-10-22</h2>
+<p>Agency-mode slice #3 — freelancer earnings. The freelancer side could only show <em>receivables</em> (who still owes what); now it also shows what each freelancer's attributed invoices actually brought in. <code>reports.freelancer_earnings()</code> computes per-freelancer, per-currency billed (attributed invoices in a real state — drafts and voids excluded), collected (payment-ledger sums), and outstanding (billed minus collected); every roster freelancer appears, unattributed invoices are counted nowhere, currencies are never mixed, and the function is read-only. New CLI command <code>invoiceguard freelancer show &lt;id&gt;</code>: contact details, per-currency earnings, and the attributed invoice lines (client, amount, collected, outstanding, status). Honest scope: earnings are bookkeeping, not payouts — nothing is recorded against what the agency owes the freelancer, and no money moves.</p>
 <h2 id="084---2026-10-22">[0.8.4] - 2026-10-22</h2>
 <p>Every fix here comes from an external hands-on review (the reviewer installed the package with stripe 15.6.1 and ran it live). <strong>Critical:</strong> under stripe&gt;=15 the webhook silently never recorded payments — the dashboard handler tested <code>isinstance(metadata, dict)</code>, but stripe 15 returns metadata as a <code>StripeObject</code>, so the invoice-id hint was dropped; the fallback could not match either, because the CLI stores the Payment Link id (<code>plink_...</code>) in <code>stripe_session_id</code> while the webhook looks up the checkout session id (<code>cs_...</code>). The webhook returned 200, Stripe never retried, and dunning kept emailing clients who had paid. Metadata is now normalized via <code>.to_dict()</code> in both webhook paths (the standalone <code>handle_event</code> also crashed on real <code>StripeObject</code> events), with a regression test that seeds the production shape. Also fixed: <code>payment_status</code> was never checked — a <code>checkout.session.completed</code> with <code>payment_status=unpaid</code> (ACH/delayed methods) marked invoices paid before the money arrived; now only settled sessions record a payment, and <code>checkout.session.async_payment_succeeded</code> is handled. Late fees no longer double at month-end — accrual counts full monthly periods elapsed since the accrual start (Jan 31 → exactly one month on Feb 28) instead of started calendar months, and contract §3/docs describe the same math. <code>sign-status</code> now reports the deposit-link acknowledgment alongside the signature state instead of contradicting it. A failed <code>invoice create</code> rolls its draft back instead of leaving orphan drafts (and Stripe API errors print as clean CLI errors, not tracebacks). <code>invoice void</code> refuses paid (and already-void) invoices. Dunning email bodies no longer leak the template's <code>Subject:</code> line or literal <code>**</code> markdown — bodies are cleaned at send time, so existing user templates are fixed too, and the shipped templates dropped the <code>Subject:</code> line. Added <code>scripts/smoke_install.py</code>: builds the wheel, installs it into a clean venv, and runs a real flow ending in a genuinely signed webhook — the check that would have caught the stripe-15 bug. Docs/version drift corrected (README test count, CLI/install pages that said v0.1.0, site test count, webhook docs for delayed payments).</p>
 <h2 id="083---2026-10-21">[0.8.3] - 2026-10-21</h2>
@@ -275,6 +279,8 @@
   <aside class="toc-side" aria-label="Table of contents">
     <p class="toc-label">On this page</p>
     <ul class="toc-list">
+<li><a href="#090---2026-10-22">[0.9.0] - 2026-10-22</a>
+</li>
 <li><a href="#084---2026-10-22">[0.8.4] - 2026-10-22</a>
 </li>
 <li><a href="#083---2026-10-21">[0.8.3] - 2026-10-21</a>

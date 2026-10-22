@@ -3,7 +3,7 @@ title: CLI reference
 eyebrow: User guide
 description: Every InvoiceGuard command and option — init, client, project, invoice, check-due, dashboard.
 ---
-The CLI entry point is `invoiceguard` (installed by pip). All commands below are from v0.8.4 — run `invoiceguard --help` or `invoiceguard <group> --help` for the same text locally.
+The CLI entry point is `invoiceguard` (installed by pip). All commands below are from v0.9.0 — run `invoiceguard --help` or `invoiceguard <group> --help` for the same text locally.
 
 ## `init`
 
@@ -36,10 +36,12 @@ invoiceguard freelancer add --name "Ali R." [--email ali@example.com] [--phone +
 invoiceguard freelancer set-email 1 [--email ali@example.com]   # omit --email to clear
 invoiceguard freelancer set-phone 1 [--phone +15551234567]     # omit --phone to clear
 invoiceguard freelancer list
+invoiceguard freelancer show 1          # v0.9.0
 ```
 
 - The agency roster: one row per team member. `add` requires `--name`; `--phone` must be E.164 (invalid numbers are rejected).
 - `list` prints `#id  name  email  phone` rows.
+- `show` (v0.9.0) prints contact details, per-currency earnings — billed (attributed invoices in a real state; drafts and voids excluded), collected (payment-ledger sums), outstanding — and the attributed invoice lines with collected/outstanding per invoice. Read-only.
 - Invoices are attributed to a freelancer with `invoice assign` (see below) — attribution is bookkeeping only and never changes dunning, payments, or invoice status.
 
 ## `project`

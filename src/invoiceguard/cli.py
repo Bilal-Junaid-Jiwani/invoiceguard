@@ -19,7 +19,8 @@ from .late_fees import late_fee_summary
 from .messaging import (message_channel, messaging_configured,
                         messaging_from_config, normalize_phone,
                         render_message, send_message)
-from .reports import invoices_csv, payments_csv, receivables_report
+from .reports import (freelancer_earnings, invoices_csv, payments_csv,
+                      receivables_report)
 from .stripe_links import create_payment_link, default_due_date
 
 TEMPLATE_SOURCE = Path(__file__).resolve().parent / "email_templates"
@@ -316,6 +317,56 @@ def freelancer_list():
     for r in rows:
         click.echo(f"#{r['id']:>3}  {r['name']:<30} {r['email'] or '':<28} "
                    f"{r['phone'] or ''}")
+
+
+@freelancer.command("show")
+@click.argument("freelancer_id", type=int)
+def freelancer_show(freelancer_id):
+    """Show a freelancer: contact details, earnings, attributed invoices.
+
+    Earnings are per currency: billed (attributed invoices in a real
+    state — drafts and voids excluded), collected (payment ledger),
+    outstanding. Read-only.
+    """
+    db = _db()
+    try:
+        rows = freelancer_earnings(db, freelancer_id)
+    except ValueError as e:
+        db.close()
+        raise click.ClickException(str(e))
+    f = db.get_freelancer(freelancer_id)
+    attributed = [dict(r) for r in db.list_invoices()
+                  if r["freelancer_id"] == freelancer_id
+                  and r["status"] not in ("draft", "void")]
+    for inv in attributed:
+        inv["paid_cents"] = db.paid_cents(inv["id"])
+        inv["outstanding_cents"] = (inv["amount_cents"]
+                                   - inv["paid_cents"])
+    db.close()
+
+    def _money(cents):
+        return f"{cents / 100:,.2f}"
+
+    click.echo(f"freelancer #{f['id']}: {f['name']}")
+    if f["email"]:
+        click.echo(f"  email: {f['email']}")
+    if f["phone"]:
+        click.echo(f"  phone: {f['phone']}")
+    for r in rows:
+        cur = r["currency"] or "(no billable invoices)"
+        click.echo(f"  {cur}: billed {_money(r['invoiced_cents'])}, "
+                   f"collected {_money(r['collected_cents'])}, "
+                   f"outstanding {_money(r['outstanding_cents'])} "
+                   f"({r['invoice_count']} invoices)")
+    if attributed:
+        click.echo("  invoices:")
+        for inv in sorted(attributed, key=lambda i: i["id"]):
+            click.echo(
+                f"    #{inv['id']:<4} {inv['client_name']:<22} "
+                f"{inv['currency']} {_money(inv['amount_cents']):>12}  "
+                f"collected {_money(inv['paid_cents']):>12}  "
+                f"outstanding {_money(inv['outstanding_cents']):>12}  "
+                f"{inv['status']}")
 
 
 # -- project --------------------------------------------------------------

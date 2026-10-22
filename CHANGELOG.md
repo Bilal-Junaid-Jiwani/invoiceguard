@@ -2,6 +2,18 @@
 
 Every release, newest first. InvoiceGuard follows semver.
 
+## [0.9.0] - 2026-10-22
+
+Agency-mode slice #3: freelancer earnings. Until now the freelancer side of the product could only show *receivables* — who still owes what (`invoice report --freelancer` / the "by freelancer" breakdown). That answers half of an agency owner's question; the other half is what each freelancer's work actually brought in.
+
+### Added
+- **Freelancer earnings** — `reports.freelancer_earnings()` computes per-freelancer, per-currency totals: *billed* (attributed invoices in a real state — drafts and voids are not bills), *collected* (payment-ledger sums against those invoices), *outstanding* (billed minus collected). Every roster freelancer appears, even with no billable invoices; unattributed invoices belong to nobody and are counted nowhere; currencies are never mixed. Read-only.
+- **`invoiceguard freelancer show <id>`** — a freelancer's contact details, per-currency earnings (billed / collected / outstanding, invoice count), and the attributed invoice lines (client, amount, collected, outstanding, status). `freelancer show 999` is a clean error, not a traceback.
+
+### Honest scope (0.9.0)
+- Earnings are bookkeeping, not payouts: nothing is recorded against what the agency owes the freelancer, and no money moves. Per-freelancer revenue splits / payout tracking remain the unshipped half of agency mode.
+- A freelancer with invoices in two currencies gets one row per currency, same as the receivables report's per-currency rule.
+
 ## [0.8.4] - 2026-10-22
 
 Every fix in this release comes from an external hands-on review: the reviewer installed the package with stripe 15.6.1 and ran it live. The headline bug was critical — under stripe>=15 the webhook silently never recorded payments, so paid clients kept receiving dunning notices.
