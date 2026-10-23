@@ -107,6 +107,8 @@
 </li>
 <li><a href="#freelancer-v080-agency-mode">freelancer (v0.8.0, agency mode)</a>
 </li>
+<li><a href="#payout-v0100-agency-mode">payout (v0.10.0, agency mode)</a>
+</li>
 <li><a href="#project">project</a>
 </li>
 <li><a href="#invoice">invoice</a>
@@ -120,7 +122,7 @@
 </ul>
         </details>
       </div>
-      <p>The CLI entry point is <code>invoiceguard</code> (installed by pip). All commands below are from v0.9.0 — run <code>invoiceguard --help</code> or <code>invoiceguard &lt;group&gt; --help</code> for the same text locally.</p>
+      <p>The CLI entry point is <code>invoiceguard</code> (installed by pip). All commands below are from v0.10.0 — run <code>invoiceguard --help</code> or <code>invoiceguard &lt;group&gt; --help</code> for the same text locally.</p>
 <h2 id="init"><code>init</code></h2>
 <pre class="codeblock" data-lang="bash"><code>invoiceguard init
 </code></pre>
@@ -156,9 +158,20 @@ invoiceguard freelancer show 1          # v0.9.0
 </li>
 <li><code>list</code> prints <code>#id  name  email  phone</code> rows.
 </li>
-<li><code>show</code> (v0.9.0) prints contact details, per-currency earnings — billed (attributed invoices in a real state; drafts and voids excluded), collected (payment-ledger sums), outstanding — and the attributed invoice lines with collected/outstanding per invoice. Read-only.
+<li><code>show</code> (v0.9.0; payouts added in v0.10.0) prints contact details, per-currency earnings — billed (attributed invoices in a real state; drafts and voids excluded), collected (payment-ledger sums), outstanding — plus paid out and still owed from the payout ledger, the attributed invoice lines with collected/outstanding per invoice, and the recorded payouts. Read-only.
 </li>
 <li>Invoices are attributed to a freelancer with <code>invoice assign</code> (see below) — attribution is bookkeeping only and never changes dunning, payments, or invoice status.
+</li>
+</ul>
+<h2 id="payout-v0100-agency-mode"><code>payout</code> (v0.10.0, agency mode)</h2>
+<pre class="codeblock" data-lang="bash"><code>invoiceguard payout record --freelancer 1 --amount 250 [--currency USD] \
+    [--paid-at 2026-10-23] [--method "bank transfer"] [--note "Sept share"]
+invoiceguard payout list [--freelancer 1]
+</code></pre>
+<ul>
+<li>Records what the agency sent a freelancer — bookkeeping only, nothing is transferred. A payout is refused with a clear error when it exceeds what the agency has collected for that freelancer in that currency (payment-ledger sums against their attributed non-draft/void invoices, minus payouts already recorded); you cannot pay out money you have not received. Currency codes are normalized to upper-case; invoice-currency matching is case-insensitive; <code>--paid-at</code> accepts <code>YYYY-MM-DD</code> (default: now).
+</li>
+<li><code>list</code> prints <code>#id  name  currency  amount  date  method  note</code> rows, newest first; <code>--freelancer ID</code> restricts to one freelancer. No revenue-split percentages and no payout schedules — those remain unshipped.
 </li>
 </ul>
 <h2 id="project"><code>project</code></h2>
@@ -251,6 +264,8 @@ invoiceguard invoice report [--as-of 2026-10-08] [--freelancer 1] [--csv invoice
 <li><a href="#client">client</a>
 </li>
 <li><a href="#freelancer-v080-agency-mode">freelancer (v0.8.0, agency mode)</a>
+</li>
+<li><a href="#payout-v0100-agency-mode">payout (v0.10.0, agency mode)</a>
 </li>
 <li><a href="#project">project</a>
 </li>

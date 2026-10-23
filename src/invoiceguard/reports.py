@@ -209,6 +209,13 @@ def freelancer_earnings(db: DB, freelancer_id: int | None = None) -> list[dict]:
     are never mixed: a freelancer with invoices in two currencies gets
     one row per currency, sorted with the largest collected total first.
 
+    Each row also carries the payout-ledger totals for its currency:
+    *paid_out_cents* (what the agency has recorded as paid to the
+    freelancer) and *still_owed_cents* (collected minus paid out — the
+    agency's remaining bookkeeping balance with them). Rows with no
+    currency (a freelancer with no billable invoices) report zero
+    payouts.
+
     Every roster freelancer appears, even with no billable invoices (a
     single row with currency None and zero amounts). Unattributed
     invoices belong to nobody and are not counted anywhere. Read-only.
@@ -241,6 +248,12 @@ def freelancer_earnings(db: DB, freelancer_id: int | None = None) -> list[dict]:
     for r in cur.fetchall():
         d = dict(r)
         d["outstanding_cents"] = d["invoiced_cents"] - d["collected_cents"]
+        # Payout ledger for the row's currency (NULL-currency rows have
+        # no billable invoices, so they report zero payouts).
+        cur2 = d["currency"]
+        d["paid_out_cents"] = (db.paid_out_cents(d["freelancer_id"], cur2)
+                               if cur2 else 0)
+        d["still_owed_cents"] = d["collected_cents"] - d["paid_out_cents"]
         rows.append(d)
     rows.sort(key=lambda r: (-r["collected_cents"], r["freelancer_name"],
                              r["currency"] or ""))

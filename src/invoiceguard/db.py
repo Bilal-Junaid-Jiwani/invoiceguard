@@ -80,6 +80,18 @@ CREATE INDEX IF NOT EXISTS idx_dunning_invoice_stage
     ON dunning_events(invoice_id, stage);
 CREATE INDEX IF NOT EXISTS idx_payments_invoice
     ON payments(invoice_id);
+CREATE TABLE IF NOT EXISTS payouts(
+    id INTEGER PRIMARY KEY,
+    freelancer_id INTEGER NOT NULL REFERENCES freelancers(id),
+    amount_cents INTEGER NOT NULL CHECK (amount_cents > 0),
+    currency TEXT NOT NULL DEFAULT 'USD',
+    method TEXT,
+    note TEXT,
+    paid_at TEXT NOT NULL,
+    created_at TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_payouts_freelancer
+    ON payouts(freelancer_id);
 CREATE TABLE IF NOT EXISTS signatures(
     id INTEGER PRIMARY KEY,
     project_id INTEGER NOT NULL REFERENCES projects(id),
@@ -182,6 +194,33 @@ def migrate_signatures_contract_md(conn: sqlite3.Connection) -> None:
         conn.commit()
 
 
+def migrate_payouts(conn: sqlite3.Connection) -> None:
+    """Additive migration: payouts table (agency-mode payout ledger, v0.10.0).
+
+    The payouts table is part of SCHEMA, and CREATE TABLE IF NOT EXISTS
+    never alters an existing database, so databases created before
+    v0.10.0 get the table here. Idempotent — safe to call on every
+    connect.
+    """
+    conn.execute(
+        """CREATE TABLE IF NOT EXISTS payouts(
+        id INTEGER PRIMARY KEY,
+        freelancer_id INTEGER NOT NULL REFERENCES freelancers(id),
+        amount_cents INTEGER NOT NULL CHECK (amount_cents > 0),
+        currency TEXT NOT NULL DEFAULT 'USD',
+        method TEXT,
+        note TEXT,
+        paid_at TEXT NOT NULL,
+        created_at TEXT NOT NULL
+    )"""
+    )
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_payouts_freelancer "
+        "ON payouts(freelancer_id)"
+    )
+    conn.commit()
+
+
 def resolve_dunning_policy(row) -> dict:
     """Resolved dunning thresholds for a client-like row.
 
@@ -240,6 +279,7 @@ class DB:
         migrate_clients_dunning_policy(self.conn)
         migrate_invoices_freelancer_id(self.conn)
         migrate_signatures_contract_md(self.conn)
+        migrate_payouts(self.conn)
         backfill_paid_ledger(self.conn)
 
     # -- clients -----------------------------------------------------
@@ -730,6 +770,101 @@ class DB:
             "outstanding_cents": remaining,
             "status": status,
         }
+
+    # -- payouts (agency mode: what the agency paid its freelancers) ---
+    def record_payout(self, freelancer_id: int, amount_cents: int,
+                      currency: str = "USD",
+                      paid_at: str | None = None,
+                      method: str | None = None,
+                      note: str | None = None) -> dict:
+        """Record a payout to a freelancer — money the agency sent them.
+
+        This is a bookkeeping ledger only: nothing is transferred, and
+        payouts are never derived from earnings automatically. A payout
+        is refused when it would exceed what the agency has actually
+        collected for that freelancer in that currency (collected from
+        the payment ledger against their attributed, non-draft/void
+        invoices, minus payouts already recorded) — you cannot pay out
+        money you have not received yet.
+
+        Raises ValueError when the freelancer does not exist, the amount
+        is not positive, or the payout exceeds the collectable balance.
+        """
+        if not self.get_freelancer(freelancer_id):
+            raise ValueError(f"no freelancer #{freelancer_id}")
+        if amount_cents <= 0:
+            raise ValueError("payout amount must be positive")
+        currency = (currency or "USD").strip().upper() or "USD"
+        if paid_at:
+            try:
+                datetime.fromisoformat(paid_at.replace("Z", "+00:00"))
+            except ValueError:
+                raise ValueError(
+                    f"invalid date {paid_at!r} — use YYYY-MM-DD or "
+                    "an ISO-8601 datetime")
+            paid_at = paid_at if "T" in paid_at else paid_at + "T00:00:00"
+        paid_at = paid_at or now_iso()
+        available = (self.freelancer_collected_cents(freelancer_id, currency)
+                     - self.paid_out_cents(freelancer_id, currency))
+        if amount_cents > available:
+            raise ValueError(
+                f"payout of {amount_cents / 100:.2f} {currency} exceeds "
+                f"what is available for freelancer #{freelancer_id} "
+                f"({available / 100:.2f} {currency} collected and unpaid)")
+        cur = self.conn.execute(
+            "INSERT INTO payouts(freelancer_id, amount_cents, currency, "
+            "method, note, paid_at, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
+            (freelancer_id, amount_cents, currency, method, note,
+             paid_at, now_iso()),
+        )
+        self.conn.commit()
+        return {"id": cur.lastrowid, "freelancer_id": freelancer_id,
+                "amount_cents": amount_cents, "currency": currency,
+                "paid_at": paid_at, "method": method, "note": note}
+
+    def freelancer_collected_cents(self, freelancer_id: int,
+                                   currency: str | None = None) -> int:
+        """Collected cents for a freelancer's attributed invoices.
+
+        The payment-ledger sum over the freelancer's invoices in a real
+        state (drafts and voids excluded). Pass currency (case-insensitive)
+        to restrict; None totals every currency — only meaningful when
+        the caller knows there is just one.
+        """
+        q = ("""SELECT COALESCE(SUM(p.amount_cents), 0) FROM payments p
+                JOIN invoices i ON i.id = p.invoice_id
+                WHERE i.freelancer_id = ?
+                  AND i.status NOT IN ('draft', 'void')""")
+        args: list = [freelancer_id]
+        if currency:
+            q += " AND UPPER(i.currency) = ?"
+            args.append(currency.strip().upper())
+        row = self.conn.execute(q, args).fetchone()
+        return int(row[0])
+
+    def paid_out_cents(self, freelancer_id: int,
+                       currency: str | None = None) -> int:
+        """Payout-ledger total for a freelancer, optionally per currency."""
+        q = ("SELECT COALESCE(SUM(amount_cents), 0) FROM payouts "
+             "WHERE freelancer_id = ?")
+        args: list = [freelancer_id]
+        if currency:
+            q += " AND currency = ?"
+            args.append(currency.strip().upper())
+        row = self.conn.execute(q, args).fetchone()
+        return int(row[0])
+
+    def list_payouts(self, freelancer_id: int | None = None
+                     ) -> list[dict]:
+        """Payout ledger rows, newest first (optionally one freelancer)."""
+        q = ("SELECT p.*, f.name AS freelancer_name FROM payouts p "
+             "JOIN freelancers f ON f.id = p.freelancer_id")
+        args: list = []
+        if freelancer_id is not None:
+            q += " WHERE p.freelancer_id = ?"
+            args.append(freelancer_id)
+        q += " ORDER BY p.paid_at DESC, p.id DESC"
+        return [dict(r) for r in self.conn.execute(q, args).fetchall()]
 
     # -- dunning -----------------------------------------------------
     def record_dunning(self, invoice_id: int, stage: str) -> None:

@@ -171,6 +171,17 @@ CREATE TABLE payments(
   note TEXT,
   paid_at TEXT NOT NULL
 );
+
+CREATE TABLE payouts(
+  id INTEGER PRIMARY KEY,
+  freelancer_id INTEGER NOT NULL REFERENCES freelancers(id),
+  amount_cents INTEGER NOT NULL CHECK (amount_cents &gt; 0),
+  currency TEXT NOT NULL DEFAULT 'USD',
+  method TEXT,
+  note TEXT,
+  paid_at TEXT NOT NULL,
+  created_at TEXT NOT NULL
+);
 CREATE TABLE signatures(
   id INTEGER PRIMARY KEY,
   project_id INTEGER NOT NULL REFERENCES projects(id),
@@ -221,6 +232,8 @@ CREATE TABLE message_events(
 <li><code>clients.phone</code> and the <code>message_events</code> table (v0.5.0) support SMS/WhatsApp escalation. Existing databases gain both automatically on first open (additive migration, same pattern as the payments backfill).
 </li>
 <li>Per-client dunning columns (v0.7.0) and the <code>freelancers</code> table + <code>invoices.freelancer_id</code> (v0.8.0) follow the same additive-migration pattern: old databases get them on first open, NULL = no policy override / unattributed.
+</li>
+<li>The <code>payouts</code> table (v0.10.0) is the agency payout ledger: old databases get it automatically on first open (same additive pattern).
 </li>
 </ul>
       <nav class="prev-next" aria-label="Previous and next pages">

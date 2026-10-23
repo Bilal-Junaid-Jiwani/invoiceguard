@@ -2,6 +2,18 @@
 
 Every release, newest first. InvoiceGuard follows semver.
 
+## [0.10.0] - 2026-10-23
+
+Agency-mode slice #4: freelancer payout tracking. Slice #3 showed what each freelancer's work billed and collected; this slice records the other half of the ledger — what the agency has actually sent each freelancer, per currency.
+
+### Added
+- **Freelancer payouts** — `invoiceguard payout record --freelancer ID --amount X [--currency USD] [--paid-at YYYY-MM-DD] [--method TEXT] [--note TEXT]` and `invoiceguard payout list [--freelancer ID]`. A `payouts` table (additive migration — existing databases get it on connect); per-currency totals in `freelancer show` (earnings lines now print *paid out* and *still owed*, followed by a payouts section) and in `reports.freelancer_earnings()` rows (`paid_out_cents`, `still_owed_cents` = collected − paid out).
+- **Over-payout guard** — a payout is refused with a clear error when it exceeds what the agency has collected for that freelancer in that currency (payment-ledger sums against their attributed non-draft/void invoices, minus payouts already recorded). You cannot pay out money you have not received. Currency codes are normalized to upper-case; invoice-currency matching is case-insensitive; `--paid-at` accepts `YYYY-MM-DD` or full ISO-8601.
+
+### Honest scope (0.10.0)
+- Bookkeeping, not money movement: payouts are recorded, never transferred, and nothing is derived automatically — no revenue-split percentages, no per-freelancer payout schedules. Those, plus multi-freelancer workspaces, remain the unshipped half of agency mode.
+- There is no per-freelancer "rate" in the roster: the guard is purely "collected − already paid out", so a payout ledger for work that was never invoiced cannot exist.
+
 ## [0.9.0] - 2026-10-22
 
 Agency-mode slice #3: freelancer earnings. Until now the freelancer side of the product could only show *receivables* — who still owes what (`invoice report --freelancer` / the "by freelancer" breakdown). That answers half of an agency owner's question; the other half is what each freelancer's work actually brought in.

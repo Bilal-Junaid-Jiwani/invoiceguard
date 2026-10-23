@@ -108,6 +108,8 @@ Send the pay link to the client. That's the whole pre-work flow.
 | `invoiceguard client list` | List clients (shows `[dunning ...]` overrides) |
 | `invoiceguard freelancer add --name N [--email E] [--phone +15551234567]` | Add a freelancer to the agency roster (v0.8.0) |
 | `invoiceguard freelancer set-email ID [--email E]` / `set-phone ID [--phone P]` / `list` | Manage or list freelancers (v0.8.0) |
+| `invoiceguard payout record --freelancer ID --amount 250 [--currency USD] [--paid-at DATE] [--method M] [--note N]` | Record what the agency paid a freelancer (bookkeeping only; v0.10.0) — refused when it exceeds collected-minus-already-paid for that freelancer+currency |
+| `invoiceguard payout list [--freelancer ID]` | List recorded payouts, newest first (v0.10.0) |
 | `invoiceguard project create --client N --title T --amount 2000 [--deposit-pct 50] [--late-fee-pct 1.5] [--late-fee-grace-days 15] [--ack]` | Create project + generate contract markdown |
 | `invoiceguard project ack ID` | Record client acknowledgment of the contract (deposit-link path) |
 | `invoiceguard project sign-request ID` | Create a one-time e-signature link for the contract (`/sign/<token>`) |
@@ -231,7 +233,7 @@ python -m venv .venv && .venv/bin/pip install -r requirements.txt && .venv/bin/p
 - ~~Real e-signature~~ — shipped in v0.3.0: `project sign-request` / `project sign-status`, one-time `/sign/<token>` page with typed-name + drawn-signature capture and SHA-256 tamper evidence.
 - ~~Late-fee accrual calculator~~ — shipped in v0.4.0: `invoice late-fees <id>` with monthly-compounding breakdown, dashboard "Accrued late fees" / "Total with fees" rows, `{late_fee_due}` / `{total_with_late_fees}` dunning variables.
 - ~~SMS / WhatsApp escalation~~ — shipped in v0.5.0: day-15 also goes out as an SMS/WhatsApp message via Twilio when configured (`invoice notify` sends one-off reminders).
-- **Agency mode** — multi-freelancer workspaces (unshipped); per-client dunning policies shipped in v0.7.0 (`invoiceguard client set-dunning-policy`); freelancer roster + invoice attribution shipped in v0.8.0 (`invoiceguard freelancer add`, `invoiceguard invoice assign`); freelancer earnings shipped in v0.9.0 (`invoiceguard freelancer show`, per-currency billed/collected/outstanding).
+- **Agency mode** — multi-freelancer workspaces (unshipped); per-client dunning policies shipped in v0.7.0 (`invoiceguard client set-dunning-policy`); freelancer roster + invoice attribution shipped in v0.8.0 (`invoiceguard freelancer add`, `invoiceguard invoice assign`); freelancer earnings shipped in v0.9.0 (`invoiceguard freelancer show`, per-currency billed/collected/outstanding); freelancer payouts shipped in v0.10.0 (`invoiceguard payout record` / `payout list`, per-currency payout ledger with an over-payout guard).
 - ~~Partial payments / payment plans~~ — shipped in v0.2.0.
 
 ## Changelog

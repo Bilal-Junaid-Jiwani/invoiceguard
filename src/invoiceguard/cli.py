@@ -322,11 +322,13 @@ def freelancer_list():
 @freelancer.command("show")
 @click.argument("freelancer_id", type=int)
 def freelancer_show(freelancer_id):
-    """Show a freelancer: contact details, earnings, attributed invoices.
+    """Show a freelancer: contact details, earnings, payouts, invoices.
 
     Earnings are per currency: billed (attributed invoices in a real
     state — drafts and voids excluded), collected (payment ledger),
-    outstanding. Read-only.
+    outstanding — plus paid out and still owed from the payout ledger.
+    The attributed invoice lines and the recorded payouts follow.
+    Read-only.
     """
     db = _db()
     try:
@@ -342,6 +344,7 @@ def freelancer_show(freelancer_id):
         inv["paid_cents"] = db.paid_cents(inv["id"])
         inv["outstanding_cents"] = (inv["amount_cents"]
                                    - inv["paid_cents"])
+    payouts = db.list_payouts(freelancer_id)
     db.close()
 
     def _money(cents):
@@ -357,7 +360,10 @@ def freelancer_show(freelancer_id):
         click.echo(f"  {cur}: billed {_money(r['invoiced_cents'])}, "
                    f"collected {_money(r['collected_cents'])}, "
                    f"outstanding {_money(r['outstanding_cents'])} "
-                   f"({r['invoice_count']} invoices)")
+                   f"({r['invoice_count']} invoices)"
+                   + (f", paid out {_money(r['paid_out_cents'])}, "
+                      f"still owed {_money(r['still_owed_cents'])}"
+                      if r["currency"] else ""))
     if attributed:
         click.echo("  invoices:")
         for inv in sorted(attributed, key=lambda i: i["id"]):
@@ -367,7 +373,78 @@ def freelancer_show(freelancer_id):
                 f"collected {_money(inv['paid_cents']):>12}  "
                 f"outstanding {_money(inv['outstanding_cents']):>12}  "
                 f"{inv['status']}")
+    if payouts:
+        click.echo("  payouts:")
+        for p in payouts:
+            detail = f"{p['currency']} {_money(p['amount_cents']):>12}  " \
+                     f"{p['paid_at'][:10]}"
+            if p["method"]:
+                detail += f"  {p['method']}"
+            if p["note"]:
+                detail += f"  \"{p['note']}\""
+            click.echo(f"    #{p['id']:<4} {detail}")
 
+
+# -- payout (agency mode) ----------------------------------------------
+@cli.group()
+def payout():
+    """Record and list payouts to freelancers (agency roster)."""
+
+
+@payout.command("record")
+@click.option("--freelancer", "freelancer_id", type=int, required=True,
+              help="Freelancer id (see `freelancer list`)")
+@click.option("--amount", required=True,
+              help="Amount in currency units, e.g. 250.50")
+@click.option("--currency", default="USD",
+              help="Currency code; matched against the freelancer's "
+                   "collected invoices")
+@click.option("--paid-at", "paid_at", default=None,
+              help="Payout date YYYY-MM-DD (default: now)")
+@click.option("--method", default=None,
+              help="How it was paid, e.g. 'bank transfer'")
+@click.option("--note", default=None, help="Optional memo")
+def payout_record(freelancer_id, amount, currency, paid_at, method, note):
+    """Record a payout to a freelancer.
+
+    Bookkeeping only — nothing is transferred. The amount is refused
+    when it exceeds what the agency has collected for that freelancer
+    in that currency (collected from the payment ledger minus payouts
+    already recorded); you cannot pay out money you have not received.
+    """
+    amount_cents = _amount_to_cents(amount)
+    db = _db()
+    try:
+        rec = db.record_payout(freelancer_id, amount_cents,
+                               currency=currency, paid_at=paid_at,
+                               method=method, note=note)
+    except ValueError as e:
+        db.close()
+        raise click.ClickException(str(e))
+    db.close()
+    click.echo(f"payout #{rec['id']}: freelancer #{freelancer_id} "
+               f"{rec['currency']} {rec['amount_cents'] / 100:,.2f} "
+               f"on {rec['paid_at'][:10]}"
+               + (f"  ({rec['method']})" if rec["method"] else ""))
+
+
+@payout.command("list")
+@click.option("--freelancer", "freelancer_id", type=int, default=None,
+              help="Only show payouts for this freelancer")
+def payout_list(freelancer_id):
+    """List recorded payouts, newest first."""
+    db = _db()
+    if freelancer_id is not None and not db.get_freelancer(freelancer_id):
+        db.close()
+        raise click.ClickException(f"no freelancer #{freelancer_id}")
+    rows = db.list_payouts(freelancer_id)
+    db.close()
+    for p in rows:
+        click.echo(f"#{p['id']:>3}  {p['freelancer_name']:<25} "
+                   f"{p['currency']} {p['amount_cents'] / 100:>12,.2f}  "
+                   f"{p['paid_at'][:10]}"
+                   f"{('  ' + p['method']) if p['method'] else ''}"
+                   f"{('  \"' + p['note'] + '\"') if p['note'] else ''}")
 
 # -- project --------------------------------------------------------------
 @cli.group()
