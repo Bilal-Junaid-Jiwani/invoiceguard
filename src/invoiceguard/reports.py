@@ -21,7 +21,7 @@ import csv
 import io
 from datetime import date
 
-from .db import DB
+from .db import DB, pct_of_cents
 from .late_fees import late_fee_summary
 
 # (key, label) in display order.
@@ -216,6 +216,14 @@ def freelancer_earnings(db: DB, freelancer_id: int | None = None) -> list[dict]:
     currency (a freelancer with no billable invoices) report zero
     payouts.
 
+    When the freelancer has a revenue split set (*split_pct*), each row
+    also carries *expected_payout_cents* — the freelancer's share of
+    what was collected in that currency (collected × split, half-up
+    to the cent) — and *still_due_to_freelancer_cents* (expected minus
+    paid out). Without a split, both fields are None: the payout
+    guard remains "you cannot pay out money you have not received",
+    and splits are bookkeeping, not an approval of the amount.
+
     Every roster freelancer appears, even with no billable invoices (a
     single row with currency None and zero amounts). Unattributed
     invoices belong to nobody and are not counted anywhere. Read-only.
@@ -227,7 +235,7 @@ def freelancer_earnings(db: DB, freelancer_id: int | None = None) -> list[dict]:
         raise ValueError(f"no freelancer #{freelancer_id}")
     cur = db.conn.execute(
         """SELECT f.id AS freelancer_id, f.name AS freelancer_name,
-                  f.email, f.phone,
+                  f.email, f.phone, f.split_pct,
                   i.currency,
                   COUNT(i.id) AS invoice_count,
                   COALESCE(SUM(i.amount_cents), 0) AS invoiced_cents,
@@ -254,6 +262,17 @@ def freelancer_earnings(db: DB, freelancer_id: int | None = None) -> list[dict]:
         d["paid_out_cents"] = (db.paid_out_cents(d["freelancer_id"], cur2)
                                if cur2 else 0)
         d["still_owed_cents"] = d["collected_cents"] - d["paid_out_cents"]
+        # Revenue-split share of what was collected in this currency
+        # (None when the freelancer has no split set).
+        split = d["split_pct"]
+        if split is None:
+            d["expected_payout_cents"] = None
+            d["still_due_to_freelancer_cents"] = None
+        else:
+            d["expected_payout_cents"] = (
+                pct_of_cents(d["collected_cents"], split) if cur2 else 0)
+            d["still_due_to_freelancer_cents"] = (
+                d["expected_payout_cents"] - d["paid_out_cents"])
         rows.append(d)
     rows.sort(key=lambda r: (-r["collected_cents"], r["freelancer_name"],
                              r["currency"] or ""))

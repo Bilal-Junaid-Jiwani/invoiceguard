@@ -153,6 +153,7 @@ CREATE TABLE freelancers(
   name TEXT NOT NULL,
   email TEXT,
   phone TEXT,
+  split_pct REAL,
   created_at TEXT NOT NULL
 );
 
@@ -234,6 +235,8 @@ CREATE TABLE message_events(
 <li>Per-client dunning columns (v0.7.0) and the <code>freelancers</code> table + <code>invoices.freelancer_id</code> (v0.8.0) follow the same additive-migration pattern: old databases get them on first open, NULL = no policy override / unattributed.
 </li>
 <li>The <code>payouts</code> table (v0.10.0) is the agency payout ledger: old databases get it automatically on first open (same additive pattern).
+</li>
+<li><code>freelancers.split_pct</code> (v0.11.0) is the revenue-split percentage of collected earnings; old databases get the column automatically on first open (same additive pattern), NULL = no split set.
 </li>
 </ul>
       <nav class="prev-next" aria-label="Previous and next pages">

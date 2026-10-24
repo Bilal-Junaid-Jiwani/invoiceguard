@@ -2,6 +2,18 @@
 
 Every release, newest first. InvoiceGuard follows semver.
 
+## [0.11.0] - 2026-10-24
+
+Agency-mode slice #5: per-freelancer revenue-split percentage. Slice #4 recorded what the agency paid each freelancer, guarded by what was collected — but it could not answer how much of the collected money was the freelancer's share in the first place. A revenue split (e.g. 70%) is now stored on each roster freelancer (`split_pct`, NULL = no split set); `freelancer show` and `reports.freelancer_earnings()` then report, per collected currency, the freelancer's expected share of what was collected and what is still due to them after recorded payouts.
+
+### Added
+- **Revenue splits** — `invoiceguard freelancer add --split-pct 70` and `invoiceguard freelancer set-split 1 --split-pct 65.5` (validated 0–100 before anything is written, via the same `_validate_percent` rule as `--deposit-pct`). A `split_pct` column on `freelancers` (additive migration — pre-v0.11.0 databases get it on connect); `freelancer list` prints the split after the phone; `freelancer show` prints a `split: 70% of collected earnings` header line and each currency line appends `share (70%): 630.00, still due to freelancer: 630.00`.
+- **`freelancer_earnings()` split fields** — every row carries `split_pct`, plus (only when a split is set) `expected_payout_cents` (collected × split, half-up to the cent with the project's Decimal money convention, shared helper `db.pct_of_cents` — previously a CLI-local copy) and `still_due_to_freelancer_cents` (expected minus paid out). Without a split both are None; no-currency rows report zero.
+
+### Honest scope (0.11.0)
+- Bookkeeping, not money movement: the split is recorded and reported, never transferred, and nothing is derived automatically — no per-freelancer payout schedules, no automatic payout suggestions. The payout guard is unchanged: it still refuses any payout larger than what was collected, even when that exceeds the freelancer's split share (over-paying against the split is the agency's own business, and the bookkeeping shows it).
+- The split applies to what was *collected* from the payment ledger, not what was billed — the agency shares received money, not invoices. Multi-freelancer workspaces remain the unshipped half of agency mode.
+
 ## [0.10.0] - 2026-10-23
 
 Agency-mode slice #4: freelancer payout tracking. Slice #3 showed what each freelancer's work billed and collected; this slice records the other half of the ledger — what the agency has actually sent each freelancer, per currency.

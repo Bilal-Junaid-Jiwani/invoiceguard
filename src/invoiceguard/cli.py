@@ -13,7 +13,7 @@ from . import __version__
 from .config import (CONFIG_TEMPLATE, config_path, db_path, load_config,
                      templates_dir)
 from .contracts import render_contract
-from .db import DB, resolve_dunning_policy
+from .db import DB, pct_of_cents, resolve_dunning_policy
 from .dunning import STAGES, check_due, money
 from .late_fees import late_fee_summary
 from .messaging import (message_channel, messaging_configured,
@@ -61,12 +61,6 @@ def _validate_percent(name: str, value: float) -> float:
         raise click.ClickException(
             f"{name} must be between 0 and 100 (got {value})")
     return value
-
-
-def _pct_cents(cents: int, pct: float) -> int:
-    """pct% of a cents amount, rounded half-up to the cent."""
-    return int((Decimal(cents) * Decimal(str(pct)) / 100).quantize(
-        Decimal("1"), rounding=ROUND_HALF_UP))
 
 
 def _db() -> DB:
@@ -246,27 +240,40 @@ def freelancer():
     """Manage freelancers (agency roster)."""
 
 
+def _fmt_split(pct: float) -> str:
+    """Render a split percentage without a dangling .0 (70, not 70.0)."""
+    return f"{pct:g}%"
+
+
 @freelancer.command("add")
 @click.option("--name", required=True, help="Freelancer name")
 @click.option("--email", default=None, help="Freelancer email")
 @click.option("--phone", default=None,
               help="Freelancer phone in E.164 form, e.g. +15551234567")
-def freelancer_add(name, email, phone):
+@click.option("--split-pct", "split_pct", type=float, default=None,
+              help="Revenue-split percentage of collected earnings "
+                   "(0-100); omit for no split")
+def freelancer_add(name, email, phone, split_pct):
     """Add a freelancer to the agency roster."""
     if phone and not normalize_phone(phone):
         raise click.ClickException(
             f"invalid phone number {phone!r} — use E.164 form, "
             f"e.g. +15551234567")
+    if split_pct is not None:
+        _validate_percent("--split-pct", split_pct)
     db = _db()
     try:
         fid = db.add_freelancer(
-            name, email, normalize_phone(phone) if phone else None)
+            name, email, normalize_phone(phone) if phone else None,
+            split_pct=split_pct)
     except ValueError as e:
         db.close()
         raise click.ClickException(str(e))
     db.close()
     click.echo(f"freelancer #{fid}: {name} <{email or 'no email'}>"
-               + (f" phone {normalize_phone(phone)}" if phone else ""))
+               + (f" phone {normalize_phone(phone)}" if phone else "")
+               + (f" split {_fmt_split(split_pct)}"
+                  if split_pct is not None else ""))
 
 
 @freelancer.command("set-email")
@@ -308,6 +315,32 @@ def freelancer_set_phone(freelancer_id, phone):
                f"{normalized or '(cleared)'}")
 
 
+@freelancer.command("set-split")
+@click.argument("freelancer_id", type=int)
+@click.option("--split-pct", "split_pct", type=float, required=True,
+              help="Revenue-split percentage of collected earnings "
+                   "(0-100)")
+def freelancer_set_split(freelancer_id, split_pct):
+    """Set a freelancer's revenue-split percentage of collected earnings.
+
+    The split feeds `freelancer show`: each currency line reports the
+    freelancer's expected share of what was collected and what is still
+    due to them after recorded payouts. Bookkeeping only — it does not
+    change the payout guard, which still refuses money the agency has
+    not collected.
+    """
+    _validate_percent("--split-pct", split_pct)
+    db = _db()
+    try:
+        db.set_freelancer_split(freelancer_id, split_pct)
+    except ValueError as e:
+        db.close()
+        raise click.ClickException(str(e))
+    db.close()
+    click.echo(f"freelancer #{freelancer_id}: split "
+               f"{_fmt_split(split_pct)}")
+
+
 @freelancer.command("list")
 def freelancer_list():
     """List freelancers."""
@@ -315,8 +348,10 @@ def freelancer_list():
     rows = db.list_freelancers()
     db.close()
     for r in rows:
+        split = f" {_fmt_split(r['split_pct'])}" \
+            if r["split_pct"] is not None else ""
         click.echo(f"#{r['id']:>3}  {r['name']:<30} {r['email'] or '':<28} "
-                   f"{r['phone'] or ''}")
+                   f"{r['phone'] or ''}{split}")
 
 
 @freelancer.command("show")
@@ -327,6 +362,9 @@ def freelancer_show(freelancer_id):
     Earnings are per currency: billed (attributed invoices in a real
     state — drafts and voids excluded), collected (payment ledger),
     outstanding — plus paid out and still owed from the payout ledger.
+    When a revenue split is set (`--split-pct` / `freelancer set-split`),
+    each currency line also shows the freelancer's expected share of
+    what was collected and what is still due to them after payouts.
     The attributed invoice lines and the recorded payouts follow.
     Read-only.
     """
@@ -355,15 +393,25 @@ def freelancer_show(freelancer_id):
         click.echo(f"  email: {f['email']}")
     if f["phone"]:
         click.echo(f"  phone: {f['phone']}")
+    if f["split_pct"] is not None:
+        click.echo(f"  split: {_fmt_split(f['split_pct'])} of collected "
+                   f"earnings")
     for r in rows:
         cur = r["currency"] or "(no billable invoices)"
+        share = ""
+        if r["currency"] and r["expected_payout_cents"] is not None:
+            share = (f", share ({_fmt_split(r['split_pct'])}): "
+                     f"{_money(r['expected_payout_cents'])}, still due "
+                     f"to freelancer: "
+                     f"{_money(r['still_due_to_freelancer_cents'])}")
         click.echo(f"  {cur}: billed {_money(r['invoiced_cents'])}, "
                    f"collected {_money(r['collected_cents'])}, "
                    f"outstanding {_money(r['outstanding_cents'])} "
                    f"({r['invoice_count']} invoices)"
                    + (f", paid out {_money(r['paid_out_cents'])}, "
                       f"still owed {_money(r['still_owed_cents'])}"
-                      if r["currency"] else ""))
+                      if r["currency"] else "")
+                   + share)
     if attributed:
         click.echo("  invoices:")
         for inv in sorted(attributed, key=lambda i: i["id"]):
@@ -498,7 +546,7 @@ def project_create(client_name, title, amount, currency, deposit_pct,
     click.echo(f"  client: {client['name']}")
     click.echo(f"  amount: {money(amount_cents, currency)} "
                f"(deposit {deposit_pct}% = "
-               f"{money(_pct_cents(amount_cents, deposit_pct), currency)})")
+               f"{money(pct_of_cents(amount_cents, deposit_pct), currency)})")
     click.echo(f"  late fee: {late_fee_pct}%/mo after {late_fee_grace_days} days grace")
     click.echo(f"  contract acknowledged: {'yes' if ack else 'no — run `invoiceguard project ack ' + str(pid) + '` after the client accepts'}")
     click.echo("  --- contract preview ---")
@@ -622,7 +670,7 @@ def invoice_create(project_id, kind, amount, due_days):
         raise click.ClickException(f"no project #{project_id}")
 
     if amount is None:
-        deposit_cents = _pct_cents(proj["amount_cents"], proj["deposit_pct"])
+        deposit_cents = pct_of_cents(proj["amount_cents"], proj["deposit_pct"])
         if kind == "deposit":
             amount_cents = deposit_cents
         elif kind == "final":

@@ -32,16 +32,18 @@ invoiceguard client list
 ## `freelancer` (v0.8.0, agency mode)
 
 ```bash
-invoiceguard freelancer add --name "Ali R." [--email ali@example.com] [--phone +15551234567]
+invoiceguard freelancer add --name "Ali R." [--email ali@example.com] [--phone +15551234567] [--split-pct 70]
 invoiceguard freelancer set-email 1 [--email ali@example.com]   # omit --email to clear
 invoiceguard freelancer set-phone 1 [--phone +15551234567]     # omit --phone to clear
+invoiceguard freelancer set-split 1 --split-pct 70   # v0.11.0
 invoiceguard freelancer list
 invoiceguard freelancer show 1          # v0.9.0
 ```
 
 - The agency roster: one row per team member. `add` requires `--name`; `--phone` must be E.164 (invalid numbers are rejected).
 - `list` prints `#id  name  email  phone` rows.
-- `show` (v0.9.0; payouts added in v0.10.0) prints contact details, per-currency earnings — billed (attributed invoices in a real state; drafts and voids excluded), collected (payment-ledger sums), outstanding — plus paid out and still owed from the payout ledger, the attributed invoice lines with collected/outstanding per invoice, and the recorded payouts. Read-only.
+- `show` (v0.9.0; payouts added in v0.10.0, revenue splits in v0.11.0) prints contact details, per-currency earnings — billed (attributed invoices in a real state; drafts and voids excluded), collected (payment-ledger sums), outstanding — plus paid out and still owed from the payout ledger, the attributed invoice lines with collected/outstanding per invoice, and the recorded payouts. When a revenue split is set it also prints the freelancer's expected share of each collected currency and what is still due to them after payouts. Read-only.
+- `--split-pct` (v0.11.0) records the freelancer's revenue-split percentage of *collected* earnings (0–100, validated before write); `freelancer set-split` changes it later. NULL (unset) means the freelancer is earnings bookkeeping only. Bookkeeping only — the split is reported, never transferred, and the payout guard is unchanged.
 - Invoices are attributed to a freelancer with `invoice assign` (see below) — attribution is bookkeeping only and never changes dunning, payments, or invoice status.
 
 ## `payout` (v0.10.0, agency mode)
@@ -53,7 +55,7 @@ invoiceguard payout list [--freelancer 1]
 ```
 
 - Records what the agency sent a freelancer — bookkeeping only, nothing is transferred. A payout is refused with a clear error when it exceeds what the agency has collected for that freelancer in that currency (payment-ledger sums against their attributed non-draft/void invoices, minus payouts already recorded); you cannot pay out money you have not received. Currency codes are normalized to upper-case; invoice-currency matching is case-insensitive; `--paid-at` accepts `YYYY-MM-DD` (default: now).
-- `list` prints `#id  name  currency  amount  date  method  note` rows, newest first; `--freelancer ID` restricts to one freelancer. No revenue-split percentages and no payout schedules — those remain unshipped.
+- `list` prints `#id  name  currency  amount  date  method  note` rows, newest first; `--freelancer ID` restricts to one freelancer. Revenue splits shipped in v0.11.0 (`freelancer set-split`); per-freelancer payout schedules remain unshipped.
 
 ## `project`
 

@@ -36,6 +36,7 @@ tests/test_contract.py
 tests/test_dunning.py
 tests/test_e2e.py
 tests/test_freelancer_earnings.py
+tests/test_freelancer_splits.py
 tests/test_freelancers.py
 tests/test_late_fees.py
 tests/test_messaging.py

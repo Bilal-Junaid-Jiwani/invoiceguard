@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import sqlite3
 from datetime import datetime, timezone
+from decimal import Decimal, ROUND_HALF_UP
 from pathlib import Path
 import hashlib
 import secrets
@@ -29,6 +30,7 @@ CREATE TABLE IF NOT EXISTS freelancers(
     name TEXT NOT NULL,
     email TEXT,
     phone TEXT,
+    split_pct REAL,
     created_at TEXT NOT NULL
 );
 CREATE TABLE IF NOT EXISTS projects(
@@ -221,6 +223,20 @@ def migrate_payouts(conn: sqlite3.Connection) -> None:
     conn.commit()
 
 
+def migrate_freelancers_split_pct(conn: sqlite3.Connection) -> None:
+    """Additive migration: freelancers.split_pct (v0.11.0).
+
+    Records the freelancer's revenue-split percentage of collected
+    earnings the agency intends to pay them (NULL = no split set —
+    the freelancer is billed/collected bookkeeping only).
+    Idempotent — safe to call on every connect.
+    """
+    cols = {r[1] for r in conn.execute("PRAGMA table_info(freelancers)")}
+    if "split_pct" not in cols:
+        conn.execute("ALTER TABLE freelancers ADD COLUMN split_pct REAL")
+        conn.commit()
+
+
 def resolve_dunning_policy(row) -> dict:
     """Resolved dunning thresholds for a client-like row.
 
@@ -267,6 +283,26 @@ def backfill_paid_ledger(conn: sqlite3.Connection) -> None:
     conn.commit()
 
 
+def pct_of_cents(cents: int, pct: float) -> int:
+    """pct% of a cents amount, rounded half-up to the cent.
+
+    The project's money convention (see also `_amount_to_cents` in
+    cli.py): Decimal arithmetic, never float, so 70% of 90_000 cents
+    is exactly 63_000 and sub-cent remainders round half-up.
+    """
+    return int((Decimal(cents) * Decimal(str(pct)) / 100).quantize(
+        Decimal("1"), rounding=ROUND_HALF_UP))
+
+
+def _validate_split_pct(split_pct: float | None) -> None:
+    """Guard a revenue-split percentage: None (unset) or 0-100."""
+    if split_pct is None:
+        return
+    if not 0 <= split_pct <= 100:
+        raise ValueError(
+            f"split_pct must be between 0 and 100 (got {split_pct})")
+
+
 class DB:
     def __init__(self, path: str | Path):
         self.path = Path(path)
@@ -280,6 +316,7 @@ class DB:
         migrate_invoices_freelancer_id(self.conn)
         migrate_signatures_contract_md(self.conn)
         migrate_payouts(self.conn)
+        migrate_freelancers_split_pct(self.conn)
         backfill_paid_ledger(self.conn)
 
     # -- clients -----------------------------------------------------
@@ -382,15 +419,22 @@ class DB:
 
     # -- freelancers (agency mode) ---------------------------------
     def add_freelancer(self, name: str, email: str | None = None,
-                       phone: str | None = None) -> int:
-        """Add a freelancer (team member) to the agency roster."""
+                       phone: str | None = None,
+                       split_pct: float | None = None) -> int:
+        """Add a freelancer (team member) to the agency roster.
+
+        split_pct, when given, is the freelancer's revenue-split
+        percentage of collected earnings (0-100); None means no split
+        is set and the freelancer is earnings bookkeeping only.
+        """
         name = (name or "").strip()
         if not name:
             raise ValueError("freelancer name is required")
+        _validate_split_pct(split_pct)
         cur = self.conn.execute(
-            "INSERT INTO freelancers(name, email, phone, created_at) "
-            "VALUES (?, ?, ?, ?)",
-            (name, email, phone, now_iso()),
+            "INSERT INTO freelancers(name, email, phone, split_pct, "
+            "created_at) VALUES (?, ?, ?, ?, ?)",
+            (name, email, phone, split_pct, now_iso()),
         )
         self.conn.commit()
         return cur.lastrowid
@@ -418,6 +462,22 @@ class DB:
         self.conn.execute(
             "UPDATE freelancers SET phone = ? WHERE id = ?",
             (phone, freelancer_id),
+        )
+        self.conn.commit()
+
+    def set_freelancer_split(self, freelancer_id: int,
+                             split_pct: float) -> None:
+        """Set a freelancer's revenue-split percentage (0-100).
+
+        Raises ValueError when the split is out of range or the
+        freelancer does not exist.
+        """
+        _validate_split_pct(split_pct)
+        if not self.get_freelancer(freelancer_id):
+            raise ValueError(f"no freelancer #{freelancer_id}")
+        self.conn.execute(
+            "UPDATE freelancers SET split_pct = ? WHERE id = ?",
+            (split_pct, freelancer_id),
         )
         self.conn.commit()
 

@@ -50,6 +50,7 @@ CREATE TABLE freelancers(
   name TEXT NOT NULL,
   email TEXT,
   phone TEXT,
+  split_pct REAL,
   created_at TEXT NOT NULL
 );
 
@@ -122,3 +123,4 @@ CREATE TABLE message_events(
 - `clients.phone` and the `message_events` table (v0.5.0) support SMS/WhatsApp escalation. Existing databases gain both automatically on first open (additive migration, same pattern as the payments backfill).
 - Per-client dunning columns (v0.7.0) and the `freelancers` table + `invoices.freelancer_id` (v0.8.0) follow the same additive-migration pattern: old databases get them on first open, NULL = no policy override / unattributed.
 - The `payouts` table (v0.10.0) is the agency payout ledger: old databases get it automatically on first open (same additive pattern).
+- `freelancers.split_pct` (v0.11.0) is the revenue-split percentage of collected earnings; old databases get the column automatically on first open (same additive pattern), NULL = no split set.
