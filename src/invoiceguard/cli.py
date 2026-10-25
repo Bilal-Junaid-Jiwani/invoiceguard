@@ -20,7 +20,7 @@ from .messaging import (message_channel, messaging_configured,
                         messaging_from_config, normalize_phone,
                         render_message, send_message)
 from .reports import (freelancer_earnings, invoices_csv, payments_csv,
-                      receivables_report)
+                      payout_suggestions, receivables_report)
 from .stripe_links import create_payment_link, default_due_date
 
 TEMPLATE_SOURCE = Path(__file__).resolve().parent / "email_templates"
@@ -493,6 +493,41 @@ def payout_list(freelancer_id):
                    f"{p['paid_at'][:10]}"
                    f"{('  ' + p['method']) if p['method'] else ''}"
                    f"{('  \"' + p['note'] + '\"') if p['note'] else ''}")
+
+@payout.command("suggest")
+@click.option("--freelancer", "freelancer_id", type=int, default=None,
+              help="Only suggest payouts for this freelancer")
+def payout_suggest(freelancer_id):
+    """Suggest what to pay each freelancer next, per currency.
+
+    Derived from collected earnings and the payout ledger — read-only,
+    nothing is recorded or transferred. With a revenue split set, the
+    suggestion is the freelancer's still-due share; without a split it
+    reports what the agency still holds for them instead. Record a
+    suggestion with `payout record`, which enforces its own guard.
+    """
+    db = _db()
+    if freelancer_id is not None and not db.get_freelancer(freelancer_id):
+        db.close()
+        raise click.ClickException(f"no freelancer #{freelancer_id}")
+    rows = payout_suggestions(db, freelancer_id)
+    db.close()
+    if not rows:
+        click.echo("no payout suggestions")
+        return
+    for r in rows:
+        if r["suggested_cents"] is not None:
+            click.echo(f"#{r['freelancer_id']:>3}  {r['freelancer_name']:<25} "
+                       f"{r['currency']} {r['suggested_cents'] / 100:>12,.2f}  "
+                       f"({_fmt_split(r['split_pct'])} of "
+                       f"{r['collected_cents'] / 100:,.2f} collected, "
+                       f"{r['paid_out_cents'] / 100:,.2f} already paid)")
+        else:
+            click.echo(f"#{r['freelancer_id']:>3}  {r['freelancer_name']:<25} "
+                       f"{r['currency']} {r['available_cents'] / 100:>12,.2f}  "
+                       f"(available — no split set; set one with "
+                       f"`freelancer set-split` for a share suggestion)")
+
 
 # -- project --------------------------------------------------------------
 @cli.group()

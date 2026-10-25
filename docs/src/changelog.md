@@ -6,6 +6,18 @@ description: InvoiceGuard release history — newest first, no fluff.
 
 Every release, newest first. InvoiceGuard follows semver.
 
+## [0.12.0] - 2026-10-25
+
+Agency-mode slice #6: payout suggestions. Slice #5 stored each freelancer's revenue split and reported their still-due share; this slice turns that into the answer to "what do I pay next?" — per freelancer, per currency, derived from collected earnings minus payouts already recorded.
+
+### Added
+- **`invoiceguard payout suggest [--freelancer ID]`** — prints one line per freelancer per currency: with a split set, the still-due share (`70% of 900.00 collected, 250.00 already paid`); without a split, what the agency still holds for them, labeled as available rather than suggested, with a pointer to `freelancer set-split`. Sorted largest suggestion first; `no payout suggestions` when nothing is actionable. Read-only — nothing is recorded or transferred, and `payout record` still enforces its own over-payout guard.
+- **`reports.payout_suggestions()`** — the same derivation for library callers: rows carry `suggested_cents` (None when no split is set), `available_cents`, and the collected/paid/expected figures behind the number.
+
+### Honest scope (0.12.0)
+- A suggestion is not an approval and not a transfer: the agency still records the payout itself, and the guard still allows paying past the split share (up to what was collected) — a freelancer paid past their share simply stops appearing in suggestions instead of going negative.
+- No per-freelancer payout schedules, and multi-freelancer workspaces remain the unshipped half of agency mode.
+
 ## [0.11.0] - 2026-10-24
 
 Agency-mode slice #5: per-freelancer revenue-split percentage. Slice #4 recorded what the agency paid each freelancer, guarded by what was collected — but it could not answer how much of the collected money was the freelancer's share in the first place. A revenue split (e.g. 70%) is now stored on each roster freelancer (`split_pct`, NULL = no split set); `freelancer show` and `reports.freelancer_earnings()` then report, per collected currency, the freelancer's expected share of what was collected and what is still due to them after recorded payouts.

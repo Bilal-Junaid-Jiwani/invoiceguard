@@ -52,10 +52,12 @@ invoiceguard freelancer show 1          # v0.9.0
 invoiceguard payout record --freelancer 1 --amount 250 [--currency USD] \
     [--paid-at 2026-10-23] [--method "bank transfer"] [--note "Sept share"]
 invoiceguard payout list [--freelancer 1]
+invoiceguard payout suggest [--freelancer 1]   # v0.12.0
 ```
 
 - Records what the agency sent a freelancer — bookkeeping only, nothing is transferred. A payout is refused with a clear error when it exceeds what the agency has collected for that freelancer in that currency (payment-ledger sums against their attributed non-draft/void invoices, minus payouts already recorded); you cannot pay out money you have not received. Currency codes are normalized to upper-case; invoice-currency matching is case-insensitive; `--paid-at` accepts `YYYY-MM-DD` (default: now).
 - `list` prints `#id  name  currency  amount  date  method  note` rows, newest first; `--freelancer ID` restricts to one freelancer. Revenue splits shipped in v0.11.0 (`freelancer set-split`); per-freelancer payout schedules remain unshipped.
+- `suggest` (v0.12.0) answers "what do I pay next?", per freelancer per currency, largest first. With a split set it prints the still-due share — expected share of what was collected minus payouts already recorded, floored at zero and never above what the agency still holds for them; a freelancer paid their full share, or paid past it, produces no row. Without a split it reports what the agency still holds for them, labeled as available rather than suggested, with a pointer to `freelancer set-split`. Read-only: nothing is recorded or transferred, and `payout record` still enforces its own guard.
 
 ## `project`
 

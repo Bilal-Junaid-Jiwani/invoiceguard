@@ -279,6 +279,63 @@ def freelancer_earnings(db: DB, freelancer_id: int | None = None) -> list[dict]:
     return rows
 
 
+def payout_suggestions(db: DB, freelancer_id: int | None = None) -> list[dict]:
+    """What to pay each freelancer next, per currency (read-only).
+
+    A suggestion is derived, never stored, and never transfers money —
+    record it with `payout record`, which still enforces its own guard
+    (you cannot pay out money you have not received).
+
+    For a freelancer with a revenue split set, the suggestion is their
+    still-due share: expected share of what was collected minus payouts
+    already recorded, floored at zero and never above what the agency
+    still holds for them (collected minus paid out — the payout guard's
+    ceiling). A freelancer already paid their full share, or paid past
+    it (the guard allows paying past the share, up to what was
+    collected), gets no suggestion row: they are settled, not owed.
+
+    A freelancer with no split set has no share to suggest, so their
+    row carries suggested_cents None and reports what the agency still
+    holds for them (available_cents) instead — the caller decides the
+    amount, or sets a split with `freelancer set-split` first.
+
+    Only actionable rows are returned: a freelancer with no billable
+    invoices, or nothing left to pay, produces no row. Rows are sorted
+    with the largest suggestion first. Pass freelancer_id to restrict
+    to one freelancer; raises ValueError when they do not exist.
+    """
+    rows = []
+    for e in freelancer_earnings(db, freelancer_id):
+        if not e["currency"]:
+            continue  # no billable invoices: nothing to suggest
+        available = e["still_owed_cents"]
+        if e["split_pct"] is None:
+            suggested = None
+            if available <= 0:
+                continue
+        else:
+            suggested = min(max(e["still_due_to_freelancer_cents"], 0),
+                            available)
+            if suggested <= 0:
+                continue  # settled (or paid past the share)
+        rows.append({
+            "freelancer_id": e["freelancer_id"],
+            "freelancer_name": e["freelancer_name"],
+            "currency": e["currency"],
+            "split_pct": e["split_pct"],
+            "collected_cents": e["collected_cents"],
+            "paid_out_cents": e["paid_out_cents"],
+            "expected_payout_cents": e["expected_payout_cents"],
+            "available_cents": available,
+            "suggested_cents": suggested,
+        })
+    rows.sort(key=lambda r: (-(r["suggested_cents"]
+                               if r["suggested_cents"] is not None
+                               else r["available_cents"]),
+                             r["freelancer_name"], r["currency"]))
+    return rows
+
+
 def payments_csv(db: DB) -> str:
     """The full payment ledger as CSV — every recorded payment,
     including payments against invoices that are now paid in full,
