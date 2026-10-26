@@ -171,6 +171,7 @@ invoiceguard freelancer show 1          # v0.9.0
     [--paid-at 2026-10-23] [--method "bank transfer"] [--note "Sept share"]
 invoiceguard payout list [--freelancer 1]
 invoiceguard payout suggest [--freelancer 1]   # v0.12.0
+invoiceguard payout settle [--freelancer 1] [--currency USD] [--dry-run]   # v0.13.0
 </code></pre>
 <ul>
 <li>Records what the agency sent a freelancer — bookkeeping only, nothing is transferred. A payout is refused with a clear error when it exceeds what the agency has collected for that freelancer in that currency (payment-ledger sums against their attributed non-draft/void invoices, minus payouts already recorded); you cannot pay out money you have not received. Currency codes are normalized to upper-case; invoice-currency matching is case-insensitive; <code>--paid-at</code> accepts <code>YYYY-MM-DD</code> (default: now).
@@ -178,6 +179,8 @@ invoiceguard payout suggest [--freelancer 1]   # v0.12.0
 <li><code>list</code> prints <code>#id  name  currency  amount  date  method  note</code> rows, newest first; <code>--freelancer ID</code> restricts to one freelancer. Revenue splits shipped in v0.11.0 (<code>freelancer set-split</code>); per-freelancer payout schedules remain unshipped.
 </li>
 <li><code>suggest</code> (v0.12.0) answers "what do I pay next?", per freelancer per currency, largest first. With a split set it prints the still-due share — expected share of what was collected minus payouts already recorded, floored at zero and never above what the agency still holds for them; a freelancer paid their full share, or paid past it, produces no row. Without a split it reports what the agency still holds for them, labeled as available rather than suggested, with a pointer to <code>freelancer set-split</code>. Read-only: nothing is recorded or transferred, and <code>payout record</code> still enforces its own guard.
+</li>
+<li><code>settle</code> (v0.13.0) records every suggestion at once, one payout per suggestion for the suggested amount, through the same guard — a fresh suggestion can never be refused. <code>--freelancer ID</code> / <code>--currency CUR</code> restrict the run; <code>--dry-run</code> prints what would be recorded and writes nothing. Freelancers with no split set are skipped with a count, never guessed at; a second settle is a no-op, so nothing is double-paid. Bookkeeping only, like <code>record</code>.
 </li>
 </ul>
 <h2 id="project"><code>project</code></h2>

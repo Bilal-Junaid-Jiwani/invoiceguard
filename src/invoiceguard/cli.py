@@ -503,8 +503,9 @@ def payout_suggest(freelancer_id):
     Derived from collected earnings and the payout ledger — read-only,
     nothing is recorded or transferred. With a revenue split set, the
     suggestion is the freelancer's still-due share; without a split it
-    reports what the agency still holds for them instead. Record a
-    suggestion with `payout record`, which enforces its own guard.
+    reports what the agency still holds for them instead. Record all
+    suggestions at once with `payout settle`, or one amount by hand
+    with `payout record`, which enforces its own guard.
     """
     db = _db()
     if freelancer_id is not None and not db.get_freelancer(freelancer_id):
@@ -527,6 +528,78 @@ def payout_suggest(freelancer_id):
                        f"{r['currency']} {r['available_cents'] / 100:>12,.2f}  "
                        f"(available — no split set; set one with "
                        f"`freelancer set-split` for a share suggestion)")
+
+
+@payout.command("settle")
+@click.option("--freelancer", "freelancer_id", type=int, default=None,
+              help="Only settle payouts for this freelancer")
+@click.option("--currency", default=None,
+              help="Only settle payouts in this currency")
+@click.option("--method", default=None,
+              help="How it was paid, e.g. 'bank transfer'")
+@click.option("--paid-at", "paid_at", default=None,
+              help="Payout date YYYY-MM-DD (default: now)")
+@click.option("--dry-run", is_flag=True, default=False,
+              help="Show what would be recorded without writing anything")
+def payout_settle(freelancer_id, currency, method, paid_at, dry_run):
+    """Record every suggested payout at once.
+
+    Slice #6 answered "what do I pay next?" per freelancer per currency;
+    this records that answer: one payout per suggestion, for the
+    suggested amount, through the same `payout record` guard (a
+    suggestion can never exceed what was collected and unpaid, so the
+    guard cannot refuse a fresh suggestion). Bookkeeping only — nothing
+    is transferred. Freelancers with no split set have no share to
+    settle, so they are skipped with a count, not guessed at: set a
+    split with `freelancer set-split`, or record their amount by hand
+    with `payout record`.
+    """
+    db = _db()
+    if freelancer_id is not None and not db.get_freelancer(freelancer_id):
+        db.close()
+        raise click.ClickException(f"no freelancer #{freelancer_id}")
+    rows = payout_suggestions(db, freelancer_id)
+    if currency is not None:
+        currency = currency.strip().upper()
+        rows = [r for r in rows if r["currency"] == currency]
+    settleable = [r for r in rows if r["suggested_cents"] is not None]
+    skipped = len(rows) - len(settleable)
+    if not settleable:
+        db.close()
+        if rows:
+            click.echo(f"no payouts to settle: {skipped} suggestion(s) "
+                       f"need a split first "
+                       f"(`freelancer set-split`) or a manual "
+                       f"`payout record`")
+        else:
+            click.echo("no payouts to settle")
+        return
+    for r in settleable:
+        if dry_run:
+            click.echo(f"would settle: #{r['freelancer_id']:>3}  "
+                       f"{r['freelancer_name']:<25} "
+                       f"{r['currency']} {r['suggested_cents'] / 100:>12,.2f}")
+            continue
+        try:
+            rec = db.record_payout(r["freelancer_id"],
+                                   r["suggested_cents"],
+                                   currency=r["currency"],
+                                   paid_at=paid_at, method=method)
+        except ValueError as e:
+            db.close()
+            raise click.ClickException(str(e))
+        click.echo(f"settled payout #{rec['id']}: "
+                   f"freelancer #{r['freelancer_id']} "
+                   f"{rec['currency']} {rec['amount_cents'] / 100:,.2f} "
+                   f"on {rec['paid_at'][:10]}"
+                   + (f"  ({rec['method']})" if rec["method"] else ""))
+    db.close()
+    if dry_run:
+        click.echo(f"dry run: {len(settleable)} payout(s) would be "
+                   f"recorded, nothing written")
+    elif skipped:
+        click.echo(f"settled {len(settleable)} payout(s); skipped "
+                   f"{skipped} without a split set")
 
 
 # -- project --------------------------------------------------------------

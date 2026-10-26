@@ -6,6 +6,16 @@ description: InvoiceGuard release history — newest first, no fluff.
 
 Every release, newest first. InvoiceGuard follows semver.
 
+## [0.13.0] - 2026-10-26
+
+Agency-mode slice #7: payout settlement. Slice #6 answered "what do I pay next?" per freelancer per currency; this slice records that answer — one payout per suggestion, for the suggested amount, through the same over-payout guard as `payout record`.
+
+### Added
+- **`invoiceguard payout settle [--freelancer ID] [--currency CUR] [--method M] [--paid-at DATE] [--dry-run]`** — records every suggested payout (split freelancers only) in one command. Each payout goes through the existing guard, so a fresh suggestion can never be refused; `--dry-run` prints what would be recorded and writes nothing. Freelancers with no split set are skipped with a count, never guessed at — set a split with `freelancer set-split`, or record their amount by hand with `payout record`. A second settle is a no-op: a settled freelancer produces no further suggestion, so nothing is double-paid.
+
+### Honest scope (0.13.0)
+- Bookkeeping, not money movement: settling records payouts, never transfers anything, and the settled amounts are exactly the suggestions — the agency still decides when to run it. No per-freelancer payout schedules, and multi-freelancer workspaces remain the unshipped half of agency mode.
+
 ## [0.12.0] - 2026-10-25
 
 Agency-mode slice #6: payout suggestions. Slice #5 stored each freelancer's revenue split and reported their still-due share; this slice turns that into the answer to "what do I pay next?" — per freelancer, per currency, derived from collected earnings minus payouts already recorded.
