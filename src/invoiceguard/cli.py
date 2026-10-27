@@ -19,8 +19,8 @@ from .late_fees import late_fee_summary
 from .messaging import (message_channel, messaging_configured,
                         messaging_from_config, normalize_phone,
                         render_message, send_message)
-from .reports import (freelancer_earnings, invoices_csv, payments_csv,
-                      payout_suggestions, receivables_report)
+from .reports import (agency_summary, freelancer_earnings, invoices_csv,
+                      payments_csv, payout_suggestions, receivables_report)
 from .stripe_links import create_payment_link, default_due_date
 
 TEMPLATE_SOURCE = Path(__file__).resolve().parent / "email_templates"
@@ -600,6 +600,88 @@ def payout_settle(freelancer_id, currency, method, paid_at, dry_run):
     elif skipped:
         click.echo(f"settled {len(settleable)} payout(s); skipped "
                    f"{skipped} without a split set")
+
+
+# -- agency (agency mode) ---------------------------------------------
+@cli.group()
+def agency():
+    """Whole-book agency views (agency roster)."""
+
+
+@agency.command("summary")
+@click.option("--freelancer", "freelancer_id", type=int, default=None,
+              help="Only summarize this freelancer")
+def agency_summary_cmd(freelancer_id):
+    """Summarize the whole agency book, per freelancer per currency.
+
+    One section per roster freelancer: billed, collected, outstanding,
+    paid out, and still owed per currency, plus the suggested payout
+    (the still-due split share) where one exists — followed by per
+    currency totals across the roster. `payout suggest` lists only
+    actionable rows and `freelancer show` covers one freelancer at a
+    time; this is the whole book at a glance. Read-only: nothing is
+    recorded or transferred.
+    """
+    db = _db()
+    if freelancer_id is not None and not db.get_freelancer(freelancer_id):
+        db.close()
+        raise click.ClickException(f"no freelancer #{freelancer_id}")
+    rows = agency_summary(db, freelancer_id)
+    db.close()
+    if not rows:
+        click.echo("no freelancers on the roster")
+        return
+    ordered: list[int] = []
+    by_freelancer: dict[int, list[dict]] = {}
+    for r in rows:
+        if r["freelancer_id"] not in by_freelancer:
+            by_freelancer[r["freelancer_id"]] = []
+            ordered.append(r["freelancer_id"])
+        by_freelancer[r["freelancer_id"]].append(r)
+    totals: dict[str, dict[str, int]] = {}
+    for fid in ordered:
+        first = by_freelancer[fid][0]
+        split = first["split_pct"]
+        split_txt = (f"split: {_fmt_split(split)}" if split is not None
+                     else "no split set")
+        click.echo(f"#{fid:>3}  {first['freelancer_name']}  ({split_txt})")
+        for r in by_freelancer[fid]:
+            if not r["currency"]:
+                click.echo("      no billable invoices")
+                continue
+            t = totals.setdefault(r["currency"], {
+                "billed": 0, "collected": 0, "outstanding": 0,
+                "paid_out": 0, "still_owed": 0, "suggested": 0,
+                "has_suggested": 0})
+            t["billed"] += r["invoiced_cents"]
+            t["collected"] += r["collected_cents"]
+            t["outstanding"] += r["outstanding_cents"]
+            t["paid_out"] += r["paid_out_cents"]
+            t["still_owed"] += r["still_owed_cents"]
+            if r["suggested_cents"] is not None:
+                t["suggested"] += r["suggested_cents"]
+                t["has_suggested"] += 1
+            line = (f"      {r['currency']}  billed "
+                    f"{r['invoiced_cents'] / 100:>12,.2f}  collected "
+                    f"{r['collected_cents'] / 100:>12,.2f}  outstanding "
+                    f"{r['outstanding_cents'] / 100:>12,.2f}  paid out "
+                    f"{r['paid_out_cents'] / 100:>12,.2f}  still owed "
+                    f"{r['still_owed_cents'] / 100:>12,.2f}")
+            if r["suggested_cents"] is not None:
+                line += (f"  suggested "
+                         f"{r['suggested_cents'] / 100:>12,.2f}")
+            click.echo(line)
+    click.echo("TOTALS")
+    for cur in sorted(totals):
+        t = totals[cur]
+        line = (f"      {cur}  billed {t['billed'] / 100:>12,.2f}  "
+                f"collected {t['collected'] / 100:>12,.2f}  outstanding "
+                f"{t['outstanding'] / 100:>12,.2f}  paid out "
+                f"{t['paid_out'] / 100:>12,.2f}  still owed "
+                f"{t['still_owed'] / 100:>12,.2f}")
+        if t["has_suggested"]:
+            line += f"  suggested {t['suggested'] / 100:>12,.2f}"
+        click.echo(line)
 
 
 # -- project --------------------------------------------------------------

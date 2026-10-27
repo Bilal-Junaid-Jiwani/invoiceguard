@@ -31,6 +31,7 @@ src/invoiceguard/web/templates/detail.html
 src/invoiceguard/web/templates/index.html
 src/invoiceguard/web/templates/sign.html
 src/invoiceguard/web/templates/signed.html
+tests/test_agency_summary.py
 tests/test_cli.py
 tests/test_contract.py
 tests/test_dunning.py

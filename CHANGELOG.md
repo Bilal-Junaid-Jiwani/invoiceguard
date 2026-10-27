@@ -2,6 +2,17 @@
 
 Every release, newest first. InvoiceGuard follows semver.
 
+## [0.14.0] - 2026-10-27
+
+Agency-mode slice #8: agency summary. `payout suggest` lists only actionable rows and `freelancer show` covers one freelancer at a time; this slice is the whole book at a glance — every roster freelancer, every currency, plus per-currency totals across the roster.
+
+### Added
+- **`invoiceguard agency summary [--freelancer ID]`** — one section per roster freelancer: per-currency billed, collected, outstanding, paid out, and still owed, plus the suggested payout (the still-due split share) where one exists; freelancers with no billable invoices print `no billable invoices`. A `TOTALS` section sums each currency across the roster, with a suggested total where any split freelancer still has a share due. Read-only — nothing is recorded or transferred. An empty roster prints `no freelancers on the roster`; an unknown `--freelancer` id is a clean error, not a traceback.
+- **`reports.agency_summary()`** — the same view for library callers: `freelancer_earnings()` rows enriched with `suggested_cents` (None when there is no share suggestion — no split set, settled, paid past the share, or no billable invoices).
+
+### Honest scope (0.14.0)
+- A view, not a workflow: the summary reports the book; it records nothing, approves nothing, and transfers nothing. Suggested totals count only split freelancers with a still-due share — no-split freelancers contribute their still-owed balance to the totals but no suggestion. No per-freelancer payout schedules, and multi-freelancer workspaces remain the unshipped half of agency mode.
+
 ## [0.13.0] - 2026-10-26
 
 Agency-mode slice #7: payout settlement. Slice #6 answered "what do I pay next?" per freelancer per currency; this slice records that answer — one payout per suggestion, for the suggested amount, through the same over-payout guard as `payout record`.

@@ -109,6 +109,8 @@
 </li>
 <li><a href="#payout-v0100-agency-mode">payout (v0.10.0, agency mode)</a>
 </li>
+<li><a href="#agency-v0140-agency-mode">agency (v0.14.0, agency mode)</a>
+</li>
 <li><a href="#project">project</a>
 </li>
 <li><a href="#invoice">invoice</a>
@@ -181,6 +183,13 @@ invoiceguard payout settle [--freelancer 1] [--currency USD] [--dry-run]   # v0.
 <li><code>suggest</code> (v0.12.0) answers "what do I pay next?", per freelancer per currency, largest first. With a split set it prints the still-due share — expected share of what was collected minus payouts already recorded, floored at zero and never above what the agency still holds for them; a freelancer paid their full share, or paid past it, produces no row. Without a split it reports what the agency still holds for them, labeled as available rather than suggested, with a pointer to <code>freelancer set-split</code>. Read-only: nothing is recorded or transferred, and <code>payout record</code> still enforces its own guard.
 </li>
 <li><code>settle</code> (v0.13.0) records every suggestion at once, one payout per suggestion for the suggested amount, through the same guard — a fresh suggestion can never be refused. <code>--freelancer ID</code> / <code>--currency CUR</code> restrict the run; <code>--dry-run</code> prints what would be recorded and writes nothing. Freelancers with no split set are skipped with a count, never guessed at; a second settle is a no-op, so nothing is double-paid. Bookkeeping only, like <code>record</code>.
+</li>
+</ul>
+<h2 id="agency-v0140-agency-mode"><code>agency</code> (v0.14.0, agency mode)</h2>
+<pre class="codeblock" data-lang="bash"><code>invoiceguard agency summary [--freelancer 1]
+</code></pre>
+<ul>
+<li>The whole book at a glance: one section per roster freelancer — per-currency billed, collected, outstanding, paid out, and still owed, plus the suggested payout (the still-due split share) where one exists — followed by a <code>TOTALS</code> section summing each currency across the roster, with a suggested total where any split freelancer still has a share due. <code>payout suggest</code> lists only actionable rows and <code>freelancer show</code> covers one freelancer at a time; this covers everyone. Read-only: nothing is recorded or transferred. An empty roster prints <code>no freelancers on the roster</code>; <code>--freelancer ID</code> restricts to one freelancer, and an unknown id is a clean error.
 </li>
 </ul>
 <h2 id="project"><code>project</code></h2>
@@ -275,6 +284,8 @@ invoiceguard invoice report [--as-of 2026-10-08] [--freelancer 1] [--csv invoice
 <li><a href="#freelancer-v080-agency-mode">freelancer (v0.8.0, agency mode)</a>
 </li>
 <li><a href="#payout-v0100-agency-mode">payout (v0.10.0, agency mode)</a>
+</li>
+<li><a href="#agency-v0140-agency-mode">agency (v0.14.0, agency mode)</a>
 </li>
 <li><a href="#project">project</a>
 </li>

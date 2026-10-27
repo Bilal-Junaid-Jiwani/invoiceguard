@@ -95,7 +95,7 @@
           
         </details>
       </div>
-      <p>These are <strong>plans, not promises</strong> — nothing below is shipped in v0.13.0.</p>
+      <p>These are <strong>plans, not promises</strong> — nothing below is shipped in v0.14.0.</p>
 <ul>
 <li>~~<strong>Real e-signature</strong>~~ — shipped in v0.3.0: typed-name / drawn-signature capture on the contract, stored with the project, SHA-256 tamper evidence.
 </li>
@@ -103,7 +103,7 @@
 </li>
 <li>~~<strong>SMS / WhatsApp escalation</strong>~~ — shipped in v0.5.0: day-15 also goes out as an SMS/WhatsApp message via Twilio when configured, plus <code>invoice notify</code> for one-off reminders.
 </li>
-<li><strong>Agency mode</strong> — multi-freelancer workspaces (unshipped); per-client dunning policies shipped in v0.7.0 (<code>invoiceguard client set-dunning-policy</code>); freelancer roster + invoice attribution shipped in v0.8.0 (<code>invoiceguard freelancer add</code>, <code>invoiceguard invoice assign</code>); freelancer earnings shipped in v0.9.0 (<code>invoiceguard freelancer show</code>, per-currency billed/collected/outstanding); freelancer payouts shipped in v0.10.0 (<code>invoiceguard payout record</code> / <code>payout list</code>, per-currency payout ledger with an over-payout guard); revenue splits shipped in v0.11.0 (<code>freelancer add --split-pct</code> / <code>freelancer set-split</code>, per-currency expected share + still-due-to-freelancer); payout suggestions shipped in v0.12.0 (<code>invoiceguard payout suggest</code>, per-currency still-due share or still-held balance when no split is set); payout settlement shipped in v0.13.0 (<code>invoiceguard payout settle</code>, records every suggestion at once through the payout guard, no-split freelancers skipped, <code>--dry-run</code> writes nothing).
+<li><strong>Agency mode</strong> — multi-freelancer workspaces (unshipped); per-client dunning policies shipped in v0.7.0 (<code>invoiceguard client set-dunning-policy</code>); freelancer roster + invoice attribution shipped in v0.8.0 (<code>invoiceguard freelancer add</code>, <code>invoiceguard invoice assign</code>); freelancer earnings shipped in v0.9.0 (<code>invoiceguard freelancer show</code>, per-currency billed/collected/outstanding); freelancer payouts shipped in v0.10.0 (<code>invoiceguard payout record</code> / <code>payout list</code>, per-currency payout ledger with an over-payout guard); revenue splits shipped in v0.11.0 (<code>freelancer add --split-pct</code> / <code>freelancer set-split</code>, per-currency expected share + still-due-to-freelancer); payout suggestions shipped in v0.12.0 (<code>invoiceguard payout suggest</code>, per-currency still-due share or still-held balance when no split is set); payout settlement shipped in v0.13.0 (<code>invoiceguard payout settle</code>, records every suggestion at once through the payout guard, no-split freelancers skipped, <code>--dry-run</code> writes nothing). agency summary shipped in v0.14.0 (<code>invoiceguard agency summary</code>, whole-book view per freelancer per currency with per-currency totals, read-only).
 </li>
 <li>~~<strong>Partial payments / payment plans</strong>~~ — shipped in v0.2.0.
 </li>

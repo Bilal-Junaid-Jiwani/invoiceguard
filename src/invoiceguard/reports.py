@@ -336,6 +336,34 @@ def payout_suggestions(db: DB, freelancer_id: int | None = None) -> list[dict]:
     return rows
 
 
+def agency_summary(db: DB, freelancer_id: int | None = None) -> list[dict]:
+    """Whole-book agency view: one row per freelancer per currency.
+
+    Each row is a `freelancer_earnings()` row (billed / collected /
+    outstanding / paid out / still owed, plus the split share fields when
+    a split is set) enriched with *suggested_cents* — the
+    `payout_suggestions()` figure for that freelancer and currency, or
+    None when there is no share suggestion (no split set, settled, paid
+    past the share, or no billable invoices). Freelancers with no
+    billable invoices appear as a single row with currency None and
+    zero amounts, same as `freelancer_earnings()`. Read-only.
+
+    This is the view `payout suggest` and `freelancer show` cannot give
+    on their own: suggest lists only actionable rows, and show covers
+    one freelancer at a time. Pass freelancer_id to restrict to one
+    freelancer; raises ValueError when they do not exist.
+    """
+    sugg = {(s["freelancer_id"], s["currency"]): s
+            for s in payout_suggestions(db, freelancer_id)}
+    rows = []
+    for e in freelancer_earnings(db, freelancer_id):
+        row = dict(e)
+        s = sugg.get((e["freelancer_id"], e["currency"]))
+        row["suggested_cents"] = (s["suggested_cents"] if s else None)
+        rows.append(row)
+    return rows
+
+
 def payments_csv(db: DB) -> str:
     """The full payment ledger as CSV — every recorded payment,
     including payments against invoices that are now paid in full,

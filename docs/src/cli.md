@@ -61,6 +61,14 @@ invoiceguard payout settle [--freelancer 1] [--currency USD] [--dry-run]   # v0.
 - `suggest` (v0.12.0) answers "what do I pay next?", per freelancer per currency, largest first. With a split set it prints the still-due share — expected share of what was collected minus payouts already recorded, floored at zero and never above what the agency still holds for them; a freelancer paid their full share, or paid past it, produces no row. Without a split it reports what the agency still holds for them, labeled as available rather than suggested, with a pointer to `freelancer set-split`. Read-only: nothing is recorded or transferred, and `payout record` still enforces its own guard.
 - `settle` (v0.13.0) records every suggestion at once, one payout per suggestion for the suggested amount, through the same guard — a fresh suggestion can never be refused. `--freelancer ID` / `--currency CUR` restrict the run; `--dry-run` prints what would be recorded and writes nothing. Freelancers with no split set are skipped with a count, never guessed at; a second settle is a no-op, so nothing is double-paid. Bookkeeping only, like `record`.
 
+## `agency` (v0.14.0, agency mode)
+
+```bash
+invoiceguard agency summary [--freelancer 1]
+```
+
+- The whole book at a glance: one section per roster freelancer — per-currency billed, collected, outstanding, paid out, and still owed, plus the suggested payout (the still-due split share) where one exists — followed by a `TOTALS` section summing each currency across the roster, with a suggested total where any split freelancer still has a share due. `payout suggest` lists only actionable rows and `freelancer show` covers one freelancer at a time; this covers everyone. Read-only: nothing is recorded or transferred. An empty roster prints `no freelancers on the roster`; `--freelancer ID` restricts to one freelancer, and an unknown id is a clean error.
+
 ## `project`
 
 ```bash
