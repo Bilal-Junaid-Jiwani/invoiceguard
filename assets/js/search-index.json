@@ -113,6 +113,10 @@
     "text": "payout (v0.10.0, agency mode)"
    },
    {
+    "id": "agency-v0140-agency-mode",
+    "text": "agency (v0.14.0, agency mode)"
+   },
+   {
     "id": "project",
     "text": "project"
    },
@@ -349,11 +353,23 @@
   "description": "InvoiceGuard release history — newest first, no fluff.",
   "headings": [
    {
+    "id": "0140---2026-10-27",
+    "text": "[0.14.0] - 2026-10-27"
+   },
+   {
+    "id": "added",
+    "text": "Added"
+   },
+   {
+    "id": "honest-scope-0140",
+    "text": "Honest scope (0.14.0)"
+   },
+   {
     "id": "0130---2026-10-26",
     "text": "[0.13.0] - 2026-10-26"
    },
    {
-    "id": "added",
+    "id": "added-2",
     "text": "Added"
    },
    {
@@ -365,7 +381,7 @@
     "text": "[0.12.0] - 2026-10-25"
    },
    {
-    "id": "added-2",
+    "id": "added-3",
     "text": "Added"
    },
    {
@@ -377,7 +393,7 @@
     "text": "[0.11.0] - 2026-10-24"
    },
    {
-    "id": "added-3",
+    "id": "added-4",
     "text": "Added"
    },
    {
@@ -389,7 +405,7 @@
     "text": "[0.10.0] - 2026-10-23"
    },
    {
-    "id": "added-4",
+    "id": "added-5",
     "text": "Added"
    },
    {
@@ -401,7 +417,7 @@
     "text": "[0.9.0] - 2026-10-22"
    },
    {
-    "id": "added-5",
+    "id": "added-6",
     "text": "Added"
    },
    {
@@ -417,7 +433,7 @@
     "text": "Fixed"
    },
    {
-    "id": "added-6",
+    "id": "added-7",
     "text": "Added"
    },
    {
@@ -469,7 +485,7 @@
     "text": "[0.8.0] - 2026-10-16"
    },
    {
-    "id": "added-7",
+    "id": "added-8",
     "text": "Added"
    },
    {
@@ -489,7 +505,7 @@
     "text": "[0.7.0] - 2026-10-14"
    },
    {
-    "id": "added-8",
+    "id": "added-9",
     "text": "Added"
    },
    {
@@ -529,7 +545,7 @@
     "text": "Fixed"
    },
    {
-    "id": "added-9",
+    "id": "added-10",
     "text": "Added"
    },
    {
@@ -565,7 +581,7 @@
     "text": "[0.6.0] - 2026-10-08"
    },
    {
-    "id": "added-10",
+    "id": "added-11",
     "text": "Added"
    },
    {
@@ -577,7 +593,7 @@
     "text": "[0.5.0] - 2026-10-07"
    },
    {
-    "id": "added-11",
+    "id": "added-12",
     "text": "Added"
    },
    {
@@ -589,7 +605,7 @@
     "text": "[0.4.0] - 2026-10-06"
    },
    {
-    "id": "added-12",
+    "id": "added-13",
     "text": "Added"
    },
    {
@@ -601,7 +617,7 @@
     "text": "[0.3.0] - 2026-10-05"
    },
    {
-    "id": "added-13",
+    "id": "added-14",
     "text": "Added"
    },
    {
@@ -617,7 +633,7 @@
     "text": "[0.2.0] - 2026-10-04"
    },
    {
-    "id": "added-14",
+    "id": "added-15",
     "text": "Added"
    },
    {
@@ -629,7 +645,7 @@
     "text": "[0.1.0] - 2026-10-02"
    },
    {
-    "id": "added-15",
+    "id": "added-16",
     "text": "Added"
    },
    {
@@ -641,7 +657,7 @@
     "text": "Honest scope (v1)"
    }
   ],
-  "text": "Every release, newest first. InvoiceGuard follows semver. [0.13.0] - 2026-10-26 Agency-mode slice #7: payout settlement. Slice #6 answered \"what do I pay next?\" per freelancer per currency; this slice records that answer — one payout per suggestion, for the suggested amount, through the same over-payout guard as payout record . Added invoiceguard payout settle [--freelancer ID] [--currency CUR] [--method M] [--paid-at DATE] [--dry-run] — records every suggested payout (split freelancers only) in one command. Each payout goes through the existing guard, so a fresh suggestion can never be refused; --dry-run prints what would be recorded and writes nothing. Freelancers with no split set are skipped with a count, never guessed at — set a split with freelancer set-split , or record their amount by hand with payout record . A second settle is a no-op: a settled freelancer produces no further suggestion, so nothing is double-paid. Honest scope (0.13.0) Bookkeeping, not money movement: settling records payouts, never transfers anything, and the settled amounts are exactly the suggestions — the agency still decides when to run it. No per-freelancer payout schedules, and multi-freelancer workspaces remain the unshipped half of agency mode. [0.12.0] - 2026-10-25 Agency-mode slice #6: payout suggestions. Slice #5 stored each freelancer's revenue split and reported their still-due share; this slice turns that into the answer to \"what do I pay next?\" — per freelancer, per currency, derived from collected earnings minus payouts already recorded. Added invoiceguard payout suggest [--freelancer ID] — prints one line per freelancer per currency: with a split set, the still-due share ( 70% of 900.00 collected, 250.00 already paid ); without a split, what the agency still holds for them, labeled as available rather than suggested, with a pointer to freelancer set-split . Sorted largest suggestion first; no payout suggestions when nothing is actionable. Read-only — nothing is recorded or transferred, and payout record still enforces its own over-payout guard. reports.payout_suggestions() — the same derivation for library callers: rows carry suggested_cents (None when no split is set), available_cents , and the collected/paid/expected figures behind the number. Honest scope (0.12.0) A suggestion is not an approval and not a transfer: the agency still records the payout itself, and the guard still allows paying past the split share (up to what was collected) — a freelancer paid past their share simply stops appearing in suggestions instead of going negative. No per-freelancer payout schedules, and multi-freelancer workspaces remain the unshipped half of agency mode. [0.11.0] - 2026-10-24 Agency-mode slice #5: per-freelancer revenue-split percentage. Slice #4 recorded what the agency paid each freelancer, guarded by what was collected — but it could not answer how much of the collected money was the freelancer's share in the first place. A revenue split (e.g. 70%) is now stored on each roster freelancer ( split_pct , NULL = no split set); freelancer show and reports.freelancer_earnings() then report, per collected currency, the freelancer's expected share of what was collected and what is still due to them after recorded payouts. Added Revenue splits — invoiceguard freelancer add --split-pct 70 and invoiceguard freelancer set-split 1 --split-pct 65.5 (validated 0–100 before anything is written, via the same _validate_percent rule as --deposit-pct ). A split_pct column on freelancers (additive migration — pre-v0.11.0 databases get it on connect); freelancer list prints the split after the phone; freelancer show prints a split: 70% of collected earnings header line and each currency line appends share (70%): 630.00, still due to freelancer: 630.00 . freelancer_earnings() split fields — every row carries split_pct , plus (only when a split is set) expected_payout_cents (collected × split, half-up to the cent with the project's Decimal money convention, "
+  "text": "Every release, newest first. InvoiceGuard follows semver. [0.14.0] - 2026-10-27 Agency-mode slice #8: agency summary. payout suggest lists only actionable rows and freelancer show covers one freelancer at a time; this slice is the whole book at a glance — every roster freelancer, every currency, plus per-currency totals across the roster. Added invoiceguard agency summary [--freelancer ID] — one section per roster freelancer: per-currency billed, collected, outstanding, paid out, and still owed, plus the suggested payout (the still-due split share) where one exists; freelancers with no billable invoices print no billable invoices . A TOTALS section sums each currency across the roster, with a suggested total where any split freelancer still has a share due. Read-only — nothing is recorded or transferred. An empty roster prints no freelancers on the roster ; an unknown --freelancer id is a clean error, not a traceback. reports.agency_summary() — the same view for library callers: freelancer_earnings() rows enriched with suggested_cents (None when there is no share suggestion — no split set, settled, paid past the share, or no billable invoices). Honest scope (0.14.0) A view, not a workflow: the summary reports the book; it records nothing, approves nothing, and transfers nothing. Suggested totals count only split freelancers with a still-due share — no-split freelancers contribute their still-owed balance to the totals but no suggestion. No per-freelancer payout schedules, and multi-freelancer workspaces remain the unshipped half of agency mode. [0.13.0] - 2026-10-26 Agency-mode slice #7: payout settlement. Slice #6 answered \"what do I pay next?\" per freelancer per currency; this slice records that answer — one payout per suggestion, for the suggested amount, through the same over-payout guard as payout record . Added invoiceguard payout settle [--freelancer ID] [--currency CUR] [--method M] [--paid-at DATE] [--dry-run] — records every suggested payout (split freelancers only) in one command. Each payout goes through the existing guard, so a fresh suggestion can never be refused; --dry-run prints what would be recorded and writes nothing. Freelancers with no split set are skipped with a count, never guessed at — set a split with freelancer set-split , or record their amount by hand with payout record . A second settle is a no-op: a settled freelancer produces no further suggestion, so nothing is double-paid. Honest scope (0.13.0) Bookkeeping, not money movement: settling records payouts, never transfers anything, and the settled amounts are exactly the suggestions — the agency still decides when to run it. No per-freelancer payout schedules, and multi-freelancer workspaces remain the unshipped half of agency mode. [0.12.0] - 2026-10-25 Agency-mode slice #6: payout suggestions. Slice #5 stored each freelancer's revenue split and reported their still-due share; this slice turns that into the answer to \"what do I pay next?\" — per freelancer, per currency, derived from collected earnings minus payouts already recorded. Added invoiceguard payout suggest [--freelancer ID] — prints one line per freelancer per currency: with a split set, the still-due share ( 70% of 900.00 collected, 250.00 already paid ); without a split, what the agency still holds for them, labeled as available rather than suggested, with a pointer to freelancer set-split . Sorted largest suggestion first; no payout suggestions when nothing is actionable. Read-only — nothing is recorded or transferred, and payout record still enforces its own over-payout guard. reports.payout_suggestions() — the same derivation for library callers: rows carry suggested_cents (None when no split is set), available_cents , and the collected/paid/expected figures behind the number. Honest scope (0.12.0) A suggestion is not an approval and not a transfer: the agency still records the payout itself, and the guard still allows paying past the split share (up to what was collected) — a fre"
  },
  {
   "url": "roadmap.html",
@@ -649,6 +665,6 @@
   "eyebrow": "Reference",
   "description": "What's planned for InvoiceGuard — honestly labeled as plans, not shipped features.",
   "headings": [],
-  "text": "These are plans, not promises — nothing below is shipped in v0.13.0. ~~ Real e-signature ~~ — shipped in v0.3.0: typed-name / drawn-signature capture on the contract, stored with the project, SHA-256 tamper evidence. ~~ Late-fee accrual calculator ~~ — shipped in v0.4.0: monthly-compounding accrual of contract §3 fees, invoice late-fees CLI, dashboard rows, dunning template variables. ~~ SMS / WhatsApp escalation ~~ — shipped in v0.5.0: day-15 also goes out as an SMS/WhatsApp message via Twilio when configured, plus invoice notify for one-off reminders. Agency mode — multi-freelancer workspaces (unshipped); per-client dunning policies shipped in v0.7.0 ( invoiceguard client set-dunning-policy ); freelancer roster + invoice attribution shipped in v0.8.0 ( invoiceguard freelancer add , invoiceguard invoice assign ); freelancer earnings shipped in v0.9.0 ( invoiceguard freelancer show , per-currency billed/collected/outstanding); freelancer payouts shipped in v0.10.0 ( invoiceguard payout record / payout list , per-currency payout ledger with an over-payout guard); revenue splits shipped in v0.11.0 ( freelancer add --split-pct / freelancer set-split , per-currency expected share + still-due-to-freelancer); payout suggestions shipped in v0.12.0 ( invoiceguard payout suggest , per-currency still-due share or still-held balance when no split is set); payout settlement shipped in v0.13.0 ( invoiceguard payout settle , records every suggestion at once through the payout guard, no-split freelancers skipped, --dry-run writes nothing). ~~ Partial payments / payment plans ~~ — shipped in v0.2.0. Priorities follow real user feedback. If a roadmap item matters to you, open an issue on GitHub describing your workflow."
+  "text": "These are plans, not promises — nothing below is shipped in v0.14.0. ~~ Real e-signature ~~ — shipped in v0.3.0: typed-name / drawn-signature capture on the contract, stored with the project, SHA-256 tamper evidence. ~~ Late-fee accrual calculator ~~ — shipped in v0.4.0: monthly-compounding accrual of contract §3 fees, invoice late-fees CLI, dashboard rows, dunning template variables. ~~ SMS / WhatsApp escalation ~~ — shipped in v0.5.0: day-15 also goes out as an SMS/WhatsApp message via Twilio when configured, plus invoice notify for one-off reminders. Agency mode — multi-freelancer workspaces (unshipped); per-client dunning policies shipped in v0.7.0 ( invoiceguard client set-dunning-policy ); freelancer roster + invoice attribution shipped in v0.8.0 ( invoiceguard freelancer add , invoiceguard invoice assign ); freelancer earnings shipped in v0.9.0 ( invoiceguard freelancer show , per-currency billed/collected/outstanding); freelancer payouts shipped in v0.10.0 ( invoiceguard payout record / payout list , per-currency payout ledger with an over-payout guard); revenue splits shipped in v0.11.0 ( freelancer add --split-pct / freelancer set-split , per-currency expected share + still-due-to-freelancer); payout suggestions shipped in v0.12.0 ( invoiceguard payout suggest , per-currency still-due share or still-held balance when no split is set); payout settlement shipped in v0.13.0 ( invoiceguard payout settle , records every suggestion at once through the payout guard, no-split freelancers skipped, --dry-run writes nothing). agency summary shipped in v0.14.0 ( invoiceguard agency summary , whole-book view per freelancer per currency with per-currency totals, read-only). ~~ Partial payments / payment plans ~~ — shipped in v0.2.0. Priorities follow real user feedback. If a roadmap item matters to you, open an issue on GitHub describing your workflow."
  }
 ]
