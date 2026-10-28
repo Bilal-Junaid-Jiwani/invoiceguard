@@ -42,6 +42,7 @@ tests/test_freelancers.py
 tests/test_late_fees.py
 tests/test_messaging.py
 tests/test_partial_payments.py
+tests/test_payout_schedule.py
 tests/test_payout_settle.py
 tests/test_payout_suggestions.py
 tests/test_payouts.py

@@ -20,7 +20,8 @@ from .messaging import (message_channel, messaging_configured,
                         messaging_from_config, normalize_phone,
                         render_message, send_message)
 from .reports import (agency_summary, freelancer_earnings, invoices_csv,
-                      payments_csv, payout_suggestions, receivables_report)
+                      next_payout_date, payments_csv, payout_schedule,
+                      payout_suggestions, receivables_report)
 from .stripe_links import create_payment_link, default_due_date
 
 TEMPLATE_SOURCE = Path(__file__).resolve().parent / "email_templates"
@@ -341,6 +342,58 @@ def freelancer_set_split(freelancer_id, split_pct):
                f"{_fmt_split(split_pct)}")
 
 
+def _fmt_schedule(cadence: str | None, day: int | None) -> str:
+    """Render a payout schedule: 'monthly on day 15', 'weekly on Friday'."""
+    if cadence is None:
+        return "no schedule set"
+    if cadence == "weekly":
+        weekday = ["Monday", "Tuesday", "Wednesday", "Thursday",
+                   "Friday", "Saturday", "Sunday"][day - 1]
+        return f"weekly on {weekday}"
+    return f"monthly on day {day}"
+
+
+@freelancer.command("set-schedule")
+@click.argument("freelancer_id", type=int)
+@click.option("--cadence", type=click.Choice(["weekly", "monthly"]),
+              required=True,
+              help="How often payouts recur: weekly or monthly")
+@click.option("--day", type=int, required=True,
+              help="Weekly: ISO weekday 1-7 (Monday-Sunday); "
+                   "monthly: day of month 1-31")
+def freelancer_set_schedule(freelancer_id, cadence, day):
+    """Set a freelancer's payout schedule.
+
+    The schedule feeds `freelancer show` and `payout schedule`, which
+    derive the next payout date from it. Bookkeeping only — a schedule
+    never records or transfers a payout; `payout settle` still records
+    the actual payouts.
+    """
+    db = _db()
+    try:
+        db.set_freelancer_schedule(freelancer_id, cadence, day)
+    except ValueError as e:
+        db.close()
+        raise click.ClickException(str(e))
+    db.close()
+    click.echo(f"freelancer #{freelancer_id}: schedule "
+               f"{_fmt_schedule(cadence, day)}")
+
+
+@freelancer.command("clear-schedule")
+@click.argument("freelancer_id", type=int)
+def freelancer_clear_schedule(freelancer_id):
+    """Clear a freelancer's payout schedule."""
+    db = _db()
+    try:
+        db.set_freelancer_schedule(freelancer_id, None, None)
+    except ValueError as e:
+        db.close()
+        raise click.ClickException(str(e))
+    db.close()
+    click.echo(f"freelancer #{freelancer_id}: schedule (cleared)")
+
+
 @freelancer.command("list")
 def freelancer_list():
     """List freelancers."""
@@ -396,6 +449,11 @@ def freelancer_show(freelancer_id):
     if f["split_pct"] is not None:
         click.echo(f"  split: {_fmt_split(f['split_pct'])} of collected "
                    f"earnings")
+    if f["payout_cadence"] is not None:
+        nxt = next_payout_date(f["payout_cadence"], f["payout_day"])
+        sched = _fmt_schedule(f["payout_cadence"], f["payout_day"])
+        nxt_txt = nxt.isoformat() if nxt else "none"
+        click.echo(f"  schedule: {sched} (next payout {nxt_txt})")
     for r in rows:
         cur = r["currency"] or "(no billable invoices)"
         share = ""
@@ -600,6 +658,45 @@ def payout_settle(freelancer_id, currency, method, paid_at, dry_run):
     elif skipped:
         click.echo(f"settled {len(settleable)} payout(s); skipped "
                    f"{skipped} without a split set")
+
+
+@payout.command("schedule")
+@click.option("--freelancer", "freelancer_id", type=int, default=None,
+              help="Only show the schedule for this freelancer")
+@click.option("--as-of", "as_of", default=None,
+              help="Project next payout dates as of YYYY-MM-DD "
+                   "(default: today)")
+def payout_schedule_cmd(freelancer_id, as_of):
+    """Show each freelancer's payout schedule and next payout date.
+
+    Derived from the schedule set with `freelancer set-schedule` —
+    read-only, nothing is recorded or transferred. Freelancers with
+    no schedule set are listed as such, so the roster's gaps are
+    visible at a glance.
+    """
+    db = _db()
+    if freelancer_id is not None and not db.get_freelancer(freelancer_id):
+        db.close()
+        raise click.ClickException(f"no freelancer #{freelancer_id}")
+    try:
+        rows = payout_schedule(db, freelancer_id, as_of=as_of)
+    except ValueError as e:
+        db.close()
+        raise click.ClickException(str(e))
+    db.close()
+    if not rows:
+        click.echo("no freelancers on the roster")
+        return
+    for r in rows:
+        if r["next_payout_date"] is None:
+            click.echo(f"#{r['freelancer_id']:>3}  "
+                       f"{r['freelancer_name']:<25} no schedule set")
+        else:
+            sched = _fmt_schedule(r["payout_cadence"], r["payout_day"])
+            click.echo(f"#{r['freelancer_id']:>3}  "
+                       f"{r['freelancer_name']:<25} "
+                       f"{sched:<22} next payout "
+                       f"{r['next_payout_date']}")
 
 
 # -- agency (agency mode) ---------------------------------------------

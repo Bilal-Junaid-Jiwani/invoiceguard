@@ -6,6 +6,19 @@ description: InvoiceGuard release history — newest first, no fluff.
 
 Every release, newest first. InvoiceGuard follows semver.
 
+## [0.15.0] - 2026-10-28
+
+Agency-mode slice #9: per-freelancer payout schedules. Slices #4–#8 recorded what the agency paid and what it should pay next; this slice answers *when* it pays — each roster freelancer gets a recurring schedule, and the next payout date is derived from it.
+
+### Added
+- **`invoiceguard freelancer set-schedule ID --cadence weekly|monthly --day N`** — weekly takes an ISO weekday 1–7 (Monday–Sunday), monthly a day of month 1–31. Validated before anything is written (bad cadence, out-of-range day, and unknown freelancer are clean errors, not tracebacks); `freelancer clear-schedule ID` clears it. New `payout_cadence`/`payout_day` columns on `freelancers` (additive migration — pre-v0.15.0 databases get them on connect).
+- **`invoiceguard payout schedule [--freelancer ID] [--as-of DATE]`** — one row per roster freelancer: schedule plus next payout date, earliest first, unscheduled freelancers listed last as `no schedule set`; an empty roster prints `no freelancers on the roster`. Read-only — nothing is recorded or transferred.
+- **`reports.payout_schedule()` / `reports.next_payout_date()`** — the same derivation for library callers. A monthly day-31 schedule clamps to the month's last day (Feb 28, or Feb 29 in a leap year); a payout day that falls on the as-of date counts as the next payout date.
+- **`freelancer show`** prints the schedule line (`schedule: monthly on day 15 (next payout 2026-11-15)`) when one is set.
+
+### Honest scope (0.15.0)
+- A schedule, not a payment: it records nothing, approves nothing, and transfers nothing — `payout settle` still records the actual payouts, on whatever date the agency runs it. Multi-freelancer workspaces remain the unshipped half of agency mode.
+
 ## [0.14.0] - 2026-10-27
 
 Agency-mode slice #8: agency summary. `payout suggest` lists only actionable rows and `freelancer show` covers one freelancer at a time; this slice is the whole book at a glance — every roster freelancer, every currency, plus per-currency totals across the roster.

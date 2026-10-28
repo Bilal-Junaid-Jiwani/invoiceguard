@@ -42,8 +42,9 @@ invoiceguard freelancer show 1          # v0.9.0
 
 - The agency roster: one row per team member. `add` requires `--name`; `--phone` must be E.164 (invalid numbers are rejected).
 - `list` prints `#id  name  email  phone` rows.
-- `show` (v0.9.0; payouts added in v0.10.0, revenue splits in v0.11.0) prints contact details, per-currency earnings — billed (attributed invoices in a real state; drafts and voids excluded), collected (payment-ledger sums), outstanding — plus paid out and still owed from the payout ledger, the attributed invoice lines with collected/outstanding per invoice, and the recorded payouts. When a revenue split is set it also prints the freelancer's expected share of each collected currency and what is still due to them after payouts. Read-only.
+- `show` (v0.9.0; payouts added in v0.10.0, revenue splits in v0.11.0, payout schedule line in v0.15.0) prints contact details, per-currency earnings — billed (attributed invoices in a real state; drafts and voids excluded), collected (payment-ledger sums), outstanding — plus paid out and still owed from the payout ledger, the attributed invoice lines with collected/outstanding per invoice, and the recorded payouts. When a revenue split is set it also prints the freelancer's expected share of each collected currency and what is still due to them after payouts. When a payout schedule is set it prints the schedule and the derived next payout date. Read-only.
 - `--split-pct` (v0.11.0) records the freelancer's revenue-split percentage of *collected* earnings (0–100, validated before write); `freelancer set-split` changes it later. NULL (unset) means the freelancer is earnings bookkeeping only. Bookkeeping only — the split is reported, never transferred, and the payout guard is unchanged.
+- `set-schedule` (v0.15.0) records a recurring payout schedule: `--cadence weekly` with `--day` 1–7 (ISO weekday, Monday–Sunday) or `--cadence monthly` with `--day` 1–31 (day of month, clamped to the month's last day when derived); `clear-schedule` clears it. Validated before write; a schedule never records or transfers a payout.
 - Invoices are attributed to a freelancer with `invoice assign` (see below) — attribution is bookkeeping only and never changes dunning, payments, or invoice status.
 
 ## `payout` (v0.10.0, agency mode)
@@ -54,12 +55,14 @@ invoiceguard payout record --freelancer 1 --amount 250 [--currency USD] \
 invoiceguard payout list [--freelancer 1]
 invoiceguard payout suggest [--freelancer 1]   # v0.12.0
 invoiceguard payout settle [--freelancer 1] [--currency USD] [--dry-run]   # v0.13.0
+invoiceguard payout schedule [--freelancer 1] [--as-of 2026-10-28]   # v0.15.0
 ```
 
 - Records what the agency sent a freelancer — bookkeeping only, nothing is transferred. A payout is refused with a clear error when it exceeds what the agency has collected for that freelancer in that currency (payment-ledger sums against their attributed non-draft/void invoices, minus payouts already recorded); you cannot pay out money you have not received. Currency codes are normalized to upper-case; invoice-currency matching is case-insensitive; `--paid-at` accepts `YYYY-MM-DD` (default: now).
-- `list` prints `#id  name  currency  amount  date  method  note` rows, newest first; `--freelancer ID` restricts to one freelancer. Revenue splits shipped in v0.11.0 (`freelancer set-split`); per-freelancer payout schedules remain unshipped.
+- `list` prints `#id  name  currency  amount  date  method  note` rows, newest first; `--freelancer ID` restricts to one freelancer. Revenue splits shipped in v0.11.0 (`freelancer set-split`); per-freelancer payout schedules shipped in v0.15.0 (`freelancer set-schedule`, `payout schedule`).
 - `suggest` (v0.12.0) answers "what do I pay next?", per freelancer per currency, largest first. With a split set it prints the still-due share — expected share of what was collected minus payouts already recorded, floored at zero and never above what the agency still holds for them; a freelancer paid their full share, or paid past it, produces no row. Without a split it reports what the agency still holds for them, labeled as available rather than suggested, with a pointer to `freelancer set-split`. Read-only: nothing is recorded or transferred, and `payout record` still enforces its own guard.
 - `settle` (v0.13.0) records every suggestion at once, one payout per suggestion for the suggested amount, through the same guard — a fresh suggestion can never be refused. `--freelancer ID` / `--currency CUR` restrict the run; `--dry-run` prints what would be recorded and writes nothing. Freelancers with no split set are skipped with a count, never guessed at; a second settle is a no-op, so nothing is double-paid. Bookkeeping only, like `record`.
+- `schedule` (v0.15.0) shows each roster freelancer's payout schedule and derived next payout date, earliest first; freelancers with no schedule set are listed as such, and an empty roster prints `no freelancers on the roster`. `--as-of DATE` projects dates as of that day (default: today). Read-only: a schedule never records or transfers a payout.
 
 ## `agency` (v0.14.0, agency mode)
 

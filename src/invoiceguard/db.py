@@ -31,6 +31,8 @@ CREATE TABLE IF NOT EXISTS freelancers(
     email TEXT,
     phone TEXT,
     split_pct REAL,
+    payout_cadence TEXT,
+    payout_day INTEGER,
     created_at TEXT NOT NULL
 );
 CREATE TABLE IF NOT EXISTS projects(
@@ -237,6 +239,23 @@ def migrate_freelancers_split_pct(conn: sqlite3.Connection) -> None:
         conn.commit()
 
 
+def migrate_freelancers_payout_schedule(conn: sqlite3.Connection) -> None:
+    """Additive migration: freelancers.payout_cadence/payout_day (v0.15.0).
+
+    Records the freelancer's payout schedule — cadence 'weekly'
+    (payout_day = ISO weekday 1-7, Monday-Sunday) or 'monthly'
+    (payout_day = day of month 1-31, clamped to the month's last day) —
+    or NULL/NULL when no schedule is set. Idempotent — safe to call
+    on every connect.
+    """
+    cols = {r[1] for r in conn.execute("PRAGMA table_info(freelancers)")}
+    if "payout_cadence" not in cols:
+        conn.execute("ALTER TABLE freelancers ADD COLUMN payout_cadence TEXT")
+    if "payout_day" not in cols:
+        conn.execute("ALTER TABLE freelancers ADD COLUMN payout_day INTEGER")
+    conn.commit()
+
+
 def resolve_dunning_policy(row) -> dict:
     """Resolved dunning thresholds for a client-like row.
 
@@ -303,6 +322,28 @@ def _validate_split_pct(split_pct: float | None) -> None:
             f"split_pct must be between 0 and 100 (got {split_pct})")
 
 
+def _validate_payout_schedule(cadence: str | None,
+                              day: int | None) -> None:
+    """Guard a payout schedule: None/None (unset), or a cadence with a
+    day in range — weekly 1-7 (ISO weekday, Monday-Sunday), monthly
+    1-31 (day of month, clamped to the month's last day at use)."""
+    if cadence is None:
+        if day is not None:
+            raise ValueError(
+                "payout_day requires a payout_cadence (got "
+                f"day {day} with no cadence)")
+        return
+    if cadence not in ("weekly", "monthly"):
+        raise ValueError(
+            f"payout_cadence must be 'weekly' or 'monthly' "
+            f"(got {cadence!r})")
+    top = 7 if cadence == "weekly" else 31
+    if day is None or not 1 <= day <= top:
+        raise ValueError(
+            f"payout_day for a {cadence} schedule must be between 1 "
+            f"and {top} (got {day})")
+
+
 class DB:
     def __init__(self, path: str | Path):
         self.path = Path(path)
@@ -317,6 +358,7 @@ class DB:
         migrate_signatures_contract_md(self.conn)
         migrate_payouts(self.conn)
         migrate_freelancers_split_pct(self.conn)
+        migrate_freelancers_payout_schedule(self.conn)
         backfill_paid_ledger(self.conn)
 
     # -- clients -----------------------------------------------------
@@ -420,21 +462,29 @@ class DB:
     # -- freelancers (agency mode) ---------------------------------
     def add_freelancer(self, name: str, email: str | None = None,
                        phone: str | None = None,
-                       split_pct: float | None = None) -> int:
+                       split_pct: float | None = None,
+                       payout_cadence: str | None = None,
+                       payout_day: int | None = None) -> int:
         """Add a freelancer (team member) to the agency roster.
 
         split_pct, when given, is the freelancer's revenue-split
         percentage of collected earnings (0-100); None means no split
         is set and the freelancer is earnings bookkeeping only.
+        payout_cadence/payout_day, when given, are the freelancer's
+        payout schedule ('weekly' + ISO weekday 1-7, or 'monthly' +
+        day of month 1-31); None/None means no schedule is set.
         """
         name = (name or "").strip()
         if not name:
             raise ValueError("freelancer name is required")
         _validate_split_pct(split_pct)
+        _validate_payout_schedule(payout_cadence, payout_day)
         cur = self.conn.execute(
             "INSERT INTO freelancers(name, email, phone, split_pct, "
-            "created_at) VALUES (?, ?, ?, ?, ?)",
-            (name, email, phone, split_pct, now_iso()),
+            "payout_cadence, payout_day, "
+            "created_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
+            (name, email, phone, split_pct, payout_cadence, payout_day,
+             now_iso()),
         )
         self.conn.commit()
         return cur.lastrowid
@@ -478,6 +528,25 @@ class DB:
         self.conn.execute(
             "UPDATE freelancers SET split_pct = ? WHERE id = ?",
             (split_pct, freelancer_id),
+        )
+        self.conn.commit()
+
+    def set_freelancer_schedule(self, freelancer_id: int,
+                                cadence: str | None,
+                                day: int | None) -> None:
+        """Set (or, with cadence None, clear) a freelancer's payout
+        schedule. Validated before anything is written.
+
+        Raises ValueError when the schedule is invalid or the
+        freelancer does not exist.
+        """
+        _validate_payout_schedule(cadence, day)
+        if not self.get_freelancer(freelancer_id):
+            raise ValueError(f"no freelancer #{freelancer_id}")
+        self.conn.execute(
+            "UPDATE freelancers SET payout_cadence = ?, payout_day = ? "
+            "WHERE id = ?",
+            (cadence, day, freelancer_id),
         )
         self.conn.commit()
 

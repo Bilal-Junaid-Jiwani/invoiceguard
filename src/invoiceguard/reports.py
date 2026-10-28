@@ -17,11 +17,12 @@ mid-accrual. This module never writes to the database.
 
 from __future__ import annotations
 
+import calendar
 import csv
 import io
-from datetime import date
+from datetime import date, timedelta
 
-from .db import DB, pct_of_cents
+from .db import DB, _validate_payout_schedule, pct_of_cents
 from .late_fees import late_fee_summary
 
 # (key, label) in display order.
@@ -361,6 +362,71 @@ def agency_summary(db: DB, freelancer_id: int | None = None) -> list[dict]:
         s = sugg.get((e["freelancer_id"], e["currency"]))
         row["suggested_cents"] = (s["suggested_cents"] if s else None)
         rows.append(row)
+    return rows
+
+
+def next_payout_date(cadence: str | None, day: int | None,
+                     as_of: str | date | None = None) -> date | None:
+    """Next payout date for a schedule, on or after as_of (today).
+
+    Weekly: the next date whose ISO weekday (Monday=1 .. Sunday=7)
+    equals day — today itself when today is the payout day. Monthly:
+    the next date whose day-of-month equals day, clamped to the
+    month's last day (a day-31 schedule pays on Feb 28/29). None when
+    no schedule is set. Pure — no database access, so callers can
+    project any date. Raises ValueError on an invalid schedule (the
+    same rule `db._validate_payout_schedule` enforces on write).
+    """
+    if cadence is None:
+        return None
+    _validate_payout_schedule(cadence, day)
+    today = _as_date(as_of) if as_of else date.today()
+    if cadence == "weekly":
+        delta = (day - today.isoweekday()) % 7
+        return today + timedelta(days=delta)
+    # Monthly: this month's clamped day if it has not passed, else
+    # next month's clamped day.
+    last = calendar.monthrange(today.year, today.month)[1]
+    candidate = date(today.year, today.month, min(day, last))
+    if candidate >= today:
+        return candidate
+    year = today.year + (1 if today.month == 12 else 0)
+    month = 1 if today.month == 12 else today.month + 1
+    last = calendar.monthrange(year, month)[1]
+    return date(year, month, min(day, last))
+
+
+def payout_schedule(db: DB, freelancer_id: int | None = None,
+                    as_of: str | date | None = None) -> list[dict]:
+    """Per-freelancer payout schedules (read-only).
+
+    One row per roster freelancer: their schedule (cadence/day, both
+    None when unset) and the next payout date derived from it — None
+    when no schedule is set. Rows sort by next payout date (scheduled
+    first, earliest first; unscheduled last), then name. Pass
+    freelancer_id to restrict to one freelancer; raises ValueError
+    when they do not exist. This is a schedule, not a payment: it
+    records nothing and never moves money — `payout settle` still
+    records the actual payouts.
+    """
+    if freelancer_id is not None and not db.get_freelancer(freelancer_id):
+        raise ValueError(f"no freelancer #{freelancer_id}")
+    rows = []
+    for f in db.list_freelancers():
+        if freelancer_id is not None and f["id"] != freelancer_id:
+            continue
+        nxt = next_payout_date(f["payout_cadence"], f["payout_day"],
+                               as_of=as_of)
+        rows.append({
+            "freelancer_id": f["id"],
+            "freelancer_name": f["name"],
+            "payout_cadence": f["payout_cadence"],
+            "payout_day": f["payout_day"],
+            "next_payout_date": nxt.isoformat() if nxt else None,
+        })
+    rows.sort(key=lambda r: (r["next_payout_date"] is None,
+                             r["next_payout_date"] or "",
+                             r["freelancer_name"]))
     return rows
 
 
