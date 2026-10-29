@@ -20,8 +20,9 @@ from .messaging import (message_channel, messaging_configured,
                         messaging_from_config, normalize_phone,
                         render_message, send_message)
 from .reports import (agency_summary, freelancer_earnings, invoices_csv,
-                      next_payout_date, payments_csv, payout_schedule,
-                      payout_suggestions, receivables_report)
+                      next_payout_date, payments_csv, payout_due,
+                      payout_schedule, payout_suggestions,
+                      receivables_report)
 from .stripe_links import create_payment_link, default_due_date
 
 TEMPLATE_SOURCE = Path(__file__).resolve().parent / "email_templates"
@@ -697,6 +698,61 @@ def payout_schedule_cmd(freelancer_id, as_of):
                        f"{r['freelancer_name']:<25} "
                        f"{sched:<22} next payout "
                        f"{r['next_payout_date']}")
+
+
+@payout.command("due")
+@click.option("--freelancer", "freelancer_id", type=int, default=None,
+              help="Only show payouts due for this freelancer")
+@click.option("--as-of", "as_of", default=None,
+              help="Pay-run date YYYY-MM-DD (default: today)")
+@click.option("--within-days", "within_days", type=int, default=0,
+              help="Also include payouts due within this many days "
+                   "after --as-of (default: 0, due on the day only)")
+def payout_due_cmd(freelancer_id, as_of, within_days):
+    """Show the payouts due on this pay run.
+
+    The join of `payout schedule` and `payout suggest`: a scheduled
+    freelancer whose next payout date falls on (or, with
+    --within-days, within that many days after) the pay-run date,
+    and who still has an actionable payout — a still-due split
+    share, or a still-held balance when no split is set. Unscheduled
+    freelancers are never due, and a due date with nothing to pay
+    produces no row. Read-only: record the run with `payout settle`
+    or `payout record`, which enforce their own guards.
+    """
+    db = _db()
+    if freelancer_id is not None and not db.get_freelancer(freelancer_id):
+        db.close()
+        raise click.ClickException(f"no freelancer #{freelancer_id}")
+    try:
+        rows = payout_due(db, freelancer_id, as_of=as_of,
+                          within_days=within_days)
+    except ValueError as e:
+        db.close()
+        raise click.ClickException(str(e))
+    roster_empty = not db.list_freelancers()
+    db.close()
+    if roster_empty:
+        click.echo("no freelancers on the roster")
+        return
+    if not rows:
+        click.echo("no payouts due")
+        return
+    for r in rows:
+        sched = _fmt_schedule(r["payout_cadence"], r["payout_day"])
+        if r["suggested_cents"] is not None:
+            click.echo(f"#{r['freelancer_id']:>3}  "
+                       f"{r['freelancer_name']:<25} "
+                       f"{r['currency']} "
+                       f"{r['suggested_cents'] / 100:>12,.2f}  "
+                       f"due {r['next_payout_date']} ({sched})")
+        else:
+            click.echo(f"#{r['freelancer_id']:>3}  "
+                       f"{r['freelancer_name']:<25} "
+                       f"{r['currency']} "
+                       f"{r['available_cents'] / 100:>12,.2f}  "
+                       f"due {r['next_payout_date']} ({sched}) "
+                       f"(available — no split set)")
 
 
 # -- agency (agency mode) ---------------------------------------------

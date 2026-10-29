@@ -430,6 +430,58 @@ def payout_schedule(db: DB, freelancer_id: int | None = None,
     return rows
 
 
+def payout_due(db: DB, freelancer_id: int | None = None,
+               as_of: str | date | None = None,
+               within_days: int = 0) -> list[dict]:
+    """Payouts due on the agency's pay run (read-only).
+
+    Slices #6 and #9 answered "what do I pay?" and "when do I pay?"
+    separately; this joins them: a row per freelancer per currency
+    where the freelancer has a payout schedule whose next payout date
+    falls on or before the horizon (as_of, default today, plus
+    within_days — so `--within-days 7` is this week's pay run) AND
+    an actionable payout suggestion row exists for that freelancer
+    and currency (a still-due split share, or — with no split set —
+    a still-held balance reported as available, never guessed at).
+
+    Freelancers with no schedule set are never due (there is no date
+    to be due by), and scheduled freelancers with nothing actionable
+    — settled, paid past their share, or nothing collected — produce
+    no row: a due date with nothing to pay is not a payout. Rows
+    sort by next payout date (earliest first), then largest amount
+    first, then name. Pass freelancer_id to restrict to one
+    freelancer; raises ValueError for an unknown freelancer or a
+    negative within_days. Read-only: this lists the pay run, it
+    never records it — record it with `payout settle` or
+    `payout record`.
+    """
+    if within_days < 0:
+        raise ValueError("within_days must be >= 0")
+    today = _as_date(as_of) if as_of else date.today()
+    horizon = today + timedelta(days=within_days)
+    sched = {s["freelancer_id"]: s
+             for s in payout_schedule(db, freelancer_id, as_of=as_of)}
+    rows = []
+    for s in payout_suggestions(db, freelancer_id):
+        sch = sched.get(s["freelancer_id"])
+        if sch is None or sch["next_payout_date"] is None:
+            continue  # unscheduled: no date to be due by
+        nxt = date.fromisoformat(sch["next_payout_date"])
+        if nxt > horizon:
+            continue
+        row = dict(s)
+        row["payout_cadence"] = sch["payout_cadence"]
+        row["payout_day"] = sch["payout_day"]
+        row["next_payout_date"] = sch["next_payout_date"]
+        rows.append(row)
+    amount = lambda r: (r["suggested_cents"]
+                        if r["suggested_cents"] is not None
+                        else r["available_cents"])
+    rows.sort(key=lambda r: (r["next_payout_date"], -amount(r),
+                             r["freelancer_name"], r["currency"]))
+    return rows
+
+
 def payments_csv(db: DB) -> str:
     """The full payment ledger as CSV — every recorded payment,
     including payments against invoices that are now paid in full,

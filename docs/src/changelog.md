@@ -6,6 +6,17 @@ description: InvoiceGuard release history — newest first, no fluff.
 
 Every release, newest first. InvoiceGuard follows semver.
 
+## [0.16.0] - 2026-10-29
+
+Agency-mode slice #10: payouts due on the pay run. Slices #6 and #9 answered *what* to pay and *when* to pay separately; this slice joins them — the pay run is the scheduled freelancers whose payout date has arrived and who still have something actionable to pay.
+
+### Added
+- **`invoiceguard payout due [--freelancer ID] [--as-of DATE] [--within-days N]`** — one row per freelancer per currency: a scheduled freelancer whose next payout date falls on the pay-run date (default: today), or within N days after it with `--within-days` (so `--within-days 7` is this week's pay run), and who has an actionable payout suggestion — a still-due split share, or the still-held balance when no split is set (labeled as available, never guessed at). Rows sort by next payout date (earliest first), then largest amount first. An empty roster prints `no freelancers on the roster`; a roster with nothing due prints `no payouts due`; an unknown `--freelancer` id or a negative `--within-days` is a clean error, not a traceback. Read-only — nothing is recorded or transferred.
+- **`reports.payout_due()`** — the same view for library callers: suggestion rows enriched with `payout_cadence`, `payout_day`, and `next_payout_date`; raises ValueError for an unknown freelancer or a negative `within_days`.
+
+### Honest scope (0.16.0)
+- A view, not a payment: it lists the pay run; recording it is still `payout settle` (split freelancers) or `payout record` (by hand). Unscheduled freelancers are never due — there is no date to be due by — and a due date with nothing to pay (settled, paid past the share, nothing collected) produces no row. Multi-freelancer workspaces remain the unshipped half of agency mode.
+
 ## [0.15.0] - 2026-10-28
 
 Agency-mode slice #9: per-freelancer payout schedules. Slices #4–#8 recorded what the agency paid and what it should pay next; this slice answers *when* it pays — each roster freelancer gets a recurring schedule, and the next payout date is derived from it.

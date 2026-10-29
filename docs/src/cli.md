@@ -56,6 +56,7 @@ invoiceguard payout list [--freelancer 1]
 invoiceguard payout suggest [--freelancer 1]   # v0.12.0
 invoiceguard payout settle [--freelancer 1] [--currency USD] [--dry-run]   # v0.13.0
 invoiceguard payout schedule [--freelancer 1] [--as-of 2026-10-28]   # v0.15.0
+invoiceguard payout due [--freelancer 1] [--as-of 2026-10-28] [--within-days 7]   # v0.16.0
 ```
 
 - Records what the agency sent a freelancer — bookkeeping only, nothing is transferred. A payout is refused with a clear error when it exceeds what the agency has collected for that freelancer in that currency (payment-ledger sums against their attributed non-draft/void invoices, minus payouts already recorded); you cannot pay out money you have not received. Currency codes are normalized to upper-case; invoice-currency matching is case-insensitive; `--paid-at` accepts `YYYY-MM-DD` (default: now).
@@ -63,6 +64,7 @@ invoiceguard payout schedule [--freelancer 1] [--as-of 2026-10-28]   # v0.15.0
 - `suggest` (v0.12.0) answers "what do I pay next?", per freelancer per currency, largest first. With a split set it prints the still-due share — expected share of what was collected minus payouts already recorded, floored at zero and never above what the agency still holds for them; a freelancer paid their full share, or paid past it, produces no row. Without a split it reports what the agency still holds for them, labeled as available rather than suggested, with a pointer to `freelancer set-split`. Read-only: nothing is recorded or transferred, and `payout record` still enforces its own guard.
 - `settle` (v0.13.0) records every suggestion at once, one payout per suggestion for the suggested amount, through the same guard — a fresh suggestion can never be refused. `--freelancer ID` / `--currency CUR` restrict the run; `--dry-run` prints what would be recorded and writes nothing. Freelancers with no split set are skipped with a count, never guessed at; a second settle is a no-op, so nothing is double-paid. Bookkeeping only, like `record`.
 - `schedule` (v0.15.0) shows each roster freelancer's payout schedule and derived next payout date, earliest first; freelancers with no schedule set are listed as such, and an empty roster prints `no freelancers on the roster`. `--as-of DATE` projects dates as of that day (default: today). Read-only: a schedule never records or transfers a payout.
+- `due` (v0.16.0) shows the pay run: scheduled freelancers whose next payout date falls on the pay-run date (default: today), or within `--within-days N` days after it, and who have an actionable payout suggestion — a still-due split share, or the still-held balance when no split is set (labeled as available). Rows sort by next payout date, earliest first, then largest amount first. Unscheduled freelancers are never due, and a due date with nothing to pay produces no row; a roster with nothing due prints `no payouts due`. Read-only: record the run with `payout settle` or `payout record`.
 
 ## `agency` (v0.14.0, agency mode)
 
