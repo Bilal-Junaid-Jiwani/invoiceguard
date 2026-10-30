@@ -452,8 +452,8 @@ def payout_due(db: DB, freelancer_id: int | None = None,
     first, then name. Pass freelancer_id to restrict to one
     freelancer; raises ValueError for an unknown freelancer or a
     negative within_days. Read-only: this lists the pay run, it
-    never records it — record it with `payout settle` or
-    `payout record`.
+    never records it — record it with `payout settle-due` (just this
+    pay run) or `payout settle` (the whole book).
     """
     if within_days < 0:
         raise ValueError("within_days must be >= 0")

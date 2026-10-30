@@ -6,6 +6,17 @@ description: InvoiceGuard release history — newest first, no fluff.
 
 Every release, newest first. InvoiceGuard follows semver.
 
+## [0.17.0] - 2026-10-30
+
+Agency-mode slice #11: settle the pay run. Slice #10 listed the pay run; this slice records it — `payout settle` settles the whole book, but an agency runs payouts on a schedule, and this settles only the freelancers whose payout date has arrived.
+
+### Added
+- **`invoiceguard payout settle-due [--freelancer ID] [--as-of DATE] [--within-days N] [--currency CUR] [--method M] [--paid-at DATE] [--dry-run]`** — one payout per due row, for the suggested amount, through the same over-payout guard as `payout record` (a due suggestion can never exceed what was collected and unpaid, so the guard cannot refuse a fresh one). A freelancer whose schedule says next week keeps their suggestion until their own pay run; `--within-days 7` settles this week's pay run. No-split freelancers are skipped with a count, never guessed at — set a split with `freelancer set-split`, or record their amount by hand with `payout record`. `--dry-run` prints what would be recorded and writes nothing; an empty roster prints `no freelancers on the roster`, a roster with nothing due prints `no payouts due`, and a second settle-due on the same pay run is a no-op, so nothing is double-paid. Bookkeeping only — nothing is transferred.
+- **`payout due` now points at `payout settle-due`** (its own docstring and the library docstring) as the way to record the run it lists.
+
+### Honest scope (0.17.0)
+- Bookkeeping, not money movement: settling records payouts, never transfers anything, and the settled amounts are exactly the due suggestions. Multi-freelancer workspaces remain the unshipped half of agency mode.
+
 ## [0.16.0] - 2026-10-29
 
 Agency-mode slice #10: payouts due on the pay run. Slices #6 and #9 answered *what* to pay and *when* to pay separately; this slice joins them — the pay run is the scheduled freelancers whose payout date has arrived and who still have something actionable to pay.

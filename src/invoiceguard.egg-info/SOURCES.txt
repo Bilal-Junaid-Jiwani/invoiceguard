@@ -45,6 +45,7 @@ tests/test_partial_payments.py
 tests/test_payout_due.py
 tests/test_payout_schedule.py
 tests/test_payout_settle.py
+tests/test_payout_settle_due.py
 tests/test_payout_suggestions.py
 tests/test_payouts.py
 tests/test_release_084.py
