@@ -2,6 +2,17 @@
 
 Every release, newest first. InvoiceGuard follows semver.
 
+## [0.18.0] - 2026-10-31
+
+Agency-mode slice #12: payouts overdue from a missed pay run. Slice #10 looked forward — the morning after a missed pay run it reported "no payouts due", even though money was still owed past a pay date. This slice looks backward: the missed run itself.
+
+### Added
+- **`invoiceguard payout overdue [--freelancer ID] [--as-of DATE]`** — one row per freelancer per currency: a scheduled freelancer whose most recent scheduled payout date has already passed, who still has an actionable payout — a still-due split share, or the still-held balance when no split is set (labeled as available, never guessed at) — and who has nothing recorded for that currency since that missed date. Rows sort by missed payout date (earliest first), then largest amount first. An empty roster prints `no freelancers on the roster`; a roster with nothing overdue prints `no overdue payouts`; an unknown `--freelancer` id is a clean error, not a traceback. Read-only — nothing is recorded or transferred.
+- **`reports.payout_overdue()` / `reports.previous_payout_date()`** — the same view for library callers (rows carry `missed_payout_date` alongside `next_payout_date`), and the scheduled date immediately before the next one: weekly steps back 7 days, monthly steps back to the previous month's clamped day (a day-31 schedule's previous date after a 30-day month is that month's last day; February clamps to Feb 28/29).
+
+### Honest scope (0.18.0)
+- Overdue means exactly this: a scheduled pay date passed with an actionable payout and nothing recorded since that date. A freelancer due on the pay-run date itself is due, not overdue — they appear in `payout due`, never here. Money collected since the last run waits for the next run; it is not a missed run. Multi-freelancer workspaces remain the unshipped half of agency mode.
+
 ## [0.17.0] - 2026-10-30
 
 Agency-mode slice #11: settle the pay run. Slice #10 listed the pay run; this slice records it — `payout settle` settles the whole book, but an agency runs payouts on a schedule, and this settles only the freelancers whose payout date has arrived.

@@ -482,6 +482,91 @@ def payout_due(db: DB, freelancer_id: int | None = None,
     return rows
 
 
+def previous_payout_date(cadence: str | None, day: int | None,
+                         as_of: str | date | None = None) -> date | None:
+    """Scheduled payout date immediately before `next_payout_date`.
+
+    Weekly: seven days before the next payout date. Monthly: the
+    previous month's clamped day (a day-31 schedule's previous date
+    after a 30-day month is that month's last day). None when no
+    schedule is set. Pure — no database access. Raises ValueError on
+    an invalid schedule (the same rule `db._validate_payout_schedule`
+    enforces on write).
+    """
+    nxt = next_payout_date(cadence, day, as_of=as_of)
+    if nxt is None:
+        return None
+    if cadence == "weekly":
+        return nxt - timedelta(days=7)
+    year = nxt.year - (1 if nxt.month == 1 else 0)
+    month = 12 if nxt.month == 1 else nxt.month - 1
+    last = calendar.monthrange(year, month)[1]
+    return date(year, month, min(day, last))
+
+
+def payout_overdue(db: DB, freelancer_id: int | None = None,
+                   as_of: str | date | None = None) -> list[dict]:
+    """Payouts overdue from a missed pay run (read-only).
+
+    `payout_due` only looks forward: the morning after a missed pay
+    run it reports "no payouts due", even though money is still owed
+    past a pay date. This looks backward instead: a row per freelancer
+    per currency where the freelancer has a schedule whose next payout
+    date is still ahead, whose most recent scheduled payout date (the
+    missed run) has already passed, and who still has an actionable
+    payout suggestion — a still-due split share, or — with no split
+    set — a still-held balance reported as available, never guessed
+    at.
+
+    A freelancer due on the pay-run date itself is due, not overdue
+    (they appear in `payout_due`, never here), and a freelancer paid
+    at or after the missed run is not overdue either: money collected
+    since the last run waits for the next run, it is not a missed one.
+    So "overdue" means exactly: a scheduled pay date passed with an
+    actionable payout and nothing recorded for that freelancer and
+    currency since that date. Unscheduled freelancers are never
+    overdue, and settled freelancers produce no row. Rows sort by
+    missed payout date (earliest first), then largest amount first,
+    then name. Pass freelancer_id to restrict to one freelancer;
+    raises ValueError when they do not exist. Read-only: record the
+    missed run with `payout record` (one amount by hand) or
+    `payout settle` (the whole book).
+    """
+    if freelancer_id is not None and not db.get_freelancer(freelancer_id):
+        raise ValueError(f"no freelancer #{freelancer_id}")
+    today = _as_date(as_of) if as_of else date.today()
+    sched = {s["freelancer_id"]: s
+             for s in payout_schedule(db, freelancer_id, as_of=as_of)}
+    rows = []
+    for s in payout_suggestions(db, freelancer_id):
+        sch = sched.get(s["freelancer_id"])
+        if sch is None or sch["next_payout_date"] is None:
+            continue  # unscheduled: no date to have missed
+        nxt = date.fromisoformat(sch["next_payout_date"])
+        if nxt <= today:
+            continue  # due on the pay-run date: in `payout due`
+        missed = previous_payout_date(sch["payout_cadence"],
+                                      sch["payout_day"], as_of=as_of)
+        paid_since = any(
+            p["currency"] == s["currency"]
+            and p["paid_at"][:10] >= missed.isoformat()
+            for p in db.list_payouts(s["freelancer_id"]))
+        if paid_since:
+            continue  # paid at/after the missed run: next run's turn
+        row = dict(s)
+        row["payout_cadence"] = sch["payout_cadence"]
+        row["payout_day"] = sch["payout_day"]
+        row["next_payout_date"] = sch["next_payout_date"]
+        row["missed_payout_date"] = missed.isoformat()
+        rows.append(row)
+    amount = lambda r: (r["suggested_cents"]
+                        if r["suggested_cents"] is not None
+                        else r["available_cents"])
+    rows.sort(key=lambda r: (r["missed_payout_date"], -amount(r),
+                             r["freelancer_name"], r["currency"]))
+    return rows
+
+
 def payments_csv(db: DB) -> str:
     """The full payment ledger as CSV — every recorded payment,
     including payments against invoices that are now paid in full,

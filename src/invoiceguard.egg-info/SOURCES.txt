@@ -43,6 +43,7 @@ tests/test_late_fees.py
 tests/test_messaging.py
 tests/test_partial_payments.py
 tests/test_payout_due.py
+tests/test_payout_overdue.py
 tests/test_payout_schedule.py
 tests/test_payout_settle.py
 tests/test_payout_settle_due.py

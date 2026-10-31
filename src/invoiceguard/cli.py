@@ -21,7 +21,7 @@ from .messaging import (message_channel, messaging_configured,
                         render_message, send_message)
 from .reports import (agency_summary, freelancer_earnings, invoices_csv,
                       next_payout_date, payments_csv, payout_due,
-                      payout_schedule, payout_suggestions,
+                      payout_overdue, payout_schedule, payout_suggestions,
                       receivables_report)
 from .stripe_links import create_payment_link, default_due_date
 
@@ -753,6 +753,60 @@ def payout_due_cmd(freelancer_id, as_of, within_days):
                        f"{r['currency']} "
                        f"{r['available_cents'] / 100:>12,.2f}  "
                        f"due {r['next_payout_date']} ({sched}) "
+                       f"(available — no split set)")
+
+
+@payout.command("overdue")
+@click.option("--freelancer", "freelancer_id", type=int, default=None,
+              help="Only show overdue payouts for this freelancer")
+@click.option("--as-of", "as_of", default=None,
+              help="Pay-run date YYYY-MM-DD (default: today)")
+def payout_overdue_cmd(freelancer_id, as_of):
+    """Show payouts overdue from a missed pay run.
+
+    The backward half of `payout due`: a scheduled freelancer whose
+    most recent scheduled payout date has already passed, who still
+    has an actionable payout — a still-due split share, or a
+    still-held balance when no split is set — and who has nothing
+    recorded for that currency since that missed date. A freelancer
+    due on the pay-run date itself appears in `payout due`, not here,
+    and money collected since the last run waits for the next run.
+    Read-only: record a missed run with `payout record` (one amount
+    by hand) or `payout settle` (the whole book).
+    """
+    db = _db()
+    if freelancer_id is not None and not db.get_freelancer(freelancer_id):
+        db.close()
+        raise click.ClickException(f"no freelancer #{freelancer_id}")
+    try:
+        rows = payout_overdue(db, freelancer_id, as_of=as_of)
+    except ValueError as e:
+        db.close()
+        raise click.ClickException(str(e))
+    roster_empty = not db.list_freelancers()
+    db.close()
+    if roster_empty:
+        click.echo("no freelancers on the roster")
+        return
+    if not rows:
+        click.echo("no overdue payouts")
+        return
+    for r in rows:
+        sched = _fmt_schedule(r["payout_cadence"], r["payout_day"])
+        if r["suggested_cents"] is not None:
+            click.echo(f"#{r['freelancer_id']:>3}  "
+                       f"{r['freelancer_name']:<25} "
+                       f"{r['currency']} "
+                       f"{r['suggested_cents'] / 100:>12,.2f}  "
+                       f"missed {r['missed_payout_date']} ({sched}), "
+                       f"next payout {r['next_payout_date']}")
+        else:
+            click.echo(f"#{r['freelancer_id']:>3}  "
+                       f"{r['freelancer_name']:<25} "
+                       f"{r['currency']} "
+                       f"{r['available_cents'] / 100:>12,.2f}  "
+                       f"missed {r['missed_payout_date']} ({sched}), "
+                       f"next payout {r['next_payout_date']} "
                        f"(available — no split set)")
 
 
