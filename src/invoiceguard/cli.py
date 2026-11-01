@@ -771,8 +771,9 @@ def payout_overdue_cmd(freelancer_id, as_of):
     recorded for that currency since that missed date. A freelancer
     due on the pay-run date itself appears in `payout due`, not here,
     and money collected since the last run waits for the next run.
-    Read-only: record a missed run with `payout record` (one amount
-    by hand) or `payout settle` (the whole book).
+    Read-only: record a missed run with `payout settle-overdue`
+    (just the missed runs) or `payout record` (one amount by hand)
+    or `payout settle` (the whole book).
     """
     db = _db()
     if freelancer_id is not None and not db.get_freelancer(freelancer_id):
@@ -880,6 +881,96 @@ def payout_settle_due(freelancer_id, as_of, within_days, currency,
                        f"{r['freelancer_name']:<25} "
                        f"{r['currency']} {r['suggested_cents'] / 100:>12,.2f}  "
                        f"due {r['next_payout_date']}")
+            continue
+        try:
+            rec = db.record_payout(r["freelancer_id"],
+                                   r["suggested_cents"],
+                                   currency=r["currency"],
+                                   paid_at=paid_at, method=method)
+        except ValueError as e:
+            db.close()
+            raise click.ClickException(str(e))
+        click.echo(f"settled payout #{rec['id']}: "
+                   f"freelancer #{r['freelancer_id']} "
+                   f"{rec['currency']} {rec['amount_cents'] / 100:,.2f} "
+                   f"on {rec['paid_at'][:10]}"
+                   + (f"  ({rec['method']})" if rec["method"] else ""))
+    db.close()
+    if dry_run:
+        click.echo(f"dry run: {len(settleable)} payout(s) would be "
+                   f"recorded, nothing written")
+    elif skipped:
+        click.echo(f"settled {len(settleable)} payout(s); skipped "
+                   f"{skipped} without a split set")
+
+
+@payout.command("settle-overdue")
+@click.option("--freelancer", "freelancer_id", type=int, default=None,
+              help="Only settle overdue payouts for this freelancer")
+@click.option("--as-of", "as_of", default=None,
+              help="Pay-run date YYYY-MM-DD (default: today)")
+@click.option("--currency", default=None,
+              help="Only settle overdue payouts in this currency")
+@click.option("--method", default=None,
+              help="How it was paid, e.g. 'bank transfer'")
+@click.option("--paid-at", "paid_at", default=None,
+              help="Payout date YYYY-MM-DD (default: now)")
+@click.option("--dry-run", is_flag=True, default=False,
+              help="Show what would be recorded without writing anything")
+def payout_settle_overdue(freelancer_id, as_of, currency,
+                          method, paid_at, dry_run):
+    """Record the payouts overdue from missed pay runs.
+
+    Slice #12 listed the missed runs; this records them: one payout
+    per overdue row, for the suggested amount, through the same
+    `payout record` guard (an overdue suggestion can never exceed
+    what was collected and unpaid, so the guard cannot refuse a
+    fresh one). Unlike `payout settle-due`, which settles only the
+    pay run whose date has arrived, this settles only the runs
+    already missed — a freelancer due on the pay-run date itself
+    stays in `payout settle-due`, and a freelancer paid at or after
+    the missed run is not overdue at all. Bookkeeping only —
+    nothing is transferred. Freelancers with no split set have no
+    share to settle, so they are skipped with a count, not guessed
+    at: set a split with `freelancer set-split`, or record their
+    amount by hand with `payout record`. A second settle-overdue
+    on the same missed runs is a no-op, so nothing is double-paid.
+    """
+    db = _db()
+    if freelancer_id is not None and not db.get_freelancer(freelancer_id):
+        db.close()
+        raise click.ClickException(f"no freelancer #{freelancer_id}")
+    try:
+        rows = payout_overdue(db, freelancer_id, as_of=as_of)
+    except ValueError as e:
+        db.close()
+        raise click.ClickException(str(e))
+    roster_empty = not db.list_freelancers()
+    if currency is not None:
+        currency = currency.strip().upper()
+        rows = [r for r in rows if r["currency"] == currency]
+    settleable = [r for r in rows if r["suggested_cents"] is not None]
+    skipped = len(rows) - len(settleable)
+    if roster_empty:
+        db.close()
+        click.echo("no freelancers on the roster")
+        return
+    if not settleable:
+        db.close()
+        if rows:
+            click.echo(f"no payouts to settle: {skipped} suggestion(s) "
+                       f"need a split first "
+                       f"(`freelancer set-split`) or a manual "
+                       f"`payout record`")
+        else:
+            click.echo("no overdue payouts")
+        return
+    for r in settleable:
+        if dry_run:
+            click.echo(f"would settle: #{r['freelancer_id']:>3}  "
+                       f"{r['freelancer_name']:<25} "
+                       f"{r['currency']} {r['suggested_cents'] / 100:>12,.2f}  "
+                       f"missed {r['missed_payout_date']}")
             continue
         try:
             rec = db.record_payout(r["freelancer_id"],

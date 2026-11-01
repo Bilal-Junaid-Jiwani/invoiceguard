@@ -529,8 +529,9 @@ def payout_overdue(db: DB, freelancer_id: int | None = None,
     missed payout date (earliest first), then largest amount first,
     then name. Pass freelancer_id to restrict to one freelancer;
     raises ValueError when they do not exist. Read-only: record the
-    missed run with `payout record` (one amount by hand) or
-    `payout settle` (the whole book).
+    missed run with `payout settle-overdue` (just the missed runs),
+    `payout record` (one amount by hand), or `payout settle` (the
+    whole book).
     """
     if freelancer_id is not None and not db.get_freelancer(freelancer_id):
         raise ValueError(f"no freelancer #{freelancer_id}")

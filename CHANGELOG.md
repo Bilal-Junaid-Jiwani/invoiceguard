@@ -2,6 +2,17 @@
 
 Every release, newest first. InvoiceGuard follows semver.
 
+## [0.19.0] - 2026-11-01
+
+Agency-mode slice #13: settle the missed pay runs. Slice #12 listed the missed runs; this slice records them — `payout settle-due` settles only the pay run whose date has arrived, and a freelancer paid at or after the missed run was never overdue at all, so a missed run previously had no scoped way to be recorded short of settling the whole book.
+
+### Added
+- **`invoiceguard payout settle-overdue [--freelancer ID] [--as-of DATE] [--currency CUR] [--method M] [--paid-at DATE] [--dry-run]`** — one payout per overdue row, for the suggested amount, through the same over-payout guard as `payout record` (an overdue suggestion can never exceed what was collected and unpaid, so the guard cannot refuse a fresh one). A freelancer due on the pay-run date itself stays in `payout settle-due`; a freelancer paid at or after the missed run produces no row. No-split freelancers are skipped with a count, never guessed at — set a split with `freelancer set-split`, or record their amount by hand with `payout record`. `--dry-run` prints what would be recorded and writes nothing; an empty roster prints `no freelancers on the roster`, a roster with nothing overdue prints `no overdue payouts`, and a second settle-overdue on the same missed runs is a no-op, so nothing is double-paid. Bookkeeping only — nothing is transferred.
+- **`payout overdue` now points at `payout settle-overdue`** (its own docstring and the library docstring) as the scoped way to record the missed runs it lists.
+
+### Honest scope (0.19.0)
+- Bookkeeping, not money movement: settling records payouts, never transfers anything, and the settled amounts are exactly the overdue suggestions. Multi-freelancer workspaces remain the unshipped half of agency mode.
+
 ## [0.18.0] - 2026-10-31
 
 Agency-mode slice #12: payouts overdue from a missed pay run. Slice #10 looked forward — the morning after a missed pay run it reported "no payouts due", even though money was still owed past a pay date. This slice looks backward: the missed run itself.
