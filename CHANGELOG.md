@@ -2,6 +2,17 @@
 
 Every release, newest first. InvoiceGuard follows semver.
 
+## [0.20.0] - 2026-11-02
+
+Agency-mode slice #14: payout timing on the agency summary. Slices #10–#13 built the pay-run views (`due`, `overdue`) and their settlements, but the whole-book view still answered only *how much* — checking whether a freelancer's payout was due, overdue, or upcoming meant cross-checking two more commands. This slice puts the timing on the summary itself.
+
+### Added
+- **`reports.agency_summary()` gains `as_of` and payout-timing fields** — every row now carries `payout_cadence`, `payout_day`, and `next_payout_date` from the freelancer's schedule, plus a per-currency `payout_status` derived from the exact rules of `payout_due()` and `payout_overdue()` as of `as_of` (default: today): `overdue` (a missed run still owed, with its `missed_payout_date`), `due` (the pay run has arrived), `upcoming` (scheduled, actionable, next date still ahead), `no schedule` (no schedule set, so nothing can be due), or `settled` (scheduled, but nothing actionable left). Rows with no billable invoices carry the schedule fields but no status — there is no per-currency row to be due or overdue. Read-only, like the rest of the summary.
+- **`invoiceguard agency summary [--freelancer ID] [--as-of DATE]`** — each currency line now appends its payout timing (`payout due (next payout 2026-11-15)`, `payout overdue (missed 2026-10-15)`, `payout upcoming (next payout ...)`, `payout settled`, or `payout no schedule`); `--as-of` projects the timing as of that day, matching `payout due`/`overdue`. An invalid `--as-of` is a clean error, not a traceback.
+
+### Honest scope (0.20.0)
+- A view, not a workflow: the status reports timing; recording a due or overdue payout is still `payout settle-due` / `payout settle-overdue`. Multi-freelancer workspaces remain the unshipped half of agency mode.
+
 ## [0.19.0] - 2026-11-01
 
 Agency-mode slice #13: settle the missed pay runs. Slice #12 listed the missed runs; this slice records them — `payout settle-due` settles only the pay run whose date has arrived, and a freelancer paid at or after the missed run was never overdue at all, so a missed run previously had no scoped way to be recorded short of settling the whole book.

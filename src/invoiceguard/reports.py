@@ -337,7 +337,8 @@ def payout_suggestions(db: DB, freelancer_id: int | None = None) -> list[dict]:
     return rows
 
 
-def agency_summary(db: DB, freelancer_id: int | None = None) -> list[dict]:
+def agency_summary(db: DB, freelancer_id: int | None = None,
+                   as_of: str | date | None = None) -> list[dict]:
     """Whole-book agency view: one row per freelancer per currency.
 
     Each row is a `freelancer_earnings()` row (billed / collected /
@@ -345,9 +346,20 @@ def agency_summary(db: DB, freelancer_id: int | None = None) -> list[dict]:
     a split is set) enriched with *suggested_cents* — the
     `payout_suggestions()` figure for that freelancer and currency, or
     None when there is no share suggestion (no split set, settled, paid
-    past the share, or no billable invoices). Freelancers with no
-    billable invoices appear as a single row with currency None and
-    zero amounts, same as `freelancer_earnings()`. Read-only.
+    past the share, or no billable invoices) — and with payout timing:
+    the freelancer's schedule (*payout_cadence* / *payout_day*,
+    *next_payout_date*) and a per-currency *payout_status* derived from
+    the same rules as `payout_due()` and `payout_overdue()` as of
+    *as_of* (default today): ``overdue`` (a missed run still owed, with
+    its *missed_payout_date*), ``due`` (the pay run has arrived),
+    ``upcoming`` (scheduled, actionable, next date still ahead),
+    ``no schedule`` (no schedule set, so nothing can be due), or
+    ``settled`` (scheduled, but nothing actionable left — settled, paid
+    past the share, or nothing collected). Rows with no billable
+    invoices carry the schedule fields but no status (currency None:
+    there is no per-currency row to be due or overdue). Freelancers
+    with no billable invoices appear as a single row with currency
+    None and zero amounts, same as `freelancer_earnings()`. Read-only.
 
     This is the view `payout suggest` and `freelancer show` cannot give
     on their own: suggest lists only actionable rows, and show covers
@@ -356,11 +368,42 @@ def agency_summary(db: DB, freelancer_id: int | None = None) -> list[dict]:
     """
     sugg = {(s["freelancer_id"], s["currency"]): s
             for s in payout_suggestions(db, freelancer_id)}
+    sched = {s["freelancer_id"]: s
+             for s in payout_schedule(db, freelancer_id, as_of=as_of)}
+    due = {(r["freelancer_id"], r["currency"])
+           for r in payout_due(db, freelancer_id, as_of=as_of)}
+    overdue = {(r["freelancer_id"], r["currency"]):
+               r["missed_payout_date"]
+               for r in payout_overdue(db, freelancer_id, as_of=as_of)}
     rows = []
     for e in freelancer_earnings(db, freelancer_id):
         row = dict(e)
         s = sugg.get((e["freelancer_id"], e["currency"]))
         row["suggested_cents"] = (s["suggested_cents"] if s else None)
+        sch = sched.get(e["freelancer_id"])
+        row["payout_cadence"] = (sch["payout_cadence"] if sch else None)
+        row["payout_day"] = sch["payout_day"] if sch else None
+        row["next_payout_date"] = (sch["next_payout_date"]
+                                   if sch else None)
+        key = (e["freelancer_id"], e["currency"])
+        if not e["currency"]:
+            row["payout_status"] = None
+            row["missed_payout_date"] = None
+        elif key in overdue:
+            row["payout_status"] = "overdue"
+            row["missed_payout_date"] = overdue[key]
+        elif key in due:
+            row["payout_status"] = "due"
+            row["missed_payout_date"] = None
+        elif row["next_payout_date"] is None:
+            row["payout_status"] = "no schedule"
+            row["missed_payout_date"] = None
+        elif key in sugg:
+            row["payout_status"] = "upcoming"
+            row["missed_payout_date"] = None
+        else:
+            row["payout_status"] = "settled"
+            row["missed_payout_date"] = None
         rows.append(row)
     return rows
 

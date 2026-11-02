@@ -93,6 +93,8 @@
         <details>
           <summary>On this page</summary>
           <ul class="toc-list">
+<li><a href="#0200---2026-11-02">[0.20.0] - 2026-11-02</a>
+</li>
 <li><a href="#0190---2026-11-01">[0.19.0] - 2026-11-01</a>
 <ul class="toc-sub">
 <li><a href="#added">Added</a></li>
@@ -275,6 +277,15 @@
         </details>
       </div>
       <p>Every release, newest first. InvoiceGuard follows semver.</p>
+<h2 id="0200---2026-11-02">[0.20.0] - 2026-11-02</h2>
+<p>Agency-mode slice #14: payout timing on the agency summary. Slices #10–#13 built the pay-run views (<code>due</code>, <code>overdue</code>) and their settlements, but the whole-book view still answered only <em>how much</em> — checking whether a freelancer's payout was due, overdue, or upcoming meant cross-checking two more commands. This slice puts the timing on the summary itself.</p>
+<ul>
+<li><strong><code>reports.agency_summary()</code> gains <code>as_of</code> and payout-timing fields</strong> — every row now carries <code>payout_cadence</code>, <code>payout_day</code>, and <code>next_payout_date</code> from the freelancer's schedule, plus a per-currency <code>payout_status</code> derived from the exact rules of <code>payout_due()</code> and <code>payout_overdue()</code> as of <code>as_of</code> (default: today): <code>overdue</code> (a missed run still owed, with its <code>missed_payout_date</code>), <code>due</code> (the pay run has arrived), <code>upcoming</code> (scheduled, actionable, next date still ahead), <code>no schedule</code> (no schedule set, so nothing can be due), or <code>settled</code> (scheduled, but nothing actionable left). Rows with no billable invoices carry the schedule fields but no status. Read-only, like the rest of the summary.
+</li>
+<li><strong><code>invoiceguard agency summary [--freelancer ID] [--as-of DATE]</code></strong> — each currency line now appends its payout timing (<code>payout due (next payout 2026-11-15)</code>, <code>payout overdue (missed 2026-10-15)</code>, <code>payout upcoming (next payout ...)</code>, <code>payout settled</code>, or <code>payout no schedule</code>); <code>--as-of</code> projects the timing as of that day. An invalid <code>--as-of</code> is a clean error, not a traceback.
+</li>
+</ul>
+<p>A view, not a workflow: the status reports timing; recording a due or overdue payout is still <code>payout settle-due</code> / <code>payout settle-overdue</code>. Multi-freelancer workspaces remain the unshipped half of agency mode.</p>
 <h2 id="0190---2026-11-01">[0.19.0] - 2026-11-01</h2>
 <p>Agency-mode slice #13: settle the missed pay runs. Slice #12 listed the missed runs; this slice records them — <code>payout settle-due</code> settles only the pay run whose date has arrived, and a freelancer paid at or after the missed run was never overdue at all, so a missed run previously had no scoped way to be recorded short of settling the whole book.</p>
 <h3 id="added">Added</h3>
@@ -767,6 +778,8 @@
   <aside class="toc-side" aria-label="Table of contents">
     <p class="toc-label">On this page</p>
     <ul class="toc-list">
+<li><a href="#0200---2026-11-02">[0.20.0] - 2026-11-02</a>
+</li>
 <li><a href="#0190---2026-11-01">[0.19.0] - 2026-11-01</a>
 <ul class="toc-sub">
 <li><a href="#added">Added</a></li>

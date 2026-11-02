@@ -129,3 +129,99 @@ def test_cli_summary_is_read_only(db, sample_project):
     out = CliRunner().invoke(cli, ["agency", "summary"])
     assert out.exit_code == 0, out.output
     assert db.paid_out_cents(1, "USD") == before
+
+
+def _timed_book(db, project):
+    """Ali: 70% split, monthly day-15 schedule, USD suggestion live.
+
+    Billed 100_000, collected 90_000, paid out 0 -> suggested 63_000.
+    Sana: no split, no schedule, EUR available 50_000.
+    """
+    ali = db.add_freelancer("Ali R.", split_pct=70.0,
+                            payout_cadence="monthly", payout_day=15)
+    iid = _invoice(db, project, 100_000, "sent", ali)
+    db.record_payment(iid, 90_000, method="bank")
+    sana = db.add_freelancer("Sana K.")
+    iid = _invoice(db, project, 50_000, "sent", sana, currency="EUR")
+    db.record_payment(iid, 50_000, method="bank")
+    return ali, sana
+
+
+def test_summary_timing_due_on_pay_day(db, sample_project):
+    ali, _sana = _timed_book(db, sample_project)
+    rows = {(r["freelancer_id"], r["currency"]): r
+            for r in agency_summary(db, as_of="2026-11-15")}
+    ali_row = rows[(ali, "USD")]
+    assert ali_row["payout_cadence"] == "monthly"
+    assert ali_row["payout_day"] == 15
+    assert ali_row["next_payout_date"] == "2026-11-15"
+    assert ali_row["payout_status"] == "due"
+    assert ali_row["missed_payout_date"] is None
+
+
+def test_summary_timing_overdue_after_missed_run(db, sample_project):
+    ali, _sana = _timed_book(db, sample_project)
+    rows = {(r["freelancer_id"], r["currency"]): r
+            for r in agency_summary(db, as_of="2026-11-20")}
+    ali_row = rows[(ali, "USD")]
+    assert ali_row["next_payout_date"] == "2026-12-15"
+    assert ali_row["payout_status"] == "overdue"
+    assert ali_row["missed_payout_date"] == "2026-11-15"
+
+
+def test_summary_timing_upcoming_no_schedule_settled(db, sample_project):
+    ali, sana = _timed_book(db, sample_project)
+    # Ali is overdue at 2026-11-10 (the 2026-10-15 run was missed), so
+    # "upcoming" needs a freelancer paid since the missed run: Omar,
+    # monthly day 15, partial payout dated after 2026-10-15, share
+    # still due, next run 2026-11-15 still ahead.
+    omar = db.add_freelancer("Omar T.", split_pct=50.0,
+                             payout_cadence="monthly", payout_day=15)
+    iid = _invoice(db, sample_project, 100_000, "sent", omar)
+    db.record_payment(iid, 80_000, method="bank")
+    db.record_payout(omar, 10_000, "USD", paid_at="2026-10-20")
+    rows = {(r["freelancer_id"], r["currency"]): r
+            for r in agency_summary(db, as_of="2026-11-10")}
+    assert rows[(omar, "USD")]["payout_status"] == "upcoming"
+    assert rows[(omar, "USD")]["next_payout_date"] == "2026-11-15"
+    sana_row = rows[(sana, "EUR")]
+    assert sana_row["payout_status"] == "no schedule"
+    assert sana_row["next_payout_date"] is None
+    # Settling Ali's full share leaves a scheduled row with nothing due.
+    db.record_payout(ali, 63_000, "USD")
+    rows = {(r["freelancer_id"], r["currency"]): r
+            for r in agency_summary(db, as_of="2026-11-10")}
+    assert rows[(ali, "USD")]["payout_status"] == "settled"
+
+
+def test_summary_timing_no_billable_row_carries_schedule(db):
+    fid = db.add_freelancer("No Work Yet", payout_cadence="weekly",
+                            payout_day=5)
+    rows = agency_summary(db, as_of="2026-11-10")
+    assert len(rows) == 1
+    assert rows[0]["payout_cadence"] == "weekly"
+    assert rows[0]["next_payout_date"] == "2026-11-13"
+    assert rows[0]["payout_status"] is None  # no currency: no status
+
+
+def test_cli_summary_as_of_prints_timing(db, sample_project):
+    _timed_book(db, sample_project)
+    out = CliRunner().invoke(cli, ["agency", "summary",
+                                   "--as-of", "2026-11-15"])
+    assert out.exit_code == 0, out.output
+    assert "payout due" in out.output
+    assert "next payout 2026-11-15" in out.output
+    assert "payout no schedule" in out.output
+    out = CliRunner().invoke(cli, ["agency", "summary",
+                                   "--as-of", "2026-11-20"])
+    assert out.exit_code == 0, out.output
+    assert "payout overdue" in out.output
+    assert "missed 2026-11-15" in out.output
+
+
+def test_cli_summary_bad_as_of_is_clean_error(db, sample_project):
+    _timed_book(db, sample_project)
+    out = CliRunner().invoke(cli, ["agency", "summary",
+                                   "--as-of", "not-a-date"])
+    assert out.exit_code != 0
+    assert "Traceback" not in out.output

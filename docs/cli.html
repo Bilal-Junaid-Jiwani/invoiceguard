@@ -203,10 +203,10 @@ invoiceguard payout settle-overdue [--freelancer 1] [--as-of 2026-10-28] [--curr
 </li>
 </ul>
 <h2 id="agency-v0140-agency-mode"><code>agency</code> (v0.14.0, agency mode)</h2>
-<pre class="codeblock" data-lang="bash"><code>invoiceguard agency summary [--freelancer 1]
+<pre class="codeblock" data-lang="bash"><code>invoiceguard agency summary [--freelancer 1] [--as-of 2026-11-15]
 </code></pre>
 <ul>
-<li>The whole book at a glance: one section per roster freelancer — per-currency billed, collected, outstanding, paid out, and still owed, plus the suggested payout (the still-due split share) where one exists — followed by a <code>TOTALS</code> section summing each currency across the roster, with a suggested total where any split freelancer still has a share due. <code>payout suggest</code> lists only actionable rows and <code>freelancer show</code> covers one freelancer at a time; this covers everyone. Read-only: nothing is recorded or transferred. An empty roster prints <code>no freelancers on the roster</code>; <code>--freelancer ID</code> restricts to one freelancer, and an unknown id is a clean error.
+<li>The whole book at a glance: one section per roster freelancer — per-currency billed, collected, outstanding, paid out, and still owed, plus the suggested payout (the still-due split share) where one exists — followed by a <code>TOTALS</code> section summing each currency across the roster, with a suggested total where any split freelancer still has a share due. Each currency line also carries payout timing (v0.20.0): the freelancer's schedule, next payout date, and whether that currency is due, overdue, upcoming, settled, or has no schedule — derived from the exact <code>payout due</code>/<code>overdue</code> rules, so the book answers "who needs paying when" without cross-checking two more commands. <code>payout suggest</code> lists only actionable rows and <code>freelancer show</code> covers one freelancer at a time; this covers everyone. Read-only: nothing is recorded or transferred. An empty roster prints <code>no freelancers on the roster</code>; <code>--freelancer ID</code> restricts to one freelancer, <code>--as-of DATE</code> projects the timing as of that day, and an unknown id or invalid date is a clean error.
 </li>
 </ul>
 <h2 id="project"><code>project</code></h2>

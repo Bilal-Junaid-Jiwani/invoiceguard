@@ -75,10 +75,10 @@ invoiceguard payout settle-overdue [--freelancer 1] [--as-of 2026-10-28] [--curr
 ## `agency` (v0.14.0, agency mode)
 
 ```bash
-invoiceguard agency summary [--freelancer 1]
+invoiceguard agency summary [--freelancer 1] [--as-of 2026-11-15]
 ```
 
-- The whole book at a glance: one section per roster freelancer — per-currency billed, collected, outstanding, paid out, and still owed, plus the suggested payout (the still-due split share) where one exists — followed by a `TOTALS` section summing each currency across the roster, with a suggested total where any split freelancer still has a share due. `payout suggest` lists only actionable rows and `freelancer show` covers one freelancer at a time; this covers everyone. Read-only: nothing is recorded or transferred. An empty roster prints `no freelancers on the roster`; `--freelancer ID` restricts to one freelancer, and an unknown id is a clean error.
+- The whole book at a glance: one section per roster freelancer — per-currency billed, collected, outstanding, paid out, and still owed, plus the suggested payout (the still-due split share) where one exists — followed by a `TOTALS` section summing each currency across the roster, with a suggested total where any split freelancer still has a share due. Each currency line also carries payout timing (v0.20.0): the freelancer's schedule, next payout date, and whether that currency is due, overdue, upcoming, settled, or has no schedule — derived from the exact `payout due`/`overdue` rules, so the book answers "who needs paying when" without cross-checking two more commands. `payout suggest` lists only actionable rows and `freelancer show` covers one freelancer at a time; this covers everyone. Read-only: nothing is recorded or transferred. An empty roster prints `no freelancers on the roster`; `--freelancer ID` restricts to one freelancer, `--as-of DATE` projects the timing as of that day, and an unknown id or invalid date is a clean error.
 
 ## `project`
 

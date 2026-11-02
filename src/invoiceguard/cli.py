@@ -1003,22 +1003,33 @@ def agency():
 @agency.command("summary")
 @click.option("--freelancer", "freelancer_id", type=int, default=None,
               help="Only summarize this freelancer")
-def agency_summary_cmd(freelancer_id):
+@click.option("--as-of", "as_of", default=None,
+              help="Project payout timing as of YYYY-MM-DD "
+                   "(default: today)")
+def agency_summary_cmd(freelancer_id, as_of):
     """Summarize the whole agency book, per freelancer per currency.
 
     One section per roster freelancer: billed, collected, outstanding,
     paid out, and still owed per currency, plus the suggested payout
     (the still-due split share) where one exists — followed by per
-    currency totals across the roster. `payout suggest` lists only
-    actionable rows and `freelancer show` covers one freelancer at a
-    time; this is the whole book at a glance. Read-only: nothing is
-    recorded or transferred.
+    currency totals across the roster. Each currency line also carries
+    payout timing: the freelancer's schedule, next payout date, and
+    whether that currency is due, overdue, upcoming, settled, or has
+    no schedule — so the book answers "who needs paying when" without
+    cross-checking `payout due` and `payout overdue`. `payout suggest`
+    lists only actionable rows and `freelancer show` covers one
+    freelancer at a time; this is the whole book at a glance.
+    Read-only: nothing is recorded or transferred.
     """
     db = _db()
     if freelancer_id is not None and not db.get_freelancer(freelancer_id):
         db.close()
         raise click.ClickException(f"no freelancer #{freelancer_id}")
-    rows = agency_summary(db, freelancer_id)
+    try:
+        rows = agency_summary(db, freelancer_id, as_of=as_of)
+    except ValueError as e:
+        db.close()
+        raise click.ClickException(str(e))
     db.close()
     if not rows:
         click.echo("no freelancers on the roster")
@@ -1062,6 +1073,20 @@ def agency_summary_cmd(freelancer_id):
             if r["suggested_cents"] is not None:
                 line += (f"  suggested "
                          f"{r['suggested_cents'] / 100:>12,.2f}")
+            status = r["payout_status"]
+            if status == "overdue":
+                line += (f"  payout overdue "
+                         f"(missed {r['missed_payout_date']})")
+            elif status == "due":
+                line += (f"  payout due "
+                         f"(next payout {r['next_payout_date']})")
+            elif status == "upcoming":
+                line += (f"  payout upcoming "
+                         f"(next payout {r['next_payout_date']})")
+            elif status == "settled":
+                line += "  payout settled"
+            else:  # "no schedule"
+                line += "  payout no schedule"
             click.echo(line)
     click.echo("TOTALS")
     for cur in sorted(totals):
