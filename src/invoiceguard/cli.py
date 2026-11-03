@@ -19,7 +19,8 @@ from .late_fees import late_fee_summary
 from .messaging import (message_channel, messaging_configured,
                         messaging_from_config, normalize_phone,
                         render_message, send_message)
-from .reports import (agency_summary, freelancer_earnings, invoices_csv,
+from .reports import (agency_summary, agency_summary_totals,
+                      freelancer_earnings, invoices_csv,
                       next_payout_date, payments_csv, payout_due,
                       payout_overdue, payout_schedule, payout_suggestions,
                       receivables_report)
@@ -1016,10 +1017,15 @@ def agency_summary_cmd(freelancer_id, as_of):
     payout timing: the freelancer's schedule, next payout date, and
     whether that currency is due, overdue, upcoming, settled, or has
     no schedule — so the book answers "who needs paying when" without
-    cross-checking `payout due` and `payout overdue`. `payout suggest`
-    lists only actionable rows and `freelancer show` covers one
-    freelancer at a time; this is the whole book at a glance.
-    Read-only: nothing is recorded or transferred.
+    cross-checking `payout due` and `payout overdue`. Each TOTALS line
+    carries the same timing rolled up across the roster for that
+    currency — the most urgent status (overdue beats due beats
+    upcoming), with the freelancer count and the earliest missed or
+    next payout date — or nothing when the currency mixes settled and
+    unscheduled freelancers and no single status describes it.
+    `payout suggest` lists only actionable rows and `freelancer show`
+    covers one freelancer at a time; this is the whole book at a
+    glance. Read-only: nothing is recorded or transferred.
     """
     db = _db()
     if freelancer_id is not None and not db.get_freelancer(freelancer_id):
@@ -1027,6 +1033,7 @@ def agency_summary_cmd(freelancer_id, as_of):
         raise click.ClickException(f"no freelancer #{freelancer_id}")
     try:
         rows = agency_summary(db, freelancer_id, as_of=as_of)
+        totals = agency_summary_totals(db, freelancer_id, as_of=as_of)
     except ValueError as e:
         db.close()
         raise click.ClickException(str(e))
@@ -1041,7 +1048,6 @@ def agency_summary_cmd(freelancer_id, as_of):
             by_freelancer[r["freelancer_id"]] = []
             ordered.append(r["freelancer_id"])
         by_freelancer[r["freelancer_id"]].append(r)
-    totals: dict[str, dict[str, int]] = {}
     for fid in ordered:
         first = by_freelancer[fid][0]
         split = first["split_pct"]
@@ -1052,18 +1058,6 @@ def agency_summary_cmd(freelancer_id, as_of):
             if not r["currency"]:
                 click.echo("      no billable invoices")
                 continue
-            t = totals.setdefault(r["currency"], {
-                "billed": 0, "collected": 0, "outstanding": 0,
-                "paid_out": 0, "still_owed": 0, "suggested": 0,
-                "has_suggested": 0})
-            t["billed"] += r["invoiced_cents"]
-            t["collected"] += r["collected_cents"]
-            t["outstanding"] += r["outstanding_cents"]
-            t["paid_out"] += r["paid_out_cents"]
-            t["still_owed"] += r["still_owed_cents"]
-            if r["suggested_cents"] is not None:
-                t["suggested"] += r["suggested_cents"]
-                t["has_suggested"] += 1
             line = (f"      {r['currency']}  billed "
                     f"{r['invoiced_cents'] / 100:>12,.2f}  collected "
                     f"{r['collected_cents'] / 100:>12,.2f}  outstanding "
@@ -1091,13 +1085,31 @@ def agency_summary_cmd(freelancer_id, as_of):
     click.echo("TOTALS")
     for cur in sorted(totals):
         t = totals[cur]
-        line = (f"      {cur}  billed {t['billed'] / 100:>12,.2f}  "
-                f"collected {t['collected'] / 100:>12,.2f}  outstanding "
-                f"{t['outstanding'] / 100:>12,.2f}  paid out "
-                f"{t['paid_out'] / 100:>12,.2f}  still owed "
-                f"{t['still_owed'] / 100:>12,.2f}")
+        line = (f"      {cur}  billed {t['invoiced_cents'] / 100:>12,.2f}  "
+                f"collected {t['collected_cents'] / 100:>12,.2f}  "
+                f"outstanding {t['outstanding_cents'] / 100:>12,.2f}  "
+                f"paid out {t['paid_out_cents'] / 100:>12,.2f}  still owed "
+                f"{t['still_owed_cents'] / 100:>12,.2f}")
         if t["has_suggested"]:
-            line += f"  suggested {t['suggested'] / 100:>12,.2f}"
+            line += f"  suggested {t['suggested_cents'] / 100:>12,.2f}"
+        status = t["payout_status"]
+        n = t["payout_freelancers"]
+        noun = "freelancer" if n == 1 else "freelancers"
+        if status == "overdue":
+            line += (f"  payout overdue ({n} {noun}, "
+                     f"missed {t['missed_payout_date']})")
+        elif status == "due":
+            line += (f"  payout due ({n} {noun}, "
+                     f"next payout {t['next_payout_date']})")
+        elif status == "upcoming":
+            line += (f"  payout upcoming ({n} {noun}, "
+                     f"next payout {t['next_payout_date']})")
+        elif status == "settled":
+            line += "  payout settled"
+        elif status == "no schedule":
+            line += "  payout no schedule"
+        # None (mixed settled + no schedule): no single status, so
+        # no timing phrase rather than a misleading one.
         click.echo(line)
 
 

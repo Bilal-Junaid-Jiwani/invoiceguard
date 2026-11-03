@@ -408,6 +408,80 @@ def agency_summary(db: DB, freelancer_id: int | None = None,
     return rows
 
 
+def agency_summary_totals(db: DB, freelancer_id: int | None = None,
+                          as_of: str | date | None = None
+                          ) -> dict[str, dict]:
+    """Per-currency totals across the agency summary, with payout timing.
+
+    One entry per currency in `agency_summary()` (freelancers with no
+    billable invoices carry no currency and contribute nothing): the
+    money totals summed across the roster (invoiced / collected /
+    outstanding / paid out / still owed, plus the suggested total and
+    *has_suggested* when any freelancer still has a share due), and a
+    payout-timing rollup derived from the rows' own *payout_status*
+    values — no new rules. The rollup reports the single most urgent
+    status in the currency: ``overdue`` beats ``due`` beats
+    ``upcoming``; *payout_freelancers* counts the freelancers in that
+    status, *missed_payout_date* is the earliest missed run among the
+    overdue rows, and *next_payout_date* is the earliest next run
+    among the due / upcoming rows. When nothing is actionable and
+    every row agrees, the rollup is that shared status (``settled``
+    or ``no schedule``); when nothing is actionable and the rows
+    disagree — some settled, some unscheduled — no single status
+    describes the currency, so *payout_status* is None and the CLI
+    prints no timing on that TOTALS line rather than a misleading
+    one. Read-only, like the summary itself.
+    """
+    totals: dict[str, dict] = {}
+    for r in agency_summary(db, freelancer_id, as_of=as_of):
+        cur = r["currency"]
+        if not cur:
+            continue
+        t = totals.setdefault(cur, {
+            "invoiced_cents": 0, "collected_cents": 0,
+            "outstanding_cents": 0, "paid_out_cents": 0,
+            "still_owed_cents": 0, "suggested_cents": 0,
+            "has_suggested": False,
+            "_status_rows": {},
+        })
+        t["invoiced_cents"] += r["invoiced_cents"]
+        t["collected_cents"] += r["collected_cents"]
+        t["outstanding_cents"] += r["outstanding_cents"]
+        t["paid_out_cents"] += r["paid_out_cents"]
+        t["still_owed_cents"] += r["still_owed_cents"]
+        if r["suggested_cents"] is not None:
+            t["suggested_cents"] += r["suggested_cents"]
+            t["has_suggested"] = True
+        t["_status_rows"].setdefault(r["payout_status"], []).append(r)
+    for t in totals.values():
+        grouped = t.pop("_status_rows")
+        for status in ("overdue", "due", "upcoming"):
+            rows = grouped.get(status)
+            if rows:
+                t["payout_status"] = status
+                t["payout_freelancers"] = len(rows)
+                if status == "overdue":
+                    t["missed_payout_date"] = min(
+                        r["missed_payout_date"] for r in rows)
+                    t["next_payout_date"] = None
+                else:
+                    t["missed_payout_date"] = None
+                    t["next_payout_date"] = min(
+                        r["next_payout_date"] for r in rows)
+                break
+        else:
+            left = [s for s in ("settled", "no schedule") if grouped.get(s)]
+            if len(left) == 1:
+                t["payout_status"] = left[0]
+                t["payout_freelancers"] = len(grouped[left[0]])
+            else:
+                t["payout_status"] = None
+                t["payout_freelancers"] = None
+            t["missed_payout_date"] = None
+            t["next_payout_date"] = None
+    return totals
+
+
 def next_payout_date(cadence: str | None, day: int | None,
                      as_of: str | date | None = None) -> date | None:
     """Next payout date for a schedule, on or after as_of (today).

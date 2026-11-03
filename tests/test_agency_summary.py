@@ -14,7 +14,7 @@ import pytest
 from click.testing import CliRunner
 
 from invoiceguard.cli import cli
-from invoiceguard.reports import agency_summary
+from invoiceguard.reports import agency_summary, agency_summary_totals
 
 
 def _invoice(db, project, cents, status, freelancer_id=None,
@@ -225,3 +225,135 @@ def test_cli_summary_bad_as_of_is_clean_error(db, sample_project):
                                    "--as-of", "not-a-date"])
     assert out.exit_code != 0
     assert "Traceback" not in out.output
+
+
+# --- Agency-mode slice #15: payout timing on the TOTALS ----------------
+# Slice #14 put timing on every per-freelancer currency line but left
+# the TOTALS lines answering only "how much". The rollup reports the
+# most urgent status per currency, derived from the rows' own statuses
+# (no new rules): overdue beats due beats upcoming; when nothing is
+# actionable the shared status wins, and a settled/no-schedule mix
+# carries no status rather than a misleading one.
+
+def _totals_book(db, project):
+    """Four USD freelancers, all with a live suggestion at 2026-11-20.
+
+    Ali (monthly 15, 70%): overdue, missed 2026-11-15. Zoe (monthly
+    10, 50%): overdue, missed 2026-11-10. Omar (monthly 20, 50%):
+    due on 2026-11-20 itself. Quinn (monthly 25, 50%): paid 10_000 on
+    2026-10-30, after the missed 2026-10-25 run, share still due ->
+    upcoming, next 2026-11-25.
+    """
+    ali = db.add_freelancer("Ali R.", split_pct=70.0,
+                            payout_cadence="monthly", payout_day=15)
+    iid = _invoice(db, project, 100_000, "sent", ali)
+    db.record_payment(iid, 90_000, method="bank")
+    zoe = db.add_freelancer("Zoe M.", split_pct=50.0,
+                            payout_cadence="monthly", payout_day=10)
+    iid = _invoice(db, project, 100_000, "sent", zoe)
+    db.record_payment(iid, 80_000, method="bank")
+    omar = db.add_freelancer("Omar T.", split_pct=50.0,
+                             payout_cadence="monthly", payout_day=20)
+    iid = _invoice(db, project, 100_000, "sent", omar)
+    db.record_payment(iid, 80_000, method="bank")
+    quinn = db.add_freelancer("Quinn P.", split_pct=50.0,
+                              payout_cadence="monthly", payout_day=25)
+    iid = _invoice(db, project, 100_000, "sent", quinn)
+    db.record_payment(iid, 80_000, method="bank")
+    db.record_payout(quinn, 10_000, "USD", paid_at="2026-10-30")
+    return ali, zoe, omar, quinn
+
+
+def test_totals_money_and_overdue_wins(db, sample_project):
+    _totals_book(db, sample_project)
+    totals = agency_summary_totals(db, as_of="2026-11-20")
+    usd = totals["USD"]
+    assert (usd["invoiced_cents"], usd["collected_cents"],
+            usd["outstanding_cents"], usd["paid_out_cents"],
+            usd["still_owed_cents"]) == (400_000, 330_000, 70_000,
+                                         10_000, 320_000)
+    # Suggested: Ali 63_000 + Zoe 40_000 + Omar 40_000 + Quinn 30_000.
+    assert usd["suggested_cents"] == 173_000
+    assert usd["has_suggested"] is True
+    assert usd["payout_status"] == "overdue"
+    assert usd["payout_freelancers"] == 2  # Ali + Zoe, not Omar/Quinn
+    assert usd["missed_payout_date"] == "2026-11-10"  # earliest missed
+    assert usd["next_payout_date"] is None
+
+
+def test_totals_due_beats_upcoming(db, sample_project):
+    _ali, _zoe, omar, quinn = _totals_book(db, sample_project)
+    totals = agency_summary_totals(db, as_of="2026-11-20")
+    # Restrict to the due + upcoming freelancers only.
+    totals = agency_summary_totals(db, freelancer_id=omar,
+                                   as_of="2026-11-20")
+    assert totals["USD"]["payout_status"] == "due"
+    assert totals["USD"]["payout_freelancers"] == 1
+    assert totals["USD"]["next_payout_date"] == "2026-11-20"
+    totals = agency_summary_totals(db, freelancer_id=quinn,
+                                   as_of="2026-11-20")
+    assert totals["USD"]["payout_status"] == "upcoming"
+    assert totals["USD"]["next_payout_date"] == "2026-11-25"
+
+
+def test_totals_settled_no_schedule_and_mixed(db, sample_project):
+    ali, sana = _timed_book(db, sample_project)
+    # Sana (EUR, no schedule) on her own: shared no-schedule status.
+    totals = agency_summary_totals(db, freelancer_id=sana,
+                                   as_of="2026-11-10")
+    assert totals["EUR"]["payout_status"] == "no schedule"
+    # Ali settled (full 63_000 share paid) on his own: settled.
+    db.record_payout(ali, 63_000, "USD")
+    totals = agency_summary_totals(db, freelancer_id=ali,
+                                   as_of="2026-11-10")
+    assert totals["USD"]["payout_status"] == "settled"
+    # Mixed settled (Ali, USD) + no-schedule (Sana, USD invoice):
+    # no single status describes the currency.
+    iid = _invoice(db, sample_project, 50_000, "sent", sana)
+    db.record_payment(iid, 50_000, method="bank")
+    totals = agency_summary_totals(db, as_of="2026-11-10")
+    assert totals["USD"]["payout_status"] is None
+    assert totals["USD"]["payout_freelancers"] is None
+
+
+def test_totals_excludes_no_billable_freelancers(db):
+    db.add_freelancer("No Work Yet")
+    assert agency_summary_totals(db) == {}
+
+
+def test_totals_unknown_freelancer_raises(db):
+    with pytest.raises(ValueError, match="no freelancer #999"):
+        agency_summary_totals(db, 999)
+
+
+def _totals_lines(output):
+    lines = output.splitlines()
+    start = lines.index("TOTALS")
+    return [ln for ln in lines[start + 1:] if ln.strip()]
+
+
+def test_cli_totals_line_carries_rollup(db, sample_project):
+    _totals_book(db, sample_project)
+    out = CliRunner().invoke(cli, ["agency", "summary",
+                                   "--as-of", "2026-11-20"])
+    assert out.exit_code == 0, out.output
+    usd = [ln for ln in _totals_lines(out.output)
+           if ln.strip().startswith("USD")]
+    assert len(usd) == 1
+    assert "payout overdue (2 freelancers, missed 2026-11-10)" in usd[0]
+    # Money totals unchanged by the rollup.
+    assert "4,000.00" in usd[0] and "3,300.00" in usd[0]
+
+
+def test_cli_totals_mixed_currency_carries_no_timing(db, sample_project):
+    ali, sana = _timed_book(db, sample_project)
+    db.record_payout(ali, 63_000, "USD")
+    iid = _invoice(db, sample_project, 50_000, "sent", sana)
+    db.record_payment(iid, 50_000, method="bank")
+    out = CliRunner().invoke(cli, ["agency", "summary",
+                                   "--as-of", "2026-11-10"])
+    assert out.exit_code == 0, out.output
+    usd = [ln for ln in _totals_lines(out.output)
+           if ln.strip().startswith("USD")]
+    assert len(usd) == 1
+    assert "payout" not in usd[0]
