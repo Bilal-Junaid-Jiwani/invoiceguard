@@ -137,7 +137,7 @@
     "text": "Exit behavior"
    }
   ],
-  "text": "The CLI entry point is invoiceguard (installed by pip). All commands below are from v0.10.0 — run invoiceguard --help or invoiceguard <group> --help for the same text locally. init invoiceguard init Creates ~/.invoiceguard/ : the config template, an empty SQLite database, and the three dunning email templates. Idempotent — existing files are left alone. client invoiceguard client add --name \"Acme Corp\" --email \"billing@acme.com\" [--phone +15551234567] invoiceguard client set-phone 1 [--phone +15551234567] # omit --phone to clear invoiceguard client set-email 1 [--email billing@acme.com] # omit --email to clear invoiceguard client set-dunning-policy 1 [--day1 N] [--day7 N] [--day15 N] [--reset] invoiceguard client list add requires --name ; --email is optional (needed later for dunning emails). --phone (E.164 form) enables SMS/WhatsApp escalation for that client; invalid numbers are rejected. set-phone updates or clears the phone number of an existing client. set-email updates or clears the email address of an existing client (dunning). set-dunning-policy sets per-client dunning stage thresholds (v0.7.0, agency mode): each --dayN is the days-overdue threshold for that stage; 0 disables the stage for that client; omit a flag to leave it unchanged. Thresholds must stay in escalation order (day1 → day7 → day15); negative values are rejected. --reset clears overrides back to the global defaults (1/7/15). list prints #id name email phone rows, plus a [dunning ...] marker for clients with policy overrides. freelancer (v0.8.0, agency mode) invoiceguard freelancer add --name \"Ali R.\" [--email ali@example.com] [--phone +15551234567] [--split-pct 70] invoiceguard freelancer set-email 1 [--email ali@example.com] # omit --email to clear invoiceguard freelancer set-phone 1 [--phone +15551234567] # omit --phone to clear invoiceguard freelancer set-split 1 --split-pct 70 # v0.11.0 invoiceguard freelancer list invoiceguard freelancer show 1 # v0.9.0 The agency roster: one row per team member. add requires --name ; --phone must be E.164 (invalid numbers are rejected). list prints #id name email phone rows. show (v0.9.0; payouts added in v0.10.0, revenue splits in v0.11.0, payout schedule line in v0.15.0) prints contact details, per-currency earnings — billed (attributed invoices in a real state; drafts and voids excluded), collected (payment-ledger sums), outstanding — plus paid out and still owed from the payout ledger, the attributed invoice lines with collected/outstanding per invoice, and the recorded payouts. When a revenue split is set it also prints the freelancer's expected share of each collected currency and what is still due to them after payouts. When a payout schedule is set it prints the schedule and the derived next payout date. Read-only. --split-pct (v0.11.0) records the freelancer's revenue-split percentage of collected earnings (0–100, validated before write); freelancer set-split changes it later. NULL (unset) means the freelancer is earnings bookkeeping only. Bookkeeping only — the split is reported, never transferred, and the payout guard is unchanged. set-schedule (v0.15.0) records a recurring payout schedule: --cadence weekly with --day 1–7 (ISO weekday, Monday–Sunday) or --cadence monthly with --day 1–31 (day of month, clamped to the month's last day when derived); clear-schedule clears it. Validated before write; a schedule never records or transfers a payout. Invoices are attributed to a freelancer with invoice assign (see below) — attribution is bookkeeping only and never changes dunning, payments, or invoice status. payout (v0.10.0, agency mode) invoiceguard payout record --freelancer 1 --amount 250 [--currency USD] \\ [--paid-at 2026-10-23] [--method \"bank transfer\"] [--note \"Sept share\"] invoiceguard payout list [--freelancer 1] invoiceguard payout suggest [--freelancer 1] # v0.12.0 invoiceguard payout settle [--freelancer 1] [--currency USD] [--dry-run] # v0.13.0 invoiceguard payout schedule [--freelancer 1] [--as"
+  "text": "The CLI entry point is invoiceguard (installed by pip). All commands below are from v0.10.0 — run invoiceguard --help or invoiceguard <group> --help for the same text locally. init invoiceguard init Creates ~/.invoiceguard/ : the config template, an empty SQLite database, and the three dunning email templates. Idempotent — existing files are left alone. client invoiceguard client add --name \"Acme Corp\" --email \"billing@acme.com\" [--phone +15551234567] invoiceguard client set-phone 1 [--phone +15551234567] # omit --phone to clear invoiceguard client set-email 1 [--email billing@acme.com] # omit --email to clear invoiceguard client set-dunning-policy 1 [--day1 N] [--day7 N] [--day15 N] [--reset] invoiceguard client list add requires --name ; --email is optional (needed later for dunning emails). --phone (E.164 form) enables SMS/WhatsApp escalation for that client; invalid numbers are rejected. set-phone updates or clears the phone number of an existing client. set-email updates or clears the email address of an existing client (dunning). set-dunning-policy sets per-client dunning stage thresholds (v0.7.0, agency mode): each --dayN is the days-overdue threshold for that stage; 0 disables the stage for that client; omit a flag to leave it unchanged. Thresholds must stay in escalation order (day1 → day7 → day15); negative values are rejected. --reset clears overrides back to the global defaults (1/7/15). list prints #id name email phone rows, plus a [dunning ...] marker for clients with policy overrides. freelancer (v0.8.0, agency mode) invoiceguard freelancer add --name \"Ali R.\" [--email ali@example.com] [--phone +15551234567] [--split-pct 70] invoiceguard freelancer set-email 1 [--email ali@example.com] # omit --email to clear invoiceguard freelancer set-phone 1 [--phone +15551234567] # omit --phone to clear invoiceguard freelancer set-split 1 --split-pct 70 # v0.11.0 invoiceguard freelancer list invoiceguard freelancer show 1 # v0.9.0 The agency roster: one row per team member. add requires --name ; --phone must be E.164 (invalid numbers are rejected). list prints #id name email phone rows. show (v0.9.0; payouts added in v0.10.0, revenue splits in v0.11.0, payout schedule line in v0.15.0, payout timing in v0.22.0) prints contact details, per-currency earnings — billed (attributed invoices in a real state; drafts and voids excluded), collected (payment-ledger sums), outstanding — plus paid out and still owed from the payout ledger, the attributed invoice lines with collected/outstanding per invoice, and the recorded payouts. When a revenue split is set it also prints the freelancer's expected share of each collected currency and what is still due to them after payouts. When a payout schedule is set it prints the schedule and the derived next payout date. Each currency line also carries payout timing (v0.22.0): due, overdue (with the missed run date), upcoming, settled, or no schedule — taken from the same agency summary rows, derived from the exact payout due / overdue rules as of --as-of (default today); an invalid date is a clean error, and freelancers with no billable invoices carry no timing phrase. Read-only. --split-pct (v0.11.0) records the freelancer's revenue-split percentage of collected earnings (0–100, validated before write); freelancer set-split changes it later. NULL (unset) means the freelancer is earnings bookkeeping only. Bookkeeping only — the split is reported, never transferred, and the payout guard is unchanged. set-schedule (v0.15.0) records a recurring payout schedule: --cadence weekly with --day 1–7 (ISO weekday, Monday–Sunday) or --cadence monthly with --day 1–31 (day of month, clamped to the month's last day when derived); clear-schedule clears it. Validated before write; a schedule never records or transfers a payout. Invoices are attributed to a freelancer with invoice assign (see below) — attribution is bookkeeping only and never changes dunning, payments, or invoice status. payout (v0.10.0, agency m"
  },
  {
   "url": "dashboard.html",
@@ -353,11 +353,27 @@
   "description": "InvoiceGuard release history — newest first, no fluff.",
   "headings": [
    {
+    "id": "0200---2026-11-02",
+    "text": "[0.20.0] - 2026-11-02"
+   },
+   {
+    "id": "0190---2026-11-01",
+    "text": "[0.19.0] - 2026-11-01"
+   },
+   {
+    "id": "added",
+    "text": "Added"
+   },
+   {
+    "id": "honest-scope-0190",
+    "text": "Honest scope (0.19.0)"
+   },
+   {
     "id": "0180---2026-10-31",
     "text": "[0.18.0] - 2026-10-31"
    },
    {
-    "id": "added",
+    "id": "added-2",
     "text": "Added"
    },
    {
@@ -369,7 +385,7 @@
     "text": "[0.17.0] - 2026-10-30"
    },
    {
-    "id": "added-2",
+    "id": "added-3",
     "text": "Added"
    },
    {
@@ -381,7 +397,7 @@
     "text": "[0.16.0] - 2026-10-29"
    },
    {
-    "id": "added-3",
+    "id": "added-4",
     "text": "Added"
    },
    {
@@ -393,7 +409,7 @@
     "text": "[0.15.0] - 2026-10-28"
    },
    {
-    "id": "added-4",
+    "id": "added-5",
     "text": "Added"
    },
    {
@@ -405,7 +421,7 @@
     "text": "[0.14.0] - 2026-10-27"
    },
    {
-    "id": "added-5",
+    "id": "added-6",
     "text": "Added"
    },
    {
@@ -417,7 +433,7 @@
     "text": "[0.13.0] - 2026-10-26"
    },
    {
-    "id": "added-6",
+    "id": "added-7",
     "text": "Added"
    },
    {
@@ -429,7 +445,7 @@
     "text": "[0.12.0] - 2026-10-25"
    },
    {
-    "id": "added-7",
+    "id": "added-8",
     "text": "Added"
    },
    {
@@ -441,7 +457,7 @@
     "text": "[0.11.0] - 2026-10-24"
    },
    {
-    "id": "added-8",
+    "id": "added-9",
     "text": "Added"
    },
    {
@@ -453,7 +469,7 @@
     "text": "[0.10.0] - 2026-10-23"
    },
    {
-    "id": "added-9",
+    "id": "added-10",
     "text": "Added"
    },
    {
@@ -465,7 +481,7 @@
     "text": "[0.9.0] - 2026-10-22"
    },
    {
-    "id": "added-10",
+    "id": "added-11",
     "text": "Added"
    },
    {
@@ -481,7 +497,7 @@
     "text": "Fixed"
    },
    {
-    "id": "added-11",
+    "id": "added-12",
     "text": "Added"
    },
    {
@@ -533,7 +549,7 @@
     "text": "[0.8.0] - 2026-10-16"
    },
    {
-    "id": "added-12",
+    "id": "added-13",
     "text": "Added"
    },
    {
@@ -553,7 +569,7 @@
     "text": "[0.7.0] - 2026-10-14"
    },
    {
-    "id": "added-13",
+    "id": "added-14",
     "text": "Added"
    },
    {
@@ -593,7 +609,7 @@
     "text": "Fixed"
    },
    {
-    "id": "added-14",
+    "id": "added-15",
     "text": "Added"
    },
    {
@@ -629,7 +645,7 @@
     "text": "[0.6.0] - 2026-10-08"
    },
    {
-    "id": "added-15",
+    "id": "added-16",
     "text": "Added"
    },
    {
@@ -641,7 +657,7 @@
     "text": "[0.5.0] - 2026-10-07"
    },
    {
-    "id": "added-16",
+    "id": "added-17",
     "text": "Added"
    },
    {
@@ -653,7 +669,7 @@
     "text": "[0.4.0] - 2026-10-06"
    },
    {
-    "id": "added-17",
+    "id": "added-18",
     "text": "Added"
    },
    {
@@ -665,7 +681,7 @@
     "text": "[0.3.0] - 2026-10-05"
    },
    {
-    "id": "added-18",
+    "id": "added-19",
     "text": "Added"
    },
    {
@@ -681,7 +697,7 @@
     "text": "[0.2.0] - 2026-10-04"
    },
    {
-    "id": "added-19",
+    "id": "added-20",
     "text": "Added"
    },
    {
@@ -693,7 +709,7 @@
     "text": "[0.1.0] - 2026-10-02"
    },
    {
-    "id": "added-20",
+    "id": "added-21",
     "text": "Added"
    },
    {
@@ -705,7 +721,7 @@
     "text": "Honest scope (v1)"
    }
   ],
-  "text": "Every release, newest first. InvoiceGuard follows semver. [0.18.0] - 2026-10-31 Agency-mode slice #12: payouts overdue from a missed pay run. Slice #10 looked forward — the morning after a missed pay run it reported \"no payouts due\", even though money was still owed past a pay date. This slice looks backward: the missed run itself. Added invoiceguard payout overdue [--freelancer ID] [--as-of DATE] — one row per freelancer per currency: a scheduled freelancer whose most recent scheduled payout date has already passed, who still has an actionable payout — a still-due split share, or the still-held balance when no split is set (labeled as available, never guessed at) — and who has nothing recorded for that currency since that missed date. Rows sort by missed payout date (earliest first), then largest amount first. An empty roster prints no freelancers on the roster ; a roster with nothing overdue prints no overdue payouts ; an unknown --freelancer id is a clean error, not a traceback. Read-only — nothing is recorded or transferred. reports.payout_overdue() / reports.previous_payout_date() — the same view for library callers (rows carry missed_payout_date alongside next_payout_date ), and the scheduled date immediately before the next one: weekly steps back 7 days, monthly steps back to the previous month's clamped day (a day-31 schedule's previous date after a 30-day month is that month's last day; February clamps to Feb 28/29). Honest scope (0.18.0) Overdue means exactly this: a scheduled pay date passed with an actionable payout and nothing recorded since that date. A freelancer due on the pay-run date itself is due, not overdue — they appear in payout due , never here. Money collected since the last run waits for the next run; it is not a missed run. Multi-freelancer workspaces remain the unshipped half of agency mode. [0.17.0] - 2026-10-30 Agency-mode slice #11: settle the pay run. Slice #10 listed the pay run; this slice records it — payout settle settles the whole book, but an agency runs payouts on a schedule, and this settles only the freelancers whose payout date has arrived. Added invoiceguard payout settle-due [--freelancer ID] [--as-of DATE] [--within-days N] [--currency CUR] [--method M] [--paid-at DATE] [--dry-run] — one payout per due row, for the suggested amount, through the same over-payout guard as payout record (a due suggestion can never exceed what was collected and unpaid, so the guard cannot refuse a fresh one). A freelancer whose schedule says next week keeps their suggestion until their own pay run; --within-days 7 settles this week's pay run. No-split freelancers are skipped with a count, never guessed at — set a split with freelancer set-split , or record their amount by hand with payout record . --dry-run prints what would be recorded and writes nothing; an empty roster prints no freelancers on the roster , a roster with nothing due prints no payouts due , and a second settle-due on the same pay run is a no-op, so nothing is double-paid. Bookkeeping only — nothing is transferred. payout due now points at payout settle-due (its own docstring and the library docstring) as the way to record the run it lists. Honest scope (0.17.0) Bookkeeping, not money movement: settling records payouts, never transfers anything, and the settled amounts are exactly the due suggestions. Multi-freelancer workspaces remain the unshipped half of agency mode. [0.16.0] - 2026-10-29 Agency-mode slice #10: payouts due on the pay run. Slices #6 and #9 answered what to pay and when to pay separately; this slice joins them — the pay run is the scheduled freelancers whose payout date has arrived and who still have something actionable to pay. Added invoiceguard payout due [--freelancer ID] [--as-of DATE] [--within-days N] — one row per freelancer per currency: a scheduled freelancer whose next payout date falls on the pay-run date (default: today), or within N days after it with --within-days (so --within-days 7 is this week's pay r"
+  "text": "Every release, newest first. InvoiceGuard follows semver. [0.20.0] - 2026-11-02 Agency-mode slice #14: payout timing on the agency summary. Slices #10–#13 built the pay-run views ( due , overdue ) and their settlements, but the whole-book view still answered only how much — checking whether a freelancer's payout was due, overdue, or upcoming meant cross-checking two more commands. This slice puts the timing on the summary itself. reports.agency_summary() gains as_of and payout-timing fields — every row now carries payout_cadence , payout_day , and next_payout_date from the freelancer's schedule, plus a per-currency payout_status derived from the exact rules of payout_due() and payout_overdue() as of as_of (default: today): overdue (a missed run still owed, with its missed_payout_date ), due (the pay run has arrived), upcoming (scheduled, actionable, next date still ahead), no schedule (no schedule set, so nothing can be due), or settled (scheduled, but nothing actionable left). Rows with no billable invoices carry the schedule fields but no status. Read-only, like the rest of the summary. invoiceguard agency summary [--freelancer ID] [--as-of DATE] — each currency line now appends its payout timing ( payout due (next payout 2026-11-15) , payout overdue (missed 2026-10-15) , payout upcoming (next payout ...) , payout settled , or payout no schedule ); --as-of projects the timing as of that day. An invalid --as-of is a clean error, not a traceback. A view, not a workflow: the status reports timing; recording a due or overdue payout is still payout settle-due / payout settle-overdue . Multi-freelancer workspaces remain the unshipped half of agency mode. [0.19.0] - 2026-11-01 Agency-mode slice #13: settle the missed pay runs. Slice #12 listed the missed runs; this slice records them — payout settle-due settles only the pay run whose date has arrived, and a freelancer paid at or after the missed run was never overdue at all, so a missed run previously had no scoped way to be recorded short of settling the whole book. Added invoiceguard payout settle-overdue [--freelancer ID] [--as-of DATE] [--currency CUR] [--method M] [--paid-at DATE] [--dry-run] — one payout per overdue row, for the suggested amount, through the same over-payout guard as payout record (an overdue suggestion can never exceed what was collected and unpaid, so the guard cannot refuse a fresh one). A freelancer due on the pay-run date itself stays in payout settle-due ; a freelancer paid at or after the missed run produces no row. No-split freelancers are skipped with a count, never guessed at — set a split with freelancer set-split , or record their amount by hand with payout record . --dry-run prints what would be recorded and writes nothing; an empty roster prints no freelancers on the roster , a roster with nothing overdue prints no overdue payouts , and a second settle-overdue on the same missed runs is a no-op, so nothing is double-paid. Bookkeeping only — nothing is transferred. payout overdue now points at payout settle-overdue (its own docstring and the library docstring) as the scoped way to record the missed runs it lists. Honest scope (0.19.0) Bookkeeping, not money movement: settling records payouts, never transfers anything, and the settled amounts are exactly the overdue suggestions. Multi-freelancer workspaces remain the unshipped half of agency mode. [0.18.0] - 2026-10-31 Agency-mode slice #12: payouts overdue from a missed pay run. Slice #10 looked forward — the morning after a missed pay run it reported \"no payouts due\", even though money was still owed past a pay date. This slice looks backward: the missed run itself. Added invoiceguard payout overdue [--freelancer ID] [--as-of DATE] — one row per freelancer per currency: a scheduled freelancer whose most recent scheduled payout date has already passed, who still has an actionable payout — a still-due split share, or the still-held balance when no split is set (labeled as available, never guessed "
  },
  {
   "url": "roadmap.html",
@@ -713,6 +729,6 @@
   "eyebrow": "Reference",
   "description": "What's planned for InvoiceGuard — honestly labeled as plans, not shipped features.",
   "headings": [],
-  "text": "These are plans, not promises — nothing below is shipped in v0.15.0. ~~ Real e-signature ~~ — shipped in v0.3.0: typed-name / drawn-signature capture on the contract, stored with the project, SHA-256 tamper evidence. ~~ Late-fee accrual calculator ~~ — shipped in v0.4.0: monthly-compounding accrual of contract §3 fees, invoice late-fees CLI, dashboard rows, dunning template variables. ~~ SMS / WhatsApp escalation ~~ — shipped in v0.5.0: day-15 also goes out as an SMS/WhatsApp message via Twilio when configured, plus invoice notify for one-off reminders. Agency mode — multi-freelancer workspaces (unshipped); per-client dunning policies shipped in v0.7.0 ( invoiceguard client set-dunning-policy ); freelancer roster + invoice attribution shipped in v0.8.0 ( invoiceguard freelancer add , invoiceguard invoice assign ); freelancer earnings shipped in v0.9.0 ( invoiceguard freelancer show , per-currency billed/collected/outstanding); freelancer payouts shipped in v0.10.0 ( invoiceguard payout record / payout list , per-currency payout ledger with an over-payout guard); revenue splits shipped in v0.11.0 ( freelancer add --split-pct / freelancer set-split , per-currency expected share + still-due-to-freelancer); payout suggestions shipped in v0.12.0 ( invoiceguard payout suggest , per-currency still-due share or still-held balance when no split is set); payout settlement shipped in v0.13.0 ( invoiceguard payout settle , records every suggestion at once through the payout guard, no-split freelancers skipped, --dry-run writes nothing). agency summary shipped in v0.14.0 ( invoiceguard agency summary , whole-book view per freelancer per currency with per-currency totals, read-only); payout schedules shipped in v0.15.0 ( freelancer set-schedule / clear-schedule , invoiceguard payout schedule with derived next payout date, read-only); payouts due shipped in v0.16.0 ( invoiceguard payout due , scheduled freelancers with an actionable payout on/inside the pay-run window, read-only); settle the pay run shipped in v0.17.0 ( invoiceguard payout settle-due , one payout per due row through the payout guard, no-split freelancers skipped, --dry-run writes nothing, second run is a no-op); payouts overdue shipped in v0.18.0 ( invoiceguard payout overdue , scheduled freelancers whose most recent payout date passed with an actionable payout and nothing recorded since that date, read-only). ~~ Partial payments / payment plans ~~ — shipped in v0.2.0. Priorities follow real user feedback. If a roadmap item matters to you, open an issue on GitHub describing your workflow."
+  "text": "These are plans, not promises — nothing below is shipped in v0.15.0. ~~ Real e-signature ~~ — shipped in v0.3.0: typed-name / drawn-signature capture on the contract, stored with the project, SHA-256 tamper evidence. ~~ Late-fee accrual calculator ~~ — shipped in v0.4.0: monthly-compounding accrual of contract §3 fees, invoice late-fees CLI, dashboard rows, dunning template variables. ~~ SMS / WhatsApp escalation ~~ — shipped in v0.5.0: day-15 also goes out as an SMS/WhatsApp message via Twilio when configured, plus invoice notify for one-off reminders. Agency mode — multi-freelancer workspaces (unshipped); per-client dunning policies shipped in v0.7.0 ( invoiceguard client set-dunning-policy ); freelancer roster + invoice attribution shipped in v0.8.0 ( invoiceguard freelancer add , invoiceguard invoice assign ); freelancer earnings shipped in v0.9.0 ( invoiceguard freelancer show , per-currency billed/collected/outstanding); freelancer payouts shipped in v0.10.0 ( invoiceguard payout record / payout list , per-currency payout ledger with an over-payout guard); revenue splits shipped in v0.11.0 ( freelancer add --split-pct / freelancer set-split , per-currency expected share + still-due-to-freelancer); payout suggestions shipped in v0.12.0 ( invoiceguard payout suggest , per-currency still-due share or still-held balance when no split is set); payout settlement shipped in v0.13.0 ( invoiceguard payout settle , records every suggestion at once through the payout guard, no-split freelancers skipped, --dry-run writes nothing). agency summary shipped in v0.14.0 ( invoiceguard agency summary , whole-book view per freelancer per currency with per-currency totals, read-only); payout schedules shipped in v0.15.0 ( freelancer set-schedule / clear-schedule , invoiceguard payout schedule with derived next payout date, read-only); payouts due shipped in v0.16.0 ( invoiceguard payout due , scheduled freelancers with an actionable payout on/inside the pay-run window, read-only); settle the pay run shipped in v0.17.0 ( invoiceguard payout settle-due , one payout per due row through the payout guard, no-split freelancers skipped, --dry-run writes nothing, second run is a no-op); payouts overdue shipped in v0.18.0 ( invoiceguard payout overdue , scheduled freelancers whose most recent payout date passed with an actionable payout and nothing recorded since that date, read-only); settle the missed pay runs shipped in v0.19.0 ( invoiceguard payout settle-overdue , one payout per overdue row through the payout guard, no-split freelancers skipped, --dry-run writes nothing, second run is a no-op); payout timing on the agency summary shipped in v0.20.0 ( invoiceguard agency summary [--as-of DATE] , per-currency due/overdue/upcoming/settled/no-schedule status with next or missed payout date, derived from the payout due / overdue rules, read-only). ~~ Partial payments / payment plans ~~ — shipped in v0.2.0. Priorities follow real user feedback. If a roadmap item matters to you, open an issue on GitHub describing your workflow."
  }
 ]
