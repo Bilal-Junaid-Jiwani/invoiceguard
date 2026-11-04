@@ -411,7 +411,10 @@ def freelancer_list():
 
 @freelancer.command("show")
 @click.argument("freelancer_id", type=int)
-def freelancer_show(freelancer_id):
+@click.option("--as-of", "as_of", default=None,
+              help="Project payout timing as of YYYY-MM-DD "
+                   "(default: today)")
+def freelancer_show(freelancer_id, as_of):
     """Show a freelancer: contact details, earnings, payouts, invoices.
 
     Earnings are per currency: billed (attributed invoices in a real
@@ -420,12 +423,20 @@ def freelancer_show(freelancer_id):
     When a revenue split is set (`--split-pct` / `freelancer set-split`),
     each currency line also shows the freelancer's expected share of
     what was collected and what is still due to them after payouts.
-    The attributed invoice lines and the recorded payouts follow.
-    Read-only.
+    Each currency line also carries payout timing, taken from the same
+    `agency summary` rows (derived from the exact `payout due` /
+    `overdue` rules as of `--as-of`, default today): due, overdue
+    (with the missed run date), upcoming, settled, or no schedule — so
+    drilling into one freelancer answers "does this freelancer need
+    paying now" without cross-checking `payout due` and
+    `payout overdue`. The attributed invoice lines and the recorded
+    payouts follow. Read-only.
     """
     db = _db()
     try:
         rows = freelancer_earnings(db, freelancer_id)
+        timing = {r["currency"]: r for r in
+                  agency_summary(db, freelancer_id, as_of=as_of)}
     except ValueError as e:
         db.close()
         raise click.ClickException(str(e))
@@ -464,6 +475,23 @@ def freelancer_show(freelancer_id):
                      f"{_money(r['expected_payout_cents'])}, still due "
                      f"to freelancer: "
                      f"{_money(r['still_due_to_freelancer_cents'])}")
+        timing_txt = ""
+        if r["currency"]:
+            t = timing.get(r["currency"], {})
+            status = t.get("payout_status")
+            if status == "overdue":
+                timing_txt = (f", payout overdue "
+                              f"(missed {t['missed_payout_date']})")
+            elif status == "due":
+                timing_txt = (f", payout due "
+                              f"(next payout {t['next_payout_date']})")
+            elif status == "upcoming":
+                timing_txt = (f", payout upcoming "
+                              f"(next payout {t['next_payout_date']})")
+            elif status == "settled":
+                timing_txt = ", payout settled"
+            elif status == "no schedule":
+                timing_txt = ", payout no schedule"
         click.echo(f"  {cur}: billed {_money(r['invoiced_cents'])}, "
                    f"collected {_money(r['collected_cents'])}, "
                    f"outstanding {_money(r['outstanding_cents'])} "
@@ -471,7 +499,7 @@ def freelancer_show(freelancer_id):
                    + (f", paid out {_money(r['paid_out_cents'])}, "
                       f"still owed {_money(r['still_owed_cents'])}"
                       if r["currency"] else "")
-                   + share)
+                   + share + timing_txt)
     if attributed:
         click.echo("  invoices:")
         for inv in sorted(attributed, key=lambda i: i["id"]):
