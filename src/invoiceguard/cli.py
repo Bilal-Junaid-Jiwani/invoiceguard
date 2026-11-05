@@ -22,7 +22,8 @@ from .messaging import (message_channel, messaging_configured,
 from .reports import (agency_summary, agency_summary_totals,
                       freelancer_earnings, invoices_csv,
                       next_payout_date, payments_csv, payout_due,
-                      payout_overdue, payout_schedule, payout_suggestions,
+                      payout_overdue, payout_schedule,
+                      payout_suggestion_timing, payout_suggestions,
                       receivables_report)
 from .stripe_links import create_payment_link, default_due_date
 
@@ -585,37 +586,65 @@ def payout_list(freelancer_id):
 @payout.command("suggest")
 @click.option("--freelancer", "freelancer_id", type=int, default=None,
               help="Only suggest payouts for this freelancer")
-def payout_suggest(freelancer_id):
+@click.option("--as-of", "as_of", default=None,
+              help="Project payout timing as of YYYY-MM-DD "
+                   "(default: today)")
+def payout_suggest(freelancer_id, as_of):
     """Suggest what to pay each freelancer next, per currency.
 
     Derived from collected earnings and the payout ledger — read-only,
     nothing is recorded or transferred. With a revenue split set, the
     suggestion is the freelancer's still-due share; without a split it
-    reports what the agency still holds for them instead. Record all
-    suggestions at once with `payout settle`, or one amount by hand
-    with `payout record`, which enforces its own guard.
+    reports what the agency still holds for them instead. Each line
+    also carries payout timing, taken from the same `payout due` /
+    `overdue` rules as of `--as-of` (default today): due, overdue
+    (with the missed run date), upcoming, or no schedule — so the
+    answer to "what do I pay next" also answers "does it need paying
+    now" without cross-checking `payout due` and `payout overdue`.
+    Record all suggestions at once with `payout settle`, or one amount
+    by hand with `payout record`, which enforces its own guard.
     """
     db = _db()
     if freelancer_id is not None and not db.get_freelancer(freelancer_id):
         db.close()
         raise click.ClickException(f"no freelancer #{freelancer_id}")
-    rows = payout_suggestions(db, freelancer_id)
+    try:
+        rows = payout_suggestions(db, freelancer_id)
+        timing = payout_suggestion_timing(db, freelancer_id, as_of=as_of)
+    except ValueError as e:
+        db.close()
+        raise click.ClickException(str(e))
     db.close()
     if not rows:
         click.echo("no payout suggestions")
         return
     for r in rows:
+        t = timing.get((r["freelancer_id"], r["currency"]), {})
+        status = t.get("payout_status")
+        if status == "overdue":
+            timing_txt = (f"  payout overdue "
+                          f"(missed {t['missed_payout_date']})")
+        elif status == "due":
+            timing_txt = (f"  payout due "
+                          f"(next payout {t['next_payout_date']})")
+        elif status == "upcoming":
+            timing_txt = (f"  payout upcoming "
+                          f"(next payout {t['next_payout_date']})")
+        else:  # "no schedule"
+            timing_txt = "  payout no schedule"
         if r["suggested_cents"] is not None:
             click.echo(f"#{r['freelancer_id']:>3}  {r['freelancer_name']:<25} "
                        f"{r['currency']} {r['suggested_cents'] / 100:>12,.2f}  "
                        f"({_fmt_split(r['split_pct'])} of "
                        f"{r['collected_cents'] / 100:,.2f} collected, "
-                       f"{r['paid_out_cents'] / 100:,.2f} already paid)")
+                       f"{r['paid_out_cents'] / 100:,.2f} already paid)"
+                       + timing_txt)
         else:
             click.echo(f"#{r['freelancer_id']:>3}  {r['freelancer_name']:<25} "
                        f"{r['currency']} {r['available_cents'] / 100:>12,.2f}  "
                        f"(available — no split set; set one with "
-                       f"`freelancer set-split` for a share suggestion)")
+                       f"`freelancer set-split` for a share suggestion)"
+                       + timing_txt)
 
 
 @payout.command("settle")

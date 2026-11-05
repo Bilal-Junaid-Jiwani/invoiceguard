@@ -6,6 +6,38 @@ description: InvoiceGuard release history — newest first, no fluff.
 
 Every release, newest first. InvoiceGuard follows semver.
 
+## [0.23.0] - 2026-11-05
+
+Agency-mode slice #17: payout timing on `payout suggest`. Slices #14–#16 put timing on the whole-book summary, its TOTALS lines, and the per-freelancer view, but the answer to "what do I pay next" itself still carried no timing — telling an overdue suggestion from an upcoming one meant cross-checking `payout due` and `payout overdue`. This slice puts the timing on the suggestion lines themselves.
+
+### Added
+- **`reports.payout_suggestion_timing()`** — one entry per (`freelancer_id`, `currency`) in `payout_suggestions()`: `payout_status` derived from the exact `payout due`/`overdue` rules as of `as_of` (default: today) — `overdue` (with `missed_payout_date`), `due`, `upcoming`, or `no schedule` — plus `next_payout_date`. A suggestion row is actionable by construction, so `settled` never appears here, unlike the agency summary which also covers settled rows. Read-only, like the rest of the command.
+- **`invoiceguard payout suggest [--freelancer ID] [--as-of DATE]`** — each suggestion line now appends its payout timing (`payout due (next payout ...)`, `payout overdue (missed ...)`, `payout upcoming (next payout ...)`, or `payout no schedule`), for split-share rows and no-split available rows alike. `--as-of` projects the timing as of that day; an invalid `--as-of` is a clean error, not a traceback. Sorting, amounts, and the `no payout suggestions` empty case are unchanged. Read-only, like the rest of the command.
+
+### Honest scope (0.23.0)
+- A view, not a workflow: the status reports timing; recording a due or overdue payout is still `payout settle-due` / `payout settle-overdue`. Multi-freelancer workspaces remain the unshipped half of agency mode.
+
+## [0.22.0] - 2026-11-04
+
+Agency-mode slice #16: payout timing on `freelancer show`. Slices #14 and #15 put timing on the whole-book summary and its TOTALS lines, but drilling into one freelancer still showed only the schedule and the next payout date — answering "does this freelancer need paying now" meant cross-checking `payout due` and `payout overdue`. This slice puts the timing on the per-freelancer view itself.
+
+### Added
+- **`invoiceguard freelancer show ID [--as-of DATE]`** — each currency line now appends its payout timing (`payout due (next payout ...)`, `payout overdue (missed ...)`, `payout upcoming (next payout ...)`, `payout settled`, or `payout no schedule`), taken from the same `agency summary` rows — derived from the exact `payout due`/`overdue` rules as of `--as-of` (default: today), no new rules. Freelancers with no billable invoices carry no timing phrase, matching the summary's no-currency row. `--as-of` with an invalid date is a clean error, not a traceback. Contact, earnings, invoice, and payout lines are unchanged; the schedule line still shows the next payout date. Read-only, like the rest of the command.
+
+### Honest scope (0.22.0)
+- A view, not a workflow: the status reports timing; recording a due or overdue payout is still `payout settle-due` / `payout settle-overdue`. Multi-freelancer workspaces remain the unshipped half of agency mode.
+
+## [0.21.0] - 2026-11-03
+
+Agency-mode slice #15: payout timing on the agency summary TOTALS. Slice #14 put timing on every per-freelancer currency line but left the TOTALS lines answering only *how much* — an agency owner glancing at the whole-book totals still could not tell whether anything in a currency was overdue without reading every freelancer section. This slice rolls the timing up.
+
+### Added
+- **`reports.agency_summary_totals()`** — per-currency totals across the summary (money totals plus the suggested total, as before, now from the library instead of recomputed in the CLI) with a payout-timing rollup derived from the rows' own `payout_status` values — no new rules. The rollup reports the single most urgent status in the currency: `overdue` beats `due` beats `upcoming`, with the freelancer count in that status and the earliest missed run (overdue) or earliest next run (due/upcoming). When nothing is actionable and every row agrees, the rollup is that shared status (`settled` or `no schedule`); when nothing is actionable and the rows disagree — some settled, some unscheduled — the currency carries no status rather than a misleading one. Read-only, like the summary itself.
+- **`invoiceguard agency summary` TOTALS lines** now append the rollup (`payout overdue (2 freelancers, missed 2026-11-10)`, `payout due (1 freelancer, next payout ...)`, `payout upcoming (...)`, `payout settled`, or `payout no schedule`); a mixed settled/no-schedule currency prints no timing phrase. Per-freelancer lines and all money totals are unchanged; `--freelancer` and `--as-of` filter and project the rollup exactly as they do the rows.
+
+### Honest scope (0.21.0)
+- A rollup, not a new rule: the timing still comes from the `payout due`/`overdue` derivations — the totals line never invents a status the rows do not already carry. Multi-freelancer workspaces remain the unshipped half of agency mode.
+
 ## [0.20.0] - 2026-11-02
 
 Agency-mode slice #14: payout timing on the agency summary. Slices #10–#13 built the pay-run views (`due`, `overdue`) and their settlements, but the whole-book view still answered only *how much* — checking whether a freelancer's payout was due, overdue, or upcoming meant cross-checking two more commands. This slice puts the timing on the summary itself.

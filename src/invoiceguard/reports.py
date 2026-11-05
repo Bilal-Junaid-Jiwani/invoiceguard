@@ -685,6 +685,55 @@ def payout_overdue(db: DB, freelancer_id: int | None = None,
     return rows
 
 
+def payout_suggestion_timing(db: DB, freelancer_id: int | None = None,
+                             as_of: str | date | None = None
+                             ) -> dict[tuple[int, str], dict]:
+    """Payout timing for each actionable suggestion row (read-only).
+
+    One entry per (freelancer_id, currency) in `payout_suggestions()`:
+    the *payout_status* derived from the exact `payout_due()` /
+    `payout_overdue()` rules as of *as_of* (default: today) —
+    ``overdue`` (a missed run still owed, with its
+    *missed_payout_date*), ``due`` (the pay run has arrived),
+    ``upcoming`` (scheduled, actionable, next date still ahead), or
+    ``no schedule`` (no schedule set, so nothing can be due) — plus
+    the freelancer's *next_payout_date* (None when unscheduled). A
+    suggestion row is actionable by construction, so ``settled`` never
+    appears here, unlike `agency_summary()`, which also covers settled
+    rows. This is the timing `payout suggest` appends to each line, so
+    the answer to "what do I pay next" also answers "does it need
+    paying now" without cross-checking `payout due` and
+    `payout overdue`. Pass freelancer_id to restrict to one freelancer;
+    raises ValueError for an unknown freelancer or an invalid as_of.
+    Read-only.
+    """
+    sugg = payout_suggestions(db, freelancer_id)
+    sched = {s["freelancer_id"]: s
+             for s in payout_schedule(db, freelancer_id, as_of=as_of)}
+    due = {(r["freelancer_id"], r["currency"])
+           for r in payout_due(db, freelancer_id, as_of=as_of)}
+    overdue = {(r["freelancer_id"], r["currency"]):
+               r["missed_payout_date"]
+               for r in payout_overdue(db, freelancer_id, as_of=as_of)}
+    timing: dict[tuple[int, str], dict] = {}
+    for s in sugg:
+        key = (s["freelancer_id"], s["currency"])
+        sch = sched.get(s["freelancer_id"])
+        nxt = sch["next_payout_date"] if sch else None
+        if key in overdue:
+            status, missed = "overdue", overdue[key]
+        elif key in due:
+            status, missed = "due", None
+        elif nxt is None:
+            status, missed = "no schedule", None
+        else:
+            status, missed = "upcoming", None
+        timing[key] = {"payout_status": status,
+                       "next_payout_date": nxt,
+                       "missed_payout_date": missed}
+    return timing
+
+
 def payments_csv(db: DB) -> str:
     """The full payment ledger as CSV — every recorded payment,
     including payments against invoices that are now paid in full,

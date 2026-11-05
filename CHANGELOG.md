@@ -2,6 +2,17 @@
 
 Every release, newest first. InvoiceGuard follows semver.
 
+## [0.23.0] - 2026-11-05
+
+Agency-mode slice #17: payout timing on `payout suggest`. Slices #14–#16 put timing on the whole-book summary, its TOTALS lines, and the per-freelancer view, but the answer to "what do I pay next" itself still carried no timing — telling an overdue suggestion from an upcoming one meant cross-checking `payout due` and `payout overdue`. This slice puts the timing on the suggestion lines themselves.
+
+### Added
+- **`reports.payout_suggestion_timing()`** — one entry per (`freelancer_id`, `currency`) in `payout_suggestions()`: `payout_status` derived from the exact `payout due`/`overdue` rules as of `as_of` (default: today) — `overdue` (with `missed_payout_date`), `due`, `upcoming`, or `no schedule` — plus `next_payout_date`. A suggestion row is actionable by construction, so `settled` never appears here, unlike the agency summary which also covers settled rows. Read-only, like the rest of the command.
+- **`invoiceguard payout suggest [--freelancer ID] [--as-of DATE]`** — each suggestion line now appends its payout timing (`payout due (next payout ...)`, `payout overdue (missed ...)`, `payout upcoming (next payout ...)`, or `payout no schedule`), for split-share rows and no-split available rows alike. `--as-of` projects the timing as of that day; an invalid `--as-of` is a clean error, not a traceback. Sorting, amounts, and the `no payout suggestions` empty case are unchanged. Read-only, like the rest of the command.
+
+### Honest scope (0.23.0)
+- A view, not a workflow: the status reports timing; recording a due or overdue payout is still `payout settle-due` / `payout settle-overdue`. Multi-freelancer workspaces remain the unshipped half of agency mode.
+
 ## [0.22.0] - 2026-11-04
 
 Agency-mode slice #16: payout timing on `freelancer show`. Slices #14 and #15 put timing on the whole-book summary and its TOTALS lines, but drilling into one freelancer still showed only the schedule and the next payout date — answering "does this freelancer need paying now" meant cross-checking `payout due` and `payout overdue`. This slice puts the timing on the per-freelancer view itself.
