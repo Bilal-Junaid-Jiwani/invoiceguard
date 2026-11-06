@@ -23,8 +23,8 @@ from .reports import (agency_summary, agency_summary_totals,
                       freelancer_earnings, invoices_csv,
                       next_payout_date, payments_csv, payout_due,
                       payout_overdue, payout_schedule,
-                      payout_suggestion_timing, payout_suggestions,
-                      receivables_report)
+                      payout_schedule_timing, payout_suggestion_timing,
+                      payout_suggestions, receivables_report)
 from .stripe_links import create_payment_link, default_due_date
 
 TEMPLATE_SOURCE = Path(__file__).resolve().parent / "email_templates"
@@ -731,7 +731,16 @@ def payout_schedule_cmd(freelancer_id, as_of):
     Derived from the schedule set with `freelancer set-schedule` —
     read-only, nothing is recorded or transferred. Freelancers with
     no schedule set are listed as such, so the roster's gaps are
-    visible at a glance.
+    visible at a glance. Each line also carries payout timing, taken
+    from the same `agency summary` rows (derived from the exact
+    `payout due` / `overdue` rules as of `--as-of`, default today):
+    due, overdue (with the missed run date), upcoming, settled, or
+    no schedule — the most urgent status across the freelancer's
+    currencies, so the roster's pay-run view also answers \"does this
+    freelancer need paying now\" without cross-checking `payout due`
+    and `payout overdue`. Freelancers with no billable invoices
+    carry no timing phrase. An invalid `--as-of` is a clean error,
+    not a traceback.
     """
     db = _db()
     if freelancer_id is not None and not db.get_freelancer(freelancer_id):
@@ -739,6 +748,7 @@ def payout_schedule_cmd(freelancer_id, as_of):
         raise click.ClickException(f"no freelancer #{freelancer_id}")
     try:
         rows = payout_schedule(db, freelancer_id, as_of=as_of)
+        timing = payout_schedule_timing(db, freelancer_id, as_of=as_of)
     except ValueError as e:
         db.close()
         raise click.ClickException(str(e))
@@ -747,15 +757,36 @@ def payout_schedule_cmd(freelancer_id, as_of):
         click.echo("no freelancers on the roster")
         return
     for r in rows:
+        t = timing.get(r["freelancer_id"], {})
+        status = t.get("payout_status")
+        count = t.get("payout_currencies") or 0
+        many = f" ({count} currencies, " if count > 1 else " ("
+        if status == "overdue":
+            timing_txt = (f"  payout overdue"
+                          f"{many}missed {t['missed_payout_date']})")
+        elif status == "due":
+            timing_txt = (f"  payout due"
+                          f"{many}next payout {t['next_payout_date']})")
+        elif status == "upcoming":
+            timing_txt = (f"  payout upcoming"
+                          f"{many}next payout {t['next_payout_date']})")
+        elif status == "settled":
+            timing_txt = "  payout settled"
+        elif status == "no schedule":
+            timing_txt = "  payout no schedule"
+        else:
+            timing_txt = ""
         if r["next_payout_date"] is None:
             click.echo(f"#{r['freelancer_id']:>3}  "
-                       f"{r['freelancer_name']:<25} no schedule set")
+                       f"{r['freelancer_name']:<25} no schedule set"
+                       + timing_txt)
         else:
             sched = _fmt_schedule(r["payout_cadence"], r["payout_day"])
             click.echo(f"#{r['freelancer_id']:>3}  "
                        f"{r['freelancer_name']:<25} "
                        f"{sched:<22} next payout "
-                       f"{r['next_payout_date']}")
+                       f"{r['next_payout_date']}"
+                       + timing_txt)
 
 
 @payout.command("due")

@@ -734,6 +734,65 @@ def payout_suggestion_timing(db: DB, freelancer_id: int | None = None,
     return timing
 
 
+def payout_schedule_timing(db: DB, freelancer_id: int | None = None,
+                             as_of: str | date | None = None
+                             ) -> dict[int, dict]:
+    """Payout timing for each roster freelancer (read-only).
+
+    One entry per freelancer id in `agency_summary()`, rolled up
+    across that freelancer's currencies with the same precedence
+    `agency_summary_totals()` uses per currency — no new rules:
+    ``overdue`` beats ``due`` beats ``upcoming``; *payout_currencies*
+    counts the currency rows in the winning status,
+    *missed_payout_date* is the earliest missed run among the
+    overdue rows, and *next_payout_date* is the earliest next run
+    among the due / upcoming rows. When nothing is actionable and
+    every currency agrees, the rollup is that shared status
+    (``settled`` or ``no schedule``); when nothing is actionable and
+    the currencies disagree — some settled, some unscheduled — no
+    single status describes the freelancer, so *payout_status* is
+    None and the CLI prints no timing on that schedule line rather
+    than a misleading one. Freelancers with no billable invoices
+    carry no currency row in the summary and get no entry, matching
+    `freelancer show`. This is the timing `payout schedule` appends
+    to each line, so the roster's pay-run view also answers \"does
+    this freelancer need paying now\" without cross-checking `payout
+    due` and `payout overdue`. Pass freelancer_id to restrict to one
+    freelancer; raises ValueError for an unknown freelancer or an
+    invalid as_of. Read-only.
+    """
+    grouped: dict[int, dict[str, list]] = {}
+    for r in agency_summary(db, freelancer_id, as_of=as_of):
+        if not r["currency"]:
+            continue
+        grouped.setdefault(r["freelancer_id"], {}).setdefault(
+            r["payout_status"], []).append(r)
+    timing: dict[int, dict] = {}
+    for fid, by_status in grouped.items():
+        entry = {"payout_status": None, "payout_currencies": None,
+                 "missed_payout_date": None, "next_payout_date": None}
+        for status in ("overdue", "due", "upcoming"):
+            rows = by_status.get(status)
+            if rows:
+                entry["payout_status"] = status
+                entry["payout_currencies"] = len(rows)
+                if status == "overdue":
+                    entry["missed_payout_date"] = min(
+                        r["missed_payout_date"] for r in rows)
+                else:
+                    entry["next_payout_date"] = min(
+                        r["next_payout_date"] for r in rows)
+                break
+        else:
+            left = [s for s in ("settled", "no schedule")
+                    if by_status.get(s)]
+            if len(left) == 1:
+                entry["payout_status"] = left[0]
+                entry["payout_currencies"] = len(by_status[left[0]])
+        timing[fid] = entry
+    return timing
+
+
 def payments_csv(db: DB) -> str:
     """The full payment ledger as CSV — every recorded payment,
     including payments against invoices that are now paid in full,

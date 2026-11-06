@@ -2,6 +2,17 @@
 
 Every release, newest first. InvoiceGuard follows semver.
 
+## [0.24.0] - 2026-11-06
+
+Agency-mode slice #18: payout timing on `payout schedule`. Slices #14–#17 put timing on the whole-book summary, its TOTALS lines, the per-freelancer view, and the suggestion lines, but the roster's pay-run view itself still showed only the schedule and the next payout date — telling a due freelancer from an upcoming one meant cross-checking `payout due` and `payout overdue`. This slice puts the timing on the schedule lines themselves.
+
+### Added
+- **`reports.payout_schedule_timing()`** — one entry per freelancer id in `agency_summary()`: `payout_status` rolled up across the freelancer's currencies with the same precedence `agency_summary_totals()` uses per currency — `overdue` beats `due` beats `upcoming`, with `payout_currencies` counting the currency rows in the winning status, `missed_payout_date` the earliest missed run among the overdue rows, and `next_payout_date` the earliest next run among the due / upcoming rows. Unanimous `settled` or `no schedule` currencies roll up to that shared status; a settled/no-schedule mix carries no status rather than a misleading one. Freelancers with no billable invoices get no entry. Read-only, like the rest of the command.
+- **`invoiceguard payout schedule [--freelancer ID] [--as-of DATE]`** — each schedule line now appends its payout timing (`payout due (next payout ...)`, `payout overdue (missed ...)`, `payout upcoming (next payout ...)`, `payout settled`, or `payout no schedule`), with a currency count when more than one currency shares the winning status (`payout overdue (2 currencies, missed ...)`). `--as-of` projects the timing as of that day; an invalid `--as-of` is a clean error, not a traceback. Sorting, the schedule rendering, and the `no freelancers on the roster` empty case are unchanged; freelancers with no billable invoices carry no timing phrase. Read-only, like the rest of the command.
+
+### Honest scope (0.24.0)
+- A view, not a workflow: the status reports timing; recording a due or overdue payout is still `payout settle-due` / `payout settle-overdue`. Multi-freelancer workspaces remain the unshipped half of agency mode.
+
 ## [0.23.0] - 2026-11-05
 
 Agency-mode slice #17: payout timing on `payout suggest`. Slices #14–#16 put timing on the whole-book summary, its TOTALS lines, and the per-freelancer view, but the answer to "what do I pay next" itself still carried no timing — telling an overdue suggestion from an upcoming one meant cross-checking `payout due` and `payout overdue`. This slice puts the timing on the suggestion lines themselves.
