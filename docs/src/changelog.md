@@ -6,6 +6,16 @@ description: InvoiceGuard release history — newest first, no fluff.
 
 Every release, newest first. InvoiceGuard follows semver.
 
+## [0.25.0] - 2026-11-07
+
+Agency-mode slice #19: payout timing on `freelancer list`. Slices #14–#18 put timing on the whole-book summary, its TOTALS lines, the per-freelancer view, the suggestion lines, and the pay-run schedule view, but the roster itself — name, contact, split — still carried no timing: telling a due freelancer from an upcoming one at a glance meant opening `payout schedule` or cross-checking `payout due` and `payout overdue`. This slice puts the timing on the roster lines themselves.
+
+### Added
+- **`invoiceguard freelancer list [--as-of DATE]`** — each roster line now appends its payout timing (`payout due (next payout ...)`, `payout overdue (missed ...)`, `payout upcoming (next payout ...)`, `payout settled`, or `payout no schedule`), taken from the same `payout_schedule_timing()` rollup `payout schedule` uses — the most urgent status across the freelancer's currencies, with a currency count when more than one currency shares the winning status (`payout overdue (2 currencies, missed ...)`). No new library rules: the rollup is reused as-is. `--as-of` projects the timing as of that day; an invalid `--as-of` is a clean error, not a traceback. The roster's contact/split rendering and the empty-roster behaviour are unchanged; freelancers with no billable invoices carry no timing phrase. Read-only, like the rest of the command.
+
+### Honest scope (0.25.0)
+- A view, not a workflow: the status reports timing; recording a due or overdue payout is still `payout settle-due` / `payout settle-overdue`. Multi-freelancer workspaces remain the unshipped half of agency mode.
+
 ## [0.24.0] - 2026-11-06
 
 Agency-mode slice #18: payout timing on `payout schedule`. Slices #14–#17 put timing on the whole-book summary, its TOTALS lines, the per-freelancer view, and the suggestion lines, but the roster's pay-run view itself still showed only the schedule and the next payout date — telling a due freelancer from an upcoming one meant cross-checking `payout due` and `payout overdue`. This slice puts the timing on the schedule lines themselves.

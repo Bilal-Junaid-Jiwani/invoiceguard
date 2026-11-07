@@ -398,16 +398,56 @@ def freelancer_clear_schedule(freelancer_id):
 
 
 @freelancer.command("list")
-def freelancer_list():
-    """List freelancers."""
+@click.option("--as-of", "as_of", default=None,
+              help="Project payout timing as of YYYY-MM-DD "
+                   "(default: today)")
+def freelancer_list(as_of):
+    """List freelancers.
+
+    Each line also carries payout timing, taken from the same
+    `agency summary` rows (derived from the exact `payout due` /
+    `overdue` rules as of `--as-of`, default today): due, overdue
+    (with the missed run date), upcoming, settled, or no schedule —
+    rolled up across the freelancer's currencies with the same
+    overdue-beats-due-beats-upcoming precedence `payout schedule`
+    uses, so the roster itself answers "does this freelancer need
+    paying now" without cross-checking `payout due` and
+    `payout overdue`. Freelancers with no billable invoices carry
+    no timing phrase. An invalid `--as-of` is a clean error, not a
+    traceback. Read-only.
+    """
     db = _db()
     rows = db.list_freelancers()
+    try:
+        timing = payout_schedule_timing(db, as_of=as_of)
+    except ValueError as e:
+        db.close()
+        raise click.ClickException(str(e))
     db.close()
     for r in rows:
         split = f" {_fmt_split(r['split_pct'])}" \
             if r["split_pct"] is not None else ""
+        t = timing.get(r["id"], {})
+        status = t.get("payout_status")
+        count = t.get("payout_currencies") or 0
+        many = f" ({count} currencies, " if count > 1 else " ("
+        if status == "overdue":
+            timing_txt = (f"  payout overdue"
+                          f"{many}missed {t['missed_payout_date']})")
+        elif status == "due":
+            timing_txt = (f"  payout due"
+                          f"{many}next payout {t['next_payout_date']})")
+        elif status == "upcoming":
+            timing_txt = (f"  payout upcoming"
+                          f"{many}next payout {t['next_payout_date']})")
+        elif status == "settled":
+            timing_txt = "  payout settled"
+        elif status == "no schedule":
+            timing_txt = "  payout no schedule"
+        else:
+            timing_txt = ""
         click.echo(f"#{r['id']:>3}  {r['name']:<30} {r['email'] or '':<28} "
-                   f"{r['phone'] or ''}{split}")
+                   f"{r['phone'] or ''}{split}" + timing_txt)
 
 
 @freelancer.command("show")

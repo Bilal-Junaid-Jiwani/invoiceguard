@@ -36,12 +36,12 @@ invoiceguard freelancer add --name "Ali R." [--email ali@example.com] [--phone +
 invoiceguard freelancer set-email 1 [--email ali@example.com]   # omit --email to clear
 invoiceguard freelancer set-phone 1 [--phone +15551234567]     # omit --phone to clear
 invoiceguard freelancer set-split 1 --split-pct 70   # v0.11.0
-invoiceguard freelancer list
+invoiceguard freelancer list [--as-of 2026-10-28]   # timing in v0.25.0
 invoiceguard freelancer show 1          # v0.9.0
 ```
 
 - The agency roster: one row per team member. `add` requires `--name`; `--phone` must be E.164 (invalid numbers are rejected).
-- `list` prints `#id  name  email  phone` rows.
+- `list` prints `#id  name  email  phone` rows. Each line also carries payout timing (v0.25.0): due, overdue (with the missed run date), upcoming, settled, or no schedule — the most urgent status across the freelancer's currencies, taken from the same `payout_schedule_timing()` rollup `payout schedule` uses, derived from the exact `payout due`/`overdue` rules as of `--as-of` (default: today); an invalid date is a clean error, and freelancers with no billable invoices carry no timing phrase. Read-only.
 - `show` (v0.9.0; payouts added in v0.10.0, revenue splits in v0.11.0, payout schedule line in v0.15.0, payout timing in v0.22.0) prints contact details, per-currency earnings — billed (attributed invoices in a real state; drafts and voids excluded), collected (payment-ledger sums), outstanding — plus paid out and still owed from the payout ledger, the attributed invoice lines with collected/outstanding per invoice, and the recorded payouts. When a revenue split is set it also prints the freelancer's expected share of each collected currency and what is still due to them after payouts. When a payout schedule is set it prints the schedule and the derived next payout date. Each currency line also carries payout timing (v0.22.0): due, overdue (with the missed run date), upcoming, settled, or no schedule — taken from the same `agency summary` rows, derived from the exact `payout due`/`overdue` rules as of `--as-of` (default today); an invalid date is a clean error, and freelancers with no billable invoices carry no timing phrase. Read-only.
 - `--split-pct` (v0.11.0) records the freelancer's revenue-split percentage of *collected* earnings (0–100, validated before write); `freelancer set-split` changes it later. NULL (unset) means the freelancer is earnings bookkeeping only. Bookkeeping only — the split is reported, never transferred, and the payout guard is unchanged.
 - `set-schedule` (v0.15.0) records a recurring payout schedule: `--cadence weekly` with `--day` 1–7 (ISO weekday, Monday–Sunday) or `--cadence monthly` with `--day` 1–31 (day of month, clamped to the month's last day when derived); `clear-schedule` clears it. Validated before write; a schedule never records or transfers a payout.
