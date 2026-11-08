@@ -470,7 +470,8 @@ def freelancer_show(freelancer_id, as_of):
     (with the missed run date), upcoming, settled, or no schedule — so
     drilling into one freelancer answers "does this freelancer need
     paying now" without cross-checking `payout due` and
-    `payout overdue`. The attributed invoice lines and the recorded
+    `payout overdue`. The `schedule:` line's next payout date is
+    projected to `--as-of` as well. The attributed invoice lines and the recorded
     payouts follow. Read-only.
     """
     db = _db()
@@ -504,7 +505,14 @@ def freelancer_show(freelancer_id, as_of):
         click.echo(f"  split: {_fmt_split(f['split_pct'])} of collected "
                    f"earnings")
     if f["payout_cadence"] is not None:
-        nxt = next_payout_date(f["payout_cadence"], f["payout_day"])
+        # Projected with --as-of like the timing lines below: the
+        # header used to compute the next payout date as of today even
+        # with --as-of, so it disagreed with the timing on the same
+        # screen (as of 2026-10-10 it said "next payout 2026-11-15"
+        # while the timing line said "payout overdue (missed
+        # 2026-09-15)").
+        nxt = next_payout_date(f["payout_cadence"], f["payout_day"],
+                               as_of=as_of)
         sched = _fmt_schedule(f["payout_cadence"], f["payout_day"])
         nxt_txt = nxt.isoformat() if nxt else "none"
         click.echo(f"  schedule: {sched} (next payout {nxt_txt})")

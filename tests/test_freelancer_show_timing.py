@@ -110,3 +110,23 @@ def test_show_invalid_as_of_is_clean_error(db, sample_project):
     out = _show(fid, "--as-of", "not-a-date")
     assert out.exit_code != 0
     assert "Traceback" not in out.output
+
+
+def test_show_schedule_header_projects_with_as_of(db, sample_project):
+    """`freelancer show --as-of` projects the schedule header too.
+
+    The timing lines are projected with `--as-of`, but the `schedule:`
+    header computed the next payout date as of today — so with
+    `--as-of 2026-10-10` it said "next payout 2026-11-15" on the same
+    screen where the timing line said "payout overdue (missed
+    2026-09-15)". The header now uses the same `--as-of` instant, so
+    the two agree.
+    """
+    # Monthly day 15, as of 2026-10-10: missed Sep 15, next Oct 15.
+    fid = _split_freelancer(db, sample_project, cadence="monthly",
+                            day=15)
+    out = _show(fid, "--as-of", "2026-10-10")
+    assert out.exit_code == 0, out.output
+    assert "schedule: monthly on day 15 (next payout 2026-10-15)" \
+        in out.output
+    assert "payout overdue (missed 2026-09-15)" in out.output

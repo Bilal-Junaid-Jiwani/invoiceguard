@@ -2,6 +2,11 @@
 
 Every release, newest first. InvoiceGuard follows semver.
 
+## [0.25.1] - 2026-11-08
+
+### Fixed
+- **`freelancer show --as-of` now projects the `schedule:` header too.** The per-currency timing lines are projected with `--as-of`, but the header computed the next payout date as of today — so with `--as-of 2026-10-10` it said "next payout 2026-11-15" on the same screen where the timing line said "payout overdue (missed 2026-09-15)". The header now passes `--as-of` through to `next_payout_date()`, like `payout schedule` already does; without `--as-of` the header is unchanged (today). Pinned by a new test in `tests/test_freelancer_show_timing.py`.
+
 ## [0.25.0] - 2026-11-07
 
 Agency-mode slice #19: payout timing on `freelancer list`. Slices #14–#18 put timing on the whole-book summary, its TOTALS lines, the per-freelancer view, the suggestion lines, and the pay-run schedule view, but the roster itself — name, contact, split — still carried no timing: telling a due freelancer from an upcoming one at a glance meant opening `payout schedule` or cross-checking `payout due` and `payout overdue`. This slice puts the timing on the roster lines themselves.
