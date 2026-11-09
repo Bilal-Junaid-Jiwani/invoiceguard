@@ -70,7 +70,12 @@ def receivables_report(db: DB, as_of: str | date | None = None,
                     fees_cents, total_cents}] sorted by total due desc
         by_freelancer — like by_client but per attributed freelancer
                     (unattributed invoices are grouped under
-                    "unassigned")
+                    "unassigned"), each entry also carrying the
+                    freelancer's id (None for "unassigned") so callers
+                    can join payout timing onto the row; entries are
+                    grouped by name, like the client side, so two
+                    roster freelancers sharing a name share one entry
+                    and the id is the first one's.
         totals    — {currency: {count, outstanding_cents, fees_cents,
                     total_cents}}
     Aggregates are per currency — cents of different currencies are
@@ -118,6 +123,7 @@ def receivables_report(db: DB, as_of: str | date | None = None,
         f_name = row.get("freelancer_name") or "unassigned"
         f_agg = freelancers.setdefault(
             (f_name, cur), dict({"freelancer_name": f_name,
+                                "freelancer_id": row.get("freelancer_id"),
                                 "currency": cur}, **_blank()))
         for agg in (b, totals[cur], f_agg,
                     clients.setdefault((row["client_name"], cur),

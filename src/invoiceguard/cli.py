@@ -1722,7 +1722,14 @@ def invoice_report(as_of, freelancer_id, csv_path, payments_csv_path):
     Aging buckets, per-client and per-freelancer totals, and accrued
     late fees over open invoices (sent / overdue / partially-paid with
     a balance), using the same outstanding-balance definition as the
-    dashboard. Never sends anything and never changes invoice state.
+    dashboard. Each "by freelancer" line also carries payout timing,
+    taken from the same `agency summary` rows (derived from the exact
+    `payout due` / `overdue` rules as of `--as-of`, default today):
+    due, overdue (with the missed run date), upcoming, settled, or no
+    schedule — per currency, matching the row's own currency, so the
+    report answers "who do we owe, and when" alongside "who owes us".
+    The "unassigned" line carries no timing phrase. Never sends
+    anything and never changes invoice state.
     """
     if csv_path == "-" and payments_csv_path == "-":
         raise click.ClickException(
@@ -1739,6 +1746,17 @@ def invoice_report(as_of, freelancer_id, csv_path, payments_csv_path):
         db.close()
         raise click.ClickException(f"no freelancer #{freelancer_id}")
     report = receivables_report(db, as_of=as_of, freelancer_id=freelancer_id)
+    try:
+        # Per-(freelancer, currency) timing from the same agency
+        # summary rows the summary itself prints — the by-freelancer
+        # rows are per currency, so each line takes its own
+        # currency's status, not the freelancer's rollup.
+        timing = {(r["freelancer_id"], r["currency"]): r
+                  for r in agency_summary(db, as_of=as_of)
+                  if r["currency"]}
+    except ValueError as e:
+        db.close()
+        raise click.ClickException(str(e))
     inv_csv = invoices_csv(report["rows"]) if csv_path else None
     pay_csv = payments_csv(db) if payments_csv_path else None
     db.close()
@@ -1816,12 +1834,40 @@ def invoice_report(as_of, freelancer_id, csv_path, payments_csv_path):
             click.echo("")
             click.echo("by freelancer:")
             for f in report["by_freelancer"]:
+                # Same per-currency timing the agency summary lines
+                # carry: each by-freelancer row is one freelancer in
+                # one currency, so it takes that currency's status,
+                # projected with --as-of. The "unassigned" group has
+                # no freelancer id, and a freelancer with no billable
+                # invoices has no timing entry — both print no phrase
+                # rather than a misleading one.
+                timing_txt = ""
+                fid = f.get("freelancer_id")
+                if fid is not None:
+                    t = timing.get((fid, f["currency"]), {})
+                    status = t.get("payout_status")
+                    if status == "overdue":
+                        timing_txt = (f"  payout overdue "
+                                      f"(missed {t['missed_payout_date']})")
+                    elif status == "due":
+                        timing_txt = (f"  payout due "
+                                      f"(next payout "
+                                      f"{t['next_payout_date']})")
+                    elif status == "upcoming":
+                        timing_txt = (f"  payout upcoming "
+                                      f"(next payout "
+                                      f"{t['next_payout_date']})")
+                    elif status == "settled":
+                        timing_txt = "  payout settled"
+                    elif status == "no schedule":
+                        timing_txt = "  payout no schedule"
                 click.echo(f"  {f['freelancer_name']:<20} {f['count']} invoice(s)  "
                            f"{money(f['outstanding_cents'], f['currency'])}"
                            f" outstanding  "
                            f"({money(f['fees_cents'], f['currency'])} fees,"
                            f" {money(f['total_cents'], f['currency'])}"
-                           f" total due)")
+                           f" total due)"
+                           + timing_txt)
     for n in notes:
         click.echo(n)
 
