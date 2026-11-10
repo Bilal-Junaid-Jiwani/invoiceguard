@@ -616,20 +616,68 @@ def payout_record(freelancer_id, amount, currency, paid_at, method, note):
 @payout.command("list")
 @click.option("--freelancer", "freelancer_id", type=int, default=None,
               help="Only show payouts for this freelancer")
-def payout_list(freelancer_id):
-    """List recorded payouts, newest first."""
+@click.option("--as-of", "as_of", default=None,
+              help="Project payout timing as of YYYY-MM-DD "
+                   "(default: today)")
+def payout_list(freelancer_id, as_of):
+    """List recorded payouts, newest first.
+
+    Each freelancer's most recent payout line also carries payout
+    timing, taken from the same `agency summary` rows (derived from
+    the exact `payout due` / `overdue` rules as of `--as-of`, default
+    today): due, overdue (with the missed run date), upcoming,
+    settled, or no schedule — rolled up across the freelancer's
+    currencies with the same overdue-beats-due-beats-upcoming
+    precedence `payout schedule` uses, so the ledger itself answers
+    "does this freelancer need paying again now" without
+    cross-checking `payout due` and `payout overdue`. The timing
+    appears once per freelancer, on their newest payout; older rows
+    for the same freelancer carry no phrase. Freelancers with no
+    billable invoices carry no timing phrase. An invalid `--as-of`
+    is a clean error, not a traceback. Read-only.
+    """
     db = _db()
     if freelancer_id is not None and not db.get_freelancer(freelancer_id):
         db.close()
         raise click.ClickException(f"no freelancer #{freelancer_id}")
+    try:
+        timing = payout_schedule_timing(db, freelancer_id, as_of=as_of)
+    except ValueError as e:
+        db.close()
+        raise click.ClickException(str(e))
     rows = db.list_payouts(freelancer_id)
     db.close()
+    seen: set[int] = set()
     for p in rows:
+        timing_txt = ""
+        fid = p["freelancer_id"]
+        if fid not in seen:
+            # Newest-first rows: the first row per freelancer is
+            # their most recent payout, so the timing appears once.
+            seen.add(fid)
+            t = timing.get(fid, {})
+            status = t.get("payout_status")
+            count = t.get("payout_currencies") or 0
+            many = f" ({count} currencies, " if count > 1 else " ("
+            if status == "overdue":
+                timing_txt = (f"  payout overdue"
+                              f"{many}missed {t['missed_payout_date']})")
+            elif status == "due":
+                timing_txt = (f"  payout due"
+                              f"{many}next payout {t['next_payout_date']})")
+            elif status == "upcoming":
+                timing_txt = (f"  payout upcoming"
+                              f"{many}next payout {t['next_payout_date']})")
+            elif status == "settled":
+                timing_txt = "  payout settled"
+            elif status == "no schedule":
+                timing_txt = "  payout no schedule"
         click.echo(f"#{p['id']:>3}  {p['freelancer_name']:<25} "
                    f"{p['currency']} {p['amount_cents'] / 100:>12,.2f}  "
                    f"{p['paid_at'][:10]}"
                    f"{('  ' + p['method']) if p['method'] else ''}"
-                   f"{('  \"' + p['note'] + '\"') if p['note'] else ''}")
+                   f"{('  \"' + p['note'] + '\"') if p['note'] else ''}"
+                   + timing_txt)
 
 @payout.command("suggest")
 @click.option("--freelancer", "freelancer_id", type=int, default=None,

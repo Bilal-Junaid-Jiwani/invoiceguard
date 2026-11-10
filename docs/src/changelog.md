@@ -6,6 +6,16 @@ description: InvoiceGuard release history — newest first, no fluff.
 
 Every release, newest first. InvoiceGuard follows semver.
 
+## [0.27.0] - 2026-11-10
+
+Agency-mode slice #21: payout timing on `payout list`. Slices #14–#20 put timing on the whole-book summary, its TOTALS lines, the per-freelancer view, the suggestion lines, the schedule lines, the roster, and the receivables report — but the payout ledger itself still answered only *what we already sent*: telling whether a freelancer in the ledger needs paying again now meant cross-checking `payout due` and `payout overdue`, or opening `agency summary`. This slice puts the timing on the ledger's newest row per freelancer.
+
+### Added
+- **`invoiceguard payout list [--freelancer ID] [--as-of DATE]`** — each freelancer's most recent payout line now appends its payout timing (`payout due (next payout ...)`, `payout overdue (missed ...)`, `payout upcoming (next payout ...)`, `payout settled`, or `payout no schedule`), taken from the same `payout_schedule_timing()` rollup `payout schedule` and `freelancer list` use — the most urgent status across the freelancer's currencies, with a currency count when more than one currency shares the winning status (`payout overdue (2 currencies, missed ...)`). No new library rules: the rollup is reused as-is. The timing appears once per freelancer, on their newest payout; older rows for the same freelancer carry no phrase. `--as-of` projects the timing as of that day; an invalid `--as-of` is a clean error, not a traceback. The ledger's row shape, ordering (newest first), and the empty-ledger behaviour are unchanged; freelancers with no billable invoices carry no timing phrase. Read-only, like the rest of the command. Pinned by a new test file `tests/test_payout_list_timing.py` (due, overdue, upcoming, settled, no-schedule, per-currency rollup, once-per-freelancer, `--as-of` projection, invalid `--as-of`, no-billable, empty ledger, `--freelancer` filter).
+
+### Honest scope (0.27.0)
+- A view, not a workflow: the status reports timing; recording a due or overdue payout is still `payout settle-due` / `payout settle-overdue`. Multi-freelancer workspaces remain the unshipped half of agency mode.
+
 ## [0.26.0] - 2026-11-09
 
 Agency-mode slice #20: payout timing on `invoice report`. Slices #14–#19 put timing on the whole-book summary, its TOTALS lines, the per-freelancer view, the suggestion lines, the schedule lines, and the roster — but the receivables report itself still answered only *who owes us*: telling whether the agency owes that freelancer a payout now meant cross-checking `payout due` and `payout overdue`, or opening `agency summary`. This slice puts the timing on the report's "by freelancer" lines themselves.
