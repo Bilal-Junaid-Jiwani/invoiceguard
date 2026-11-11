@@ -33,7 +33,9 @@ from fastapi.templating import Jinja2Templates
 
 from . import db
 from ..config import is_placeholder, load_config
+from ..db import DB as CoreDB
 from ..late_fees import late_fee_summary
+from ..reports import payout_schedule_timing
 
 
 def webhook_secret() -> str | None:
@@ -88,8 +90,76 @@ def index(request: Request, status: str | None = Query(default=None)):
         counts=db.status_counts(),
         active=status or "all",
         statuses=db.STATUSES,
+        payouts=_dashboard_payouts(),
     )
     return templates.TemplateResponse(request, "index.html", ctx)
+
+
+_STATUS_CLASS = {
+    "overdue": "overdue",
+    "due": "due",
+    "upcoming": "upcoming",
+    "settled": "settled",
+    "no schedule": "no-schedule",
+}
+
+
+def _payout_timing_text(entry: dict) -> str:
+    """The CLI's payout-timing phrase for one rollup entry.
+
+    Same wording `freelancer list` appends to each roster line, so the
+    dashboard and the CLI never disagree about a freelancer: due /
+    overdue / upcoming carry the next or missed run date, with a
+    currency count when more than one currency shares the status;
+    settled and no schedule are bare. No entry (no billable invoices)
+    is the caller's problem — this returns "" for it.
+    """
+    status = entry.get("payout_status")
+    count = entry.get("payout_currencies") or 0
+    many = f" ({count} currencies, " if count > 1 else " ("
+    if status == "overdue":
+        return f"payout overdue{many}missed {entry['missed_payout_date']})"
+    if status == "due":
+        return f"payout due{many}next payout {entry['next_payout_date']})"
+    if status == "upcoming":
+        return f"payout upcoming{many}next payout {entry['next_payout_date']})"
+    if status == "settled":
+        return "payout settled"
+    if status == "no schedule":
+        return "payout no schedule"
+    return ""
+
+
+def _dashboard_payouts() -> dict:
+    """Per-freelancer payout timing for the dashboard index (read-only).
+
+    One row per roster freelancer who has a timing entry — the same
+    `payout_schedule_timing()` rollup `payout schedule` and
+    `freelancer list` use, as of today, so the dashboard answers
+    "does this freelancer need paying now" without opening the CLI.
+    Freelancers with no billable invoices have no entry and get no
+    row, matching the CLI views. `has_freelancers` is False only when
+    the roster itself is empty, so the section hides on a fresh DB.
+    """
+    core = CoreDB(db.db_path())
+    try:
+        roster = core.list_freelancers()
+        timing = payout_schedule_timing(core)
+    finally:
+        core.close()
+    rows = []
+    for r in roster:
+        entry = timing.get(r["id"], {})
+        text = _payout_timing_text(entry)
+        if not text:
+            continue
+        rows.append({
+            "name": r["name"],
+            "status": entry.get("payout_status"),
+            "status_class": _STATUS_CLASS.get(entry.get("payout_status"), ""),
+            "text": text,
+        })
+    return {"has_freelancers": bool(roster), "rows": rows}
 
 
 @app.get("/invoices/{invoice_id}", response_class=HTMLResponse)

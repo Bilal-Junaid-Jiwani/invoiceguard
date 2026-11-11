@@ -2,6 +2,16 @@
 
 Every release, newest first. InvoiceGuard follows semver.
 
+## [0.28.0] - 2026-11-11
+
+Agency-mode slice #22: payout timing on the web dashboard. Slices #14–#21 put timing on every CLI view — the whole-book summary, its TOTALS lines, the per-freelancer view, the suggestion lines, the schedule lines, the roster, the receivables report, and the payout ledger — but the dashboard index still answered only *what we already sent*: telling whether a freelancer needs paying now meant opening the CLI. This slice puts the timing on the dashboard's new Payouts section.
+
+### Added
+- **Dashboard index `GET /`** — a Payouts section (between the totals and the invoice list) shows one row per roster freelancer with their payout timing (`payout due (next payout ...)`, `payout overdue (missed ...)`, `payout upcoming (next payout ...)`, `payout settled`, or `payout no schedule`), taken from the same `payout_schedule_timing()` rollup `payout schedule` and `freelancer list` use — the most urgent status across the freelancer's currencies, with a currency count when more than one currency shares the winning status (`payout overdue (2 currencies, missed ...)`). No new library rules: the rollup is reused as-is. Freelancers with no billable invoices get no row; an empty roster hides the section entirely. Read-only, like the rest of the page. Pinned by a new test file `tests/test_dashboard_payout_timing.py` (due, overdue, upcoming, settled, no-schedule, per-currency rollup, no-billable, empty roster). Docs: README dashboard section + roadmap + test count, docs/src/dashboard.md, docs/src/roadmap.md, and the changelog; generated docs pages rebuilt.
+
+### Honest scope (0.28.0)
+- A view, not a workflow: the status reports timing; recording a due or overdue payout is still `payout settle-due` / `payout settle-overdue`. The dashboard has no `--as-of`: timing is always as of today. Multi-freelancer workspaces remain the unshipped half of agency mode.
+
 ## [0.27.0] - 2026-11-10
 
 Agency-mode slice #21: payout timing on `payout list`. Slices #14–#20 put timing on the whole-book summary, its TOTALS lines, the per-freelancer view, the suggestion lines, the schedule lines, the roster, and the receivables report — but the payout ledger itself still answered only *what we already sent*: telling whether a freelancer in the ledger needs paying again now meant cross-checking `payout due` and `payout overdue`, or opening `agency summary`. This slice puts the timing on the ledger's newest row per freelancer.

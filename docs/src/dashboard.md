@@ -1,7 +1,7 @@
 ---
 title: Dashboard
 eyebrow: User guide
-description: The InvoiceGuard localhost web dashboard — invoice list, status filters, per-invoice timelines, and the Stripe webhook receiver.
+description: The InvoiceGuard localhost web dashboard — invoice list, status filters, per-freelancer payout timing, per-invoice timelines, and the Stripe webhook receiver.
 ---
 ```bash
 invoiceguard dashboard            # http://127.0.0.1:8000/
@@ -12,7 +12,7 @@ A small FastAPI + Jinja2 web UI that shares the CLI's SQLite database. Binds to 
 
 ## Pages
 
-- **`GET /`** — invoice list with status filters (`draft`, `sent`, `partially-paid`, `paid`, `overdue`, `void`), totals (outstanding / overdue / collected), and per-status counts. Each row shows the invoice kind, amount, project, due date, current escalation stage — and, for partially-paid invoices, how much has been paid and what is left.
+- **`GET /`** — invoice list with status filters (`draft`, `sent`, `partially-paid`, `paid`, `overdue`, `void`), totals (outstanding / overdue / collected), and per-status counts, plus a Payouts section with per-freelancer payout timing (due / overdue / upcoming / settled / no schedule, with next or missed payout date, as of today — the same rollup `payout schedule` and `freelancer list` use; hidden when the roster is empty, and freelancers with no billable invoices get no row). Each row shows the invoice kind, amount, project, due date, current escalation stage — and, for partially-paid invoices, how much has been paid and what is left.
 - **`GET /invoices/{id}`** — invoice detail: amount, paid and outstanding balances, status, Stripe payment link, due date, a **payments ledger** (every recorded payment with date, method, and note), and a chronological timeline of dunning events and payments.
 - **`GET /healthz`** — `{"ok": true}`, for uptime checks.
 - **`GET /sign/{token}`** — the client's one-time contract signing page: renders the contract, collects a typed name and a drawn signature (see [Contracts](contracts.html)).
