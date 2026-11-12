@@ -176,8 +176,35 @@ def invoice_detail(request: Request, invoice_id: int):
         payments=invoice_payments,
         late=late_fee_summary(inv),
         timeline=db.build_timeline(inv, events, invoice_payments),
+        payout_timing=_invoice_payout_timing(inv),
     )
     return templates.TemplateResponse(request, "detail.html", ctx)
+
+
+def _invoice_payout_timing(inv: dict) -> dict | None:
+    """The assigned freelancer's payout timing for the detail page.
+
+    The same `payout_schedule_timing()` rollup the index Payouts
+    section uses, as of today — so the detail page and the index never
+    disagree about a freelancer. None when the invoice is unassigned
+    or the freelancer has no timing entry (no billable invoices); the
+    Freelancer row then renders exactly as before. Read-only.
+    """
+    fid = inv.get("freelancer_id")
+    if not fid:
+        return None
+    core = CoreDB(db.db_path())
+    try:
+        entry = payout_schedule_timing(core).get(fid, {})
+    finally:
+        core.close()
+    text = _payout_timing_text(entry)
+    if not text:
+        return None
+    return {
+        "text": text,
+        "status_class": _STATUS_CLASS.get(entry.get("payout_status"), ""),
+    }
 
 
 @app.get("/healthz")

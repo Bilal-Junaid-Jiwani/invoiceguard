@@ -2,6 +2,16 @@
 
 Every release, newest first. InvoiceGuard follows semver.
 
+## [0.29.0] - 2026-11-12
+
+Agency-mode slice #23: payout timing on the dashboard invoice detail. Slices #14–#22 put timing on every CLI view and on the dashboard index's Payouts section — but opening one invoice still answered only *who did the work*: telling whether that freelancer needs paying now meant going back to the index or opening the CLI. This slice puts the timing on the detail page's Freelancer row itself.
+
+### Added
+- **Dashboard invoice detail `GET /invoices/{id}`** — the Freelancer row now appends the assigned freelancer's payout timing (`payout due (next payout ...)`, `payout overdue (missed ...)`, `payout upcoming (next payout ...)`, `payout settled`, or `payout no schedule`), taken from the same `payout_schedule_timing()` rollup the index Payouts section uses — the most urgent status across the freelancer's currencies, with a currency count when more than one currency shares the winning status (`payout overdue (2 currencies, missed ...)`). No new library rules: the rollup is reused as-is. Unassigned invoices show no phrase (and no Freelancer row, as before); an assigned invoice whose freelancer has no billable invoices — a draft does not count — carries no phrase either. Read-only, like the rest of the page. Pinned by a new test file `tests/test_invoice_detail_payout_timing.py` (due, overdue, upcoming, settled, no-schedule, per-currency rollup, unassigned, draft-assigned, missing-invoice 404). Docs: README dashboard section + roadmap + test count, docs/src/dashboard.md, docs/src/roadmap.md, and the changelog; generated docs pages rebuilt.
+
+### Honest scope (0.29.0)
+- A view, not a workflow: the status reports timing; recording a due or overdue payout is still `payout settle-due` / `payout settle-overdue`. The dashboard has no `--as-of`: timing is always as of today. Multi-freelancer workspaces remain the unshipped half of agency mode.
+
 ## [0.28.0] - 2026-11-11
 
 Agency-mode slice #22: payout timing on the web dashboard. Slices #14–#21 put timing on every CLI view — the whole-book summary, its TOTALS lines, the per-freelancer view, the suggestion lines, the schedule lines, the roster, the receivables report, and the payout ledger — but the dashboard index still answered only *what we already sent*: telling whether a freelancer needs paying now meant opening the CLI. This slice puts the timing on the dashboard's new Payouts section.
