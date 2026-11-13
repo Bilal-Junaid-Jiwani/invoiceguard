@@ -158,7 +158,7 @@
     "text": "Notes"
    }
   ],
-  "text": "invoiceguard dashboard # http://127.0.0.1:8000/ invoiceguard dashboard --port 8080 A small FastAPI + Jinja2 web UI that shares the CLI's SQLite database. Binds to 127.0.0.1 by default (localhost only). The API docs ( /docs , /redoc ) are disabled. Pages GET / — invoice list with status filters ( draft , sent , partially-paid , paid , overdue , void ), totals (outstanding / overdue / collected), and per-status counts, plus a Payouts section with per-freelancer payout timing (due / overdue / upcoming / settled / no schedule, with next or missed payout date, as of today — the same rollup payout schedule and freelancer list use; hidden when the roster is empty, and freelancers with no billable invoices get no row). Each row shows the invoice kind, amount, project, due date, current escalation stage — and, for partially-paid invoices, how much has been paid and what is left. GET /invoices/{id} — invoice detail: amount, paid and outstanding balances, status, Stripe payment link, due date, a payments ledger (every recorded payment with date, method, and note), and a chronological timeline of dunning events and payments. When the invoice is assigned to a freelancer, the Freelancer row also shows their payout timing (due / overdue / upcoming / settled / no schedule, with next or missed payout date, as of today — the same rollup as the index Payouts section; no phrase when the freelancer has no billable invoices). GET /healthz — {\"ok\": true} , for uptime checks. GET /sign/{token} — the client's one-time contract signing page: renders the contract, collects a typed name and a drawn signature (see Contracts ). POST /sign/{token} — records the signature; returns a signed-receipt page. Unknown or already-used tokens return 404 / 400. POST /webhooks/stripe — the Stripe webhook receiver (see Webhooks ). Unknown status filters and missing invoices return a 404 page. Screenshots Captured from the real dashboard running locally against seeded demo data (every sample name is labeled (demo) ): Invoice list — status filters, totals, and escalation stages. Invoice detail — timeline of dunning events. Invoice detail — a partially-paid invoice: Paid/Outstanding amounts, the payments ledger, and payment events in the timeline. Notes The dashboard never inserts data on startup — it creates empty tables if the DB is fresh, nothing more. It reads and writes the same tables as the CLI; column names and types are frozen (additive migrations only). See Database . Webhook verification needs the signing secret — resolution order is documented in Webhooks . Without a real secret, POST /webhooks/stripe returns HTTP 500. Totals, defined: Outstanding = sum of outstanding balances over sent / overdue / partially-paid invoices; Overdue = the same over overdue invoices only; Collected = sum of all rows in the payment ledger. (Since v0.2.0; for older databases the ledger backfill makes the numbers identical to the old definitions.)"
+  "text": "invoiceguard dashboard # http://127.0.0.1:8000/ invoiceguard dashboard --port 8080 A small FastAPI + Jinja2 web UI that shares the CLI's SQLite database. Binds to 127.0.0.1 by default (localhost only). The API docs ( /docs , /redoc ) are disabled. Pages GET / — invoice list with status filters ( draft , sent , partially-paid , paid , overdue , void ), totals (outstanding / overdue / collected), and per-status counts, plus a Payouts section with per-freelancer payout timing (due / overdue / upcoming / settled / no schedule, with next or missed payout date, as of today — the same rollup payout schedule and freelancer list use; hidden when the roster is empty, and freelancers with no billable invoices get no row). Append ?as_of=YYYY-MM-DD to project the timing to that day instead (the header then reads payout timing as of <date> with a \"back to today\" link, and the status-filter and Details links keep the projection); an invalid date is a clean 400. Only the payout timing is projected — the invoice list, totals, and escalation stages stay as-of-today. Each row shows the invoice kind, amount, project, due date, current escalation stage — and, for partially-paid invoices, how much has been paid and what is left. GET /invoices/{id} — invoice detail: amount, paid and outstanding balances, status, Stripe payment link, due date, a payments ledger (every recorded payment with date, method, and note), and a chronological timeline of dunning events and payments. When the invoice is assigned to a freelancer, the Freelancer row also shows their payout timing (due / overdue / upcoming / settled / no schedule, with next or missed payout date, as of today — the same rollup as the index Payouts section; no phrase when the freelancer has no billable invoices). ?as_of=YYYY-MM-DD projects that timing to the day (marked (as of <date>) , back link keeps the projection); the amounts and timeline stay as-of-today, and an invalid date is a clean 400. GET /healthz — {\"ok\": true} , for uptime checks. GET /sign/{token} — the client's one-time contract signing page: renders the contract, collects a typed name and a drawn signature (see Contracts ). POST /sign/{token} — records the signature; returns a signed-receipt page. Unknown or already-used tokens return 404 / 400. POST /webhooks/stripe — the Stripe webhook receiver (see Webhooks ). Unknown status filters and missing invoices return a 404 page. Screenshots Captured from the real dashboard running locally against seeded demo data (every sample name is labeled (demo) ): Invoice list — status filters, totals, and escalation stages. Invoice detail — timeline of dunning events. Invoice detail — a partially-paid invoice: Paid/Outstanding amounts, the payments ledger, and payment events in the timeline. Notes The dashboard never inserts data on startup — it creates empty tables if the DB is fresh, nothing more. It reads and writes the same tables as the CLI; column names and types are frozen (additive migrations only). See Database . Webhook verification needs the signing secret — resolution order is documented in Webhooks . Without a real secret, POST /webhooks/stripe returns HTTP 500. Totals, defined: Outstanding = sum of outstanding balances over sent / overdue / partially-paid invoices; Overdue = the same over overdue invoices only; Collected = sum of all rows in the payment ledger. (Since v0.2.0; for older databases the ledger backfill makes the numbers identical to the old definitions.)"
  },
  {
   "url": "dunning.html",
@@ -353,11 +353,23 @@
   "description": "InvoiceGuard release history — newest first, no fluff.",
   "headings": [
    {
+    "id": "0300---2026-11-13",
+    "text": "[0.30.0] - 2026-11-13"
+   },
+   {
+    "id": "added",
+    "text": "Added"
+   },
+   {
+    "id": "honest-scope-0300",
+    "text": "Honest scope (0.30.0)"
+   },
+   {
     "id": "0290---2026-11-12",
     "text": "[0.29.0] - 2026-11-12"
    },
    {
-    "id": "added",
+    "id": "added-2",
     "text": "Added"
    },
    {
@@ -369,7 +381,7 @@
     "text": "[0.28.0] - 2026-11-11"
    },
    {
-    "id": "added-2",
+    "id": "added-3",
     "text": "Added"
    },
    {
@@ -381,7 +393,7 @@
     "text": "[0.27.0] - 2026-11-10"
    },
    {
-    "id": "added-3",
+    "id": "added-4",
     "text": "Added"
    },
    {
@@ -393,7 +405,7 @@
     "text": "[0.26.0] - 2026-11-09"
    },
    {
-    "id": "added-4",
+    "id": "added-5",
     "text": "Added"
    },
    {
@@ -413,7 +425,7 @@
     "text": "[0.25.0] - 2026-11-07"
    },
    {
-    "id": "added-5",
+    "id": "added-6",
     "text": "Added"
    },
    {
@@ -425,7 +437,7 @@
     "text": "[0.24.0] - 2026-11-06"
    },
    {
-    "id": "added-6",
+    "id": "added-7",
     "text": "Added"
    },
    {
@@ -437,7 +449,7 @@
     "text": "[0.23.0] - 2026-11-05"
    },
    {
-    "id": "added-7",
+    "id": "added-8",
     "text": "Added"
    },
    {
@@ -449,7 +461,7 @@
     "text": "[0.22.0] - 2026-11-04"
    },
    {
-    "id": "added-8",
+    "id": "added-9",
     "text": "Added"
    },
    {
@@ -461,7 +473,7 @@
     "text": "[0.21.0] - 2026-11-03"
    },
    {
-    "id": "added-9",
+    "id": "added-10",
     "text": "Added"
    },
    {
@@ -477,7 +489,7 @@
     "text": "[0.19.0] - 2026-11-01"
    },
    {
-    "id": "added-10",
+    "id": "added-11",
     "text": "Added"
    },
    {
@@ -489,7 +501,7 @@
     "text": "[0.18.0] - 2026-10-31"
    },
    {
-    "id": "added-11",
+    "id": "added-12",
     "text": "Added"
    },
    {
@@ -501,7 +513,7 @@
     "text": "[0.17.0] - 2026-10-30"
    },
    {
-    "id": "added-12",
+    "id": "added-13",
     "text": "Added"
    },
    {
@@ -513,7 +525,7 @@
     "text": "[0.16.0] - 2026-10-29"
    },
    {
-    "id": "added-13",
+    "id": "added-14",
     "text": "Added"
    },
    {
@@ -525,7 +537,7 @@
     "text": "[0.15.0] - 2026-10-28"
    },
    {
-    "id": "added-14",
+    "id": "added-15",
     "text": "Added"
    },
    {
@@ -537,7 +549,7 @@
     "text": "[0.14.0] - 2026-10-27"
    },
    {
-    "id": "added-15",
+    "id": "added-16",
     "text": "Added"
    },
    {
@@ -549,7 +561,7 @@
     "text": "[0.13.0] - 2026-10-26"
    },
    {
-    "id": "added-16",
+    "id": "added-17",
     "text": "Added"
    },
    {
@@ -561,7 +573,7 @@
     "text": "[0.12.0] - 2026-10-25"
    },
    {
-    "id": "added-17",
+    "id": "added-18",
     "text": "Added"
    },
    {
@@ -573,7 +585,7 @@
     "text": "[0.11.0] - 2026-10-24"
    },
    {
-    "id": "added-18",
+    "id": "added-19",
     "text": "Added"
    },
    {
@@ -585,7 +597,7 @@
     "text": "[0.10.0] - 2026-10-23"
    },
    {
-    "id": "added-19",
+    "id": "added-20",
     "text": "Added"
    },
    {
@@ -597,7 +609,7 @@
     "text": "[0.9.0] - 2026-10-22"
    },
    {
-    "id": "added-20",
+    "id": "added-21",
     "text": "Added"
    },
    {
@@ -613,7 +625,7 @@
     "text": "Fixed"
    },
    {
-    "id": "added-21",
+    "id": "added-22",
     "text": "Added"
    },
    {
@@ -665,7 +677,7 @@
     "text": "[0.8.0] - 2026-10-16"
    },
    {
-    "id": "added-22",
+    "id": "added-23",
     "text": "Added"
    },
    {
@@ -685,7 +697,7 @@
     "text": "[0.7.0] - 2026-10-14"
    },
    {
-    "id": "added-23",
+    "id": "added-24",
     "text": "Added"
    },
    {
@@ -725,7 +737,7 @@
     "text": "Fixed"
    },
    {
-    "id": "added-24",
+    "id": "added-25",
     "text": "Added"
    },
    {
@@ -761,7 +773,7 @@
     "text": "[0.6.0] - 2026-10-08"
    },
    {
-    "id": "added-25",
+    "id": "added-26",
     "text": "Added"
    },
    {
@@ -773,7 +785,7 @@
     "text": "[0.5.0] - 2026-10-07"
    },
    {
-    "id": "added-26",
+    "id": "added-27",
     "text": "Added"
    },
    {
@@ -785,7 +797,7 @@
     "text": "[0.4.0] - 2026-10-06"
    },
    {
-    "id": "added-27",
+    "id": "added-28",
     "text": "Added"
    },
    {
@@ -797,7 +809,7 @@
     "text": "[0.3.0] - 2026-10-05"
    },
    {
-    "id": "added-28",
+    "id": "added-29",
     "text": "Added"
    },
    {
@@ -813,7 +825,7 @@
     "text": "[0.2.0] - 2026-10-04"
    },
    {
-    "id": "added-29",
+    "id": "added-30",
     "text": "Added"
    },
    {
@@ -825,7 +837,7 @@
     "text": "[0.1.0] - 2026-10-02"
    },
    {
-    "id": "added-30",
+    "id": "added-31",
     "text": "Added"
    },
    {
@@ -837,7 +849,7 @@
     "text": "Honest scope (v1)"
    }
   ],
-  "text": "Every release, newest first. InvoiceGuard follows semver. [0.29.0] - 2026-11-12 Agency-mode slice #23: payout timing on the dashboard invoice detail. Slices #14–#22 put timing on every CLI view and on the dashboard index's Payouts section — but opening one invoice still answered only who did the work : telling whether that freelancer needs paying now meant going back to the index or opening the CLI. This slice puts the timing on the detail page's Freelancer row itself. Added Dashboard invoice detail GET /invoices/{id} — the Freelancer row now appends the assigned freelancer's payout timing ( payout due (next payout ...) , payout overdue (missed ...) , payout upcoming (next payout ...) , payout settled , or payout no schedule ), taken from the same payout_schedule_timing() rollup the index Payouts section uses — the most urgent status across the freelancer's currencies, with a currency count when more than one currency shares the winning status ( payout overdue (2 currencies, missed ...) ). No new library rules: the rollup is reused as-is. Unassigned invoices show no phrase (and no Freelancer row, as before); an assigned invoice whose freelancer has no billable invoices — a draft does not count — carries no phrase either. Read-only, like the rest of the page. Pinned by a new test file tests/test_invoice_detail_payout_timing.py (due, overdue, upcoming, settled, no-schedule, per-currency rollup, unassigned, draft-assigned, missing-invoice 404). Docs: README dashboard section + roadmap + test count, docs/src/dashboard.md, docs/src/roadmap.md, and the changelog; generated docs pages rebuilt. Honest scope (0.29.0) A view, not a workflow: the status reports timing; recording a due or overdue payout is still payout settle-due / payout settle-overdue . The dashboard has no --as-of : timing is always as of today. Multi-freelancer workspaces remain the unshipped half of agency mode. [0.28.0] - 2026-11-11 Agency-mode slice #22: payout timing on the web dashboard. Slices #14–#21 put timing on every CLI view — the whole-book summary, its TOTALS lines, the per-freelancer view, the suggestion lines, the schedule lines, the roster, the receivables report, and the payout ledger — but the dashboard index still answered only what we already sent : telling whether a freelancer needs paying now meant opening the CLI. This slice puts the timing on the dashboard's new Payouts section. Added Dashboard index GET / — a Payouts section (between the totals and the invoice list) shows one row per roster freelancer with their payout timing ( payout due (next payout ...) , payout overdue (missed ...) , payout upcoming (next payout ...) , payout settled , or payout no schedule ), taken from the same payout_schedule_timing() rollup payout schedule and freelancer list use — the most urgent status across the freelancer's currencies, with a currency count when more than one currency shares the winning status ( payout overdue (2 currencies, missed ...) ). No new library rules: the rollup is reused as-is. Freelancers with no billable invoices get no row; an empty roster hides the section entirely. Read-only, like the rest of the page. Pinned by a new test file tests/test_dashboard_payout_timing.py (due, overdue, upcoming, settled, no-schedule, per-currency rollup, no-billable, empty roster). Docs: README dashboard section + roadmap + test count, docs/src/dashboard.md, docs/src/roadmap.md, and the changelog; generated docs pages rebuilt. Honest scope (0.28.0) A view, not a workflow: the status reports timing; recording a due or overdue payout is still payout settle-due / payout settle-overdue . The dashboard has no --as-of : timing is always as of today. Multi-freelancer workspaces remain the unshipped half of agency mode. [0.27.0] - 2026-11-10 Agency-mode slice #21: payout timing on payout list . Slices #14–#20 put timing on the whole-book summary, its TOTALS lines, the per-freelancer view, the suggestion lines, the schedule lines, the roster, and the receivables r"
+  "text": "Every release, newest first. InvoiceGuard follows semver. [0.30.0] - 2026-11-13 Agency-mode slice #24: dashboard payout timing as of a projected date. Slices #14–#23 put timing on every CLI view and on both dashboard pages — but the dashboard was stuck on today: the CLI's --as-of had no web equivalent, so planning next week's pay run (\"who will be due on Friday?\") meant opening the CLI. This slice adds ?as_of=YYYY-MM-DD to the dashboard index and the invoice detail page, projecting the Payouts section and the detail page's Freelancer row to that day. Added Dashboard index GET /?as_of=YYYY-MM-DD — the Payouts section now shows each roster freelancer's payout timing as of that day (same payout_schedule_timing() rollup, same due / overdue / upcoming / settled / no-schedule phrases with next or missed payout date — no new library rules). The section header reads payout timing as of <date> with a \"back to today\" link; the status-filter and Details links keep the projection so the day survives navigation. Without ?as_of= the page is exactly as before. Dashboard invoice detail GET /invoices/{id}?as_of=YYYY-MM-DD — the Freelancer row's timing is projected to the same day, marked (as of <date>) , and the back link keeps the projection. An invalid date on either page is a clean 400, not a traceback. Pinned by a new test file tests/test_dashboard_as_of.py (projection to due, projection to overdue, invalid-date 400 on both pages, detail projection + back-link preservation, filter-link preservation, unprojected default). Docs: README dashboard section + roadmap + test count, docs/src/dashboard.md, docs/src/roadmap.md, and the changelog; generated docs pages rebuilt. Honest scope (0.30.0) Only the payout timing is projected: the invoice list, totals, escalation stages, and the detail page's amounts and timeline stay as-of-today. Recording a due or overdue payout is still payout settle-due / payout settle-overdue . Multi-freelancer workspaces remain the unshipped half of agency mode. [0.29.0] - 2026-11-12 Agency-mode slice #23: payout timing on the dashboard invoice detail. Slices #14–#22 put timing on every CLI view and on the dashboard index's Payouts section — but opening one invoice still answered only who did the work : telling whether that freelancer needs paying now meant going back to the index or opening the CLI. This slice puts the timing on the detail page's Freelancer row itself. Added Dashboard invoice detail GET /invoices/{id} — the Freelancer row now appends the assigned freelancer's payout timing ( payout due (next payout ...) , payout overdue (missed ...) , payout upcoming (next payout ...) , payout settled , or payout no schedule ), taken from the same payout_schedule_timing() rollup the index Payouts section uses — the most urgent status across the freelancer's currencies, with a currency count when more than one currency shares the winning status ( payout overdue (2 currencies, missed ...) ). No new library rules: the rollup is reused as-is. Unassigned invoices show no phrase (and no Freelancer row, as before); an assigned invoice whose freelancer has no billable invoices — a draft does not count — carries no phrase either. Read-only, like the rest of the page. Pinned by a new test file tests/test_invoice_detail_payout_timing.py (due, overdue, upcoming, settled, no-schedule, per-currency rollup, unassigned, draft-assigned, missing-invoice 404). Docs: README dashboard section + roadmap + test count, docs/src/dashboard.md, docs/src/roadmap.md, and the changelog; generated docs pages rebuilt. Honest scope (0.29.0) A view, not a workflow: the status reports timing; recording a due or overdue payout is still payout settle-due / payout settle-overdue . The dashboard has no --as-of : timing is always as of today. Multi-freelancer workspaces remain the unshipped half of agency mode. [0.28.0] - 2026-11-11 Agency-mode slice #22: payout timing on the web dashboard. Slices #14–#21 put timing on every CLI view — the whole-book summary"
  },
  {
   "url": "roadmap.html",

@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% block title %}Invoice #{{ invoice.id }} · InvoiceGuard{% endblock %}
 {% block content %}
-<a class="back" href="/">← All invoices</a>
+<a class="back" href="/{% if payout_timing and payout_timing.as_of %}?as_of={{ payout_timing.as_of }}{% endif %}">← All invoices</a>
 
 <div class="detail-grid">
   <section class="card">
@@ -11,7 +11,7 @@
     </div>
     <dl class="facts">
       <div><dt>Client</dt><dd>{{ invoice.client_name }}{% if invoice.client_email %} <span class="muted">{{ invoice.client_email }}</span>{% endif %}</dd></div>
-      {% if invoice.freelancer_name %}<div><dt>Freelancer</dt><dd>{{ invoice.freelancer_name }}{% if payout_timing %} <span class="payout-timing payout-{{ payout_timing.status_class }}">{{ payout_timing.text }}</span>{% endif %}</dd></div>{% endif %}
+      {% if invoice.freelancer_name %}<div><dt>Freelancer</dt><dd>{{ invoice.freelancer_name }}{% if payout_timing %} <span class="payout-timing payout-{{ payout_timing.status_class }}">{{ payout_timing.text }}</span>{% if payout_timing.as_of %} <span class="muted">(as of {{ payout_timing.as_of }})</span>{% endif %}{% endif %}</dd></div>{% endif %}
       <div><dt>Project</dt><dd>{{ invoice.project_title }}</dd></div>
       <div><dt>Kind</dt><dd><span class="kind kind-{{ invoice.kind }}">{{ invoice.kind }}</span></dd></div>
       <div><dt>Amount</dt><dd class="mono big">{{ fmt(invoice.amount_cents, invoice.currency) }}</dd></div>

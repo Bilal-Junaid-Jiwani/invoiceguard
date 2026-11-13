@@ -27,7 +27,8 @@
 <section class="payouts">
   <div class="payouts-head">
     <h2>Payouts</h2>
-    <span class="muted">payout timing as of today</span>
+    {% if payouts.as_of %}<span class="muted">payout timing as of {{ payouts.as_of }} · <a href="{{ payouts.today_url }}">back to today</a></span>
+    {% else %}<span class="muted">payout timing as of today</span>{% endif %}
   </div>
   {% if payouts.rows %}
   {% for p in payouts.rows %}
@@ -43,9 +44,9 @@
 {% endif %}
 
 <nav class="filters" aria-label="Filter by status">
-  <a href="/" class="filter{% if active == 'all' %} active{% endif %}">All</a>
+  <a href="/{% if payouts.as_of %}?as_of={{ payouts.as_of }}{% endif %}" class="filter{% if active == 'all' %} active{% endif %}">All</a>
   {% for s in statuses %}
-  <a href="/?status={{ s }}" class="filter{% if active == s %} active{% endif %}">{{ s|title }} <span class="count">{{ counts[s] }}</span></a>
+  <a href="/?status={{ s }}{% if payouts.as_of %}&as_of={{ payouts.as_of }}{% endif %}" class="filter{% if active == s %} active{% endif %}">{{ s|title }} <span class="count">{{ counts[s] }}</span></a>
   {% endfor %}
 </nav>
 
@@ -87,7 +88,7 @@
       {% if inv.stripe_url and inv.status in ('sent', 'overdue', 'partially-paid') %}
       <a class="btn-pay" href="{{ inv.stripe_url }}" target="_blank" rel="noopener">Pay</a>
       {% endif %}
-      <a class="btn-ghost" href="/invoices/{{ inv.id }}">Details</a>
+      <a class="btn-ghost" href="/invoices/{{ inv.id }}{% if payouts.as_of %}?as_of={{ payouts.as_of }}{% endif %}">Details</a>
     </div>
   </article>
   {% endfor %}

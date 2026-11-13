@@ -2,6 +2,17 @@
 
 Every release, newest first. InvoiceGuard follows semver.
 
+## [0.30.0] - 2026-11-13
+
+Agency-mode slice #24: dashboard payout timing as of a projected date. Slices #14–#23 put timing on every CLI view and on both dashboard pages — but the dashboard was stuck on today: the CLI's `--as-of` had no web equivalent, so planning next week's pay run ("who will be due on Friday?") meant opening the CLI. This slice adds `?as_of=YYYY-MM-DD` to the dashboard index and the invoice detail page, projecting the Payouts section and the detail page's Freelancer row to that day.
+
+### Added
+- **Dashboard index `GET /?as_of=YYYY-MM-DD`** — the Payouts section now shows each roster freelancer's payout timing as of that day (same `payout_schedule_timing()` rollup, same due / overdue / upcoming / settled / no-schedule phrases with next or missed payout date — no new library rules). The section header reads `payout timing as of <date>` with a "back to today" link; the status-filter and Details links keep the projection so the day survives navigation. Without `?as_of=` the page is exactly as before.
+- **Dashboard invoice detail `GET /invoices/{id}?as_of=YYYY-MM-DD`** — the Freelancer row's timing is projected to the same day, marked `(as of <date>)`, and the back link keeps the projection. An invalid date on either page is a clean 400, not a traceback. Pinned by a new test file `tests/test_dashboard_as_of.py` (projection to due, projection to overdue, invalid-date 400 on both pages, detail projection + back-link preservation, filter-link preservation, unprojected default). Docs: README dashboard section + roadmap + test count, docs/src/dashboard.md, docs/src/roadmap.md, and the changelog; generated docs pages rebuilt.
+
+### Honest scope (0.30.0)
+- Only the payout timing is projected: the invoice list, totals, escalation stages, and the detail page's amounts and timeline stay as-of-today. Recording a due or overdue payout is still `payout settle-due` / `payout settle-overdue`. Multi-freelancer workspaces remain the unshipped half of agency mode.
+
 ## [0.29.0] - 2026-11-12
 
 Agency-mode slice #23: payout timing on the dashboard invoice detail. Slices #14–#22 put timing on every CLI view and on the dashboard index's Payouts section — but opening one invoice still answered only *who did the work*: telling whether that freelancer needs paying now meant going back to the index or opening the CLI. This slice puts the timing on the detail page's Freelancer row itself.

@@ -12,7 +12,8 @@ is also honored when neither env var is set.
 
 Routes:
     GET  /                 invoice list + totals + status filter
-    GET  /invoices/{id}    invoice detail + timeline
+                           (payout timing: ?as_of=YYYY-MM-DD projects it)
+    GET  /invoices/{id}    invoice detail + timeline (same ?as_of=)
     GET  /sign/{token}     one-time contract signing page (e-signature)
     POST /sign/{token}     record the client's signature
     POST /webhooks/stripe  Stripe checkout.session.completed → mark paid
@@ -24,6 +25,7 @@ import os
 import re
 import html
 from contextlib import asynccontextmanager
+from datetime import date
 
 import stripe
 from fastapi import FastAPI, Form, HTTPException, Query, Request
@@ -80,9 +82,11 @@ def _base_ctx() -> dict:
 
 
 @app.get("/", response_class=HTMLResponse)
-def index(request: Request, status: str | None = Query(default=None)):
+def index(request: Request, status: str | None = Query(default=None),
+          as_of: str | None = Query(default=None)):
     if status and status not in db.STATUSES:
         raise HTTPException(status_code=404, detail="unknown status filter")
+    as_of = _parse_as_of(as_of)
     ctx = _base_ctx()
     ctx.update(
         invoices=db.list_invoices(status=status),
@@ -90,9 +94,28 @@ def index(request: Request, status: str | None = Query(default=None)):
         counts=db.status_counts(),
         active=status or "all",
         statuses=db.STATUSES,
-        payouts=_dashboard_payouts(),
+        payouts=_dashboard_payouts(as_of, status=status),
     )
     return templates.TemplateResponse(request, "index.html", ctx)
+
+
+def _parse_as_of(raw: str | None) -> str | None:
+    """Validate the dashboard's `?as_of=YYYY-MM-DD` projection date.
+
+    Returns the validated ISO date string, or None when no projection
+    was asked for (timing is as of today). An unparseable value is a
+    clean 400, not a traceback — the same contract as the CLI's
+    invalid `--as-of`.
+    """
+    if raw is None:
+        return None
+    try:
+        date.fromisoformat(raw)
+    except ValueError:
+        raise HTTPException(
+            status_code=400,
+            detail="invalid as_of date (expected YYYY-MM-DD)")
+    return raw
 
 
 _STATUS_CLASS = {
@@ -130,21 +153,25 @@ def _payout_timing_text(entry: dict) -> str:
     return ""
 
 
-def _dashboard_payouts() -> dict:
+def _dashboard_payouts(as_of: str | None = None,
+                       status: str | None = None) -> dict:
     """Per-freelancer payout timing for the dashboard index (read-only).
 
     One row per roster freelancer who has a timing entry — the same
     `payout_schedule_timing()` rollup `payout schedule` and
-    `freelancer list` use, as of today, so the dashboard answers
-    "does this freelancer need paying now" without opening the CLI.
-    Freelancers with no billable invoices have no entry and get no
-    row, matching the CLI views. `has_freelancers` is False only when
-    the roster itself is empty, so the section hides on a fresh DB.
+    `freelancer list` use, as of `as_of` (default: today), so the
+    dashboard answers "does this freelancer need paying now" without
+    opening the CLI — and, with `?as_of=`, as of the day the agency
+    is planning for. Freelancers with no billable invoices have no
+    entry and get no row, matching the CLI views. `has_freelancers`
+    is False only when the roster itself is empty, so the section
+    hides on a fresh DB. `today_url` drops the projection (keeping
+    the status filter) so the header can link back to today.
     """
     core = CoreDB(db.db_path())
     try:
         roster = core.list_freelancers()
-        timing = payout_schedule_timing(core)
+        timing = payout_schedule_timing(core, as_of=as_of)
     finally:
         core.close()
     rows = []
@@ -159,14 +186,18 @@ def _dashboard_payouts() -> dict:
             "status_class": _STATUS_CLASS.get(entry.get("payout_status"), ""),
             "text": text,
         })
-    return {"has_freelancers": bool(roster), "rows": rows}
+    today_url = f"/?status={status}" if status else "/"
+    return {"has_freelancers": bool(roster), "rows": rows,
+            "as_of": as_of, "today_url": today_url}
 
 
 @app.get("/invoices/{invoice_id}", response_class=HTMLResponse)
-def invoice_detail(request: Request, invoice_id: int):
+def invoice_detail(request: Request, invoice_id: int,
+                   as_of: str | None = Query(default=None)):
     inv = db.get_invoice(invoice_id)
     if inv is None:
         raise HTTPException(status_code=404, detail="invoice not found")
+    as_of = _parse_as_of(as_of)
     events = db.dunning_events(invoice_id)
     invoice_payments = db.payments(invoice_id)
     ctx = _base_ctx()
@@ -176,18 +207,20 @@ def invoice_detail(request: Request, invoice_id: int):
         payments=invoice_payments,
         late=late_fee_summary(inv),
         timeline=db.build_timeline(inv, events, invoice_payments),
-        payout_timing=_invoice_payout_timing(inv),
+        payout_timing=_invoice_payout_timing(inv, as_of),
     )
     return templates.TemplateResponse(request, "detail.html", ctx)
 
 
-def _invoice_payout_timing(inv: dict) -> dict | None:
+def _invoice_payout_timing(inv: dict,
+                           as_of: str | None = None) -> dict | None:
     """The assigned freelancer's payout timing for the detail page.
 
     The same `payout_schedule_timing()` rollup the index Payouts
-    section uses, as of today — so the detail page and the index never
-    disagree about a freelancer. None when the invoice is unassigned
-    or the freelancer has no timing entry (no billable invoices); the
+    section uses, as of `as_of` (default: today) — so the detail
+    page and the index never disagree about a freelancer, on the
+    same projected day. None when the invoice is unassigned or the
+    freelancer has no timing entry (no billable invoices); the
     Freelancer row then renders exactly as before. Read-only.
     """
     fid = inv.get("freelancer_id")
@@ -195,7 +228,7 @@ def _invoice_payout_timing(inv: dict) -> dict | None:
         return None
     core = CoreDB(db.db_path())
     try:
-        entry = payout_schedule_timing(core).get(fid, {})
+        entry = payout_schedule_timing(core, as_of=as_of).get(fid, {})
     finally:
         core.close()
     text = _payout_timing_text(entry)
@@ -204,6 +237,7 @@ def _invoice_payout_timing(inv: dict) -> dict | None:
     return {
         "text": text,
         "status_class": _STATUS_CLASS.get(entry.get("payout_status"), ""),
+        "as_of": as_of,
     }
 
 
