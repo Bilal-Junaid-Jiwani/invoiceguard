@@ -1805,7 +1805,7 @@ def invoice_report(as_of, freelancer_id, csv_path, payments_csv_path):
     except ValueError as e:
         db.close()
         raise click.ClickException(str(e))
-    inv_csv = invoices_csv(report["rows"]) if csv_path else None
+    inv_csv = invoices_csv(report["rows"], timing=timing) if csv_path else None
     pay_csv = payments_csv(db) if payments_csv_path else None
     db.close()
 

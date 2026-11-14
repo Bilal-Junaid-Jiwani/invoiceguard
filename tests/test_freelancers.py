@@ -183,4 +183,4 @@ def test_cli_assign_and_list_filter(db, sample_project):
                             "--csv", "-"])
     assert r.exit_code == 0, r.output
     header = r.output.splitlines()[0]
-    assert header.endswith("freelancer")
+    assert header.endswith("freelancer,payout_status,payout_date")

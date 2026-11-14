@@ -174,19 +174,41 @@ INVOICE_CSV_COLUMNS = [
     "invoice_id", "client", "project", "kind", "status", "currency",
     "amount", "paid", "outstanding", "late_fees", "total_due",
     "due_date", "days_overdue", "freelancer",
+    "payout_status", "payout_date",
 ]
 
 
-def invoices_csv(rows: list[dict]) -> str:
+def invoices_csv(rows: list[dict], timing: dict | None = None) -> str:
     """One CSV row per open invoice (the receivables_report rows).
 
     Free-text cells (client, project, freelancer) are neutralized
     against CSV formula injection (see `_csv_cell`).
+
+    Pass the same per-(freelancer, currency) agency-summary timing
+    map the text report joins onto its \"by freelancer\" lines and
+    each row also carries that freelancer's payout timing: the
+    status (due / overdue / upcoming / settled / no schedule) in
+    ``payout_status`` and the date it refers to in ``payout_date``
+    — the missed run date when overdue, the next payout date when
+    due or upcoming, empty for settled / no schedule. Unassigned
+    invoices and freelancers with no timing entry carry empty cells
+    rather than a misleading status. Without ``timing`` both columns
+    stay empty, so a bare ``invoices_csv(rows)`` call is unchanged
+    apart from the two new (empty) columns.
     """
     buf = io.StringIO()
     w = csv.writer(buf, lineterminator="\n")
     w.writerow(INVOICE_CSV_COLUMNS)
     for r in rows:
+        status = ""
+        payout_date = ""
+        if timing is not None:
+            t = timing.get((r.get("freelancer_id"), r["currency"]), {})
+            status = t.get("payout_status") or ""
+            if status == "overdue":
+                payout_date = t.get("missed_payout_date") or ""
+            elif status in ("due", "upcoming"):
+                payout_date = t.get("next_payout_date") or ""
         w.writerow([_csv_cell(v) for v in [
             r["id"], r["client_name"], r["project_title"], r["kind"],
             r["status"], r["currency"],
@@ -196,6 +218,7 @@ def invoices_csv(rows: list[dict]) -> str:
             r["due_date"] or "",
             "" if r["days_overdue"] is None else r["days_overdue"],
             r.get("freelancer_name") or "",
+            status, payout_date,
         ]])
     return buf.getvalue()
 

@@ -2,6 +2,16 @@
 
 Every release, newest first. InvoiceGuard follows semver.
 
+## [0.31.0] - 2026-11-14
+
+Agency-mode slice #25: payout timing in the `invoice report` CSV export. Slices #14–#24 put timing on every CLI view and on both dashboard pages — but the `--csv` export dropped it: the accountant's spreadsheet answered "who owes us" with no hint of "who do we owe, and when". This slice joins the same per-currency timing the text report's "by freelancer" lines carry onto each CSV row.
+
+### Added
+- **`invoiceguard invoice report [--as-of DATE] [--csv PATH]`** — each invoice CSV row now carries two trailing columns, `payout_status` (due / overdue / upcoming / settled / no schedule) and `payout_date` (the missed run date when overdue, the next payout date when due or upcoming, empty for settled / no schedule), taken from the same `agency_summary()` rows the text report joins onto its "by freelancer" lines — per currency, matching the row's own currency, projected with `--as-of` (default: today). Unassigned invoices carry empty cells rather than a misleading status. `invoices_csv(rows, timing=None)` takes the same per-(freelancer, currency) timing map; without it both columns stay empty, so a bare `invoices_csv(rows)` call gains no invented status. Pinned by a new test file `tests/test_invoice_report_csv_timing.py` (due, overdue, upcoming, settled, no-schedule, per-currency, unassigned, `--as-of` projection, bare-call empty columns). Docs: README invoice report row + roadmap + test count, docs/src/cli.md, docs/src/roadmap.md, and the changelog; generated docs pages rebuilt.
+
+### Honest scope (0.31.0)
+- The payments CSV (`--payments-csv`) is unchanged: it exports the payment ledger, which has no per-freelancer timing to join. Multi-freelancer workspaces remain the unshipped half of agency mode.
+
 ## [0.30.0] - 2026-11-13
 
 Agency-mode slice #24: dashboard payout timing as of a projected date. Slices #14–#23 put timing on every CLI view and on both dashboard pages — but the dashboard was stuck on today: the CLI's `--as-of` had no web equivalent, so planning next week's pay run ("who will be due on Friday?") meant opening the CLI. This slice adds `?as_of=YYYY-MM-DD` to the dashboard index and the invoice detail page, projecting the Payouts section and the detail page's Freelancer row to that day.

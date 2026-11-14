@@ -136,12 +136,15 @@ def test_invoices_csv_rows(db, sample_project):
     assert rows[0] == ["invoice_id", "client", "project", "kind",
                        "status", "currency", "amount", "paid",
                        "outstanding", "late_fees", "total_due",
-                       "due_date", "days_overdue", "freelancer"]
+                       "due_date", "days_overdue", "freelancer",
+                       "payout_status", "payout_date"]
     assert len(rows) == 2
     r = rows[1]
     assert r[0] == str(mid) and r[1] == "Acme Corp"
     assert r[6] == "1000.00" and r[7] == "250.00" and r[8] == "750.00"
     assert r[11] == "2026-09-20" and r[12] == "18"
+    # Unassigned invoice: no timing to join, so both cells are empty.
+    assert r[14] == "" and r[15] == ""
 
 
 def test_payments_csv_covers_paid_invoices_too(db, sample_project):
