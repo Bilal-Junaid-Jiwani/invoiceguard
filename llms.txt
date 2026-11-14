@@ -14,7 +14,7 @@ Source: https://github.com/Bilal-Junaid-Jiwani/okfsmith
 - [Quickstart](https://bilal-junaid-jiwani.github.io/invoiceguard/quickstart.html): The 5-minute InvoiceGuard flow — init, Stripe test key, SMTP, first client, first deposit link, automated collections.
 - [Configuration](https://bilal-junaid-jiwani.github.io/invoiceguard/configuration.html): Every InvoiceGuard setting — config.yaml, environment variables, secret resolution order, and path overrides.
 - [CLI reference](https://bilal-junaid-jiwani.github.io/invoiceguard/cli.html): Every InvoiceGuard command and option — init, client, project, invoice, check-due, dashboard.
-- [Dashboard](https://bilal-junaid-jiwani.github.io/invoiceguard/dashboard.html): The InvoiceGuard localhost web dashboard — invoice list, status filters, per-invoice timelines, and the Stripe webhook receiver.
+- [Dashboard](https://bilal-junaid-jiwani.github.io/invoiceguard/dashboard.html): The InvoiceGuard localhost web dashboard — invoice list, status filters, per-freelancer payout timing, per-invoice timelines, and the Stripe webhook receiver.
 - [Dunning engine](https://bilal-junaid-jiwani.github.io/invoiceguard/dunning.html): The automated 3-stage collections engine — day1/day7/day15 escalation, idempotency, editable templates, cron setup.
 - [Webhooks](https://bilal-junaid-jiwani.github.io/invoiceguard/webhooks.html): Stripe webhook setup for InvoiceGuard — endpoint, signing-secret resolution order, verified events, offline testing.
 - [Contracts](https://bilal-junaid-jiwani.github.io/invoiceguard/contracts.html): The InvoiceGuard contract generator — late-fee clause, deposit acknowledgment model, and the honest limits of v1.

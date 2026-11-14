@@ -4,15 +4,15 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Dashboard — invoiceguard docs</title>
-  <meta name="description" content="The InvoiceGuard localhost web dashboard — invoice list, status filters, per-invoice timelines, and the Stripe webhook receiver.">
+  <meta name="description" content="The InvoiceGuard localhost web dashboard — invoice list, status filters, per-freelancer payout timing, per-invoice timelines, and the Stripe webhook receiver.">
   <meta property="og:title" content="Dashboard — invoiceguard docs">
-  <meta property="og:description" content="The InvoiceGuard localhost web dashboard — invoice list, status filters, per-invoice timelines, and the Stripe webhook receiver.">
+  <meta property="og:description" content="The InvoiceGuard localhost web dashboard — invoice list, status filters, per-freelancer payout timing, per-invoice timelines, and the Stripe webhook receiver.">
   <meta property="og:type" content="article">
   <meta property="og:url" content="https://bilal-junaid-jiwani.github.io/invoiceguard/dashboard.html">
   <meta property="og:site_name" content="invoiceguard docs">
   <meta name="twitter:card" content="summary">
   <meta name="twitter:title" content="Dashboard — invoiceguard docs">
-  <meta name="twitter:description" content="The InvoiceGuard localhost web dashboard — invoice list, status filters, per-invoice timelines, and the Stripe webhook receiver.">
+  <meta name="twitter:description" content="The InvoiceGuard localhost web dashboard — invoice list, status filters, per-freelancer payout timing, per-invoice timelines, and the Stripe webhook receiver.">
   <link rel="canonical" href="https://bilal-junaid-jiwani.github.io/invoiceguard/dashboard.html">
   <link rel="icon" href="assets/img/favicon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="assets/css/docs.css">
@@ -28,7 +28,7 @@
     "@context": "https://schema.org",
     "@type": "TechArticle",
     "headline": "Dashboard",
-    "description": "The InvoiceGuard localhost web dashboard — invoice list, status filters, per-invoice timelines, and the Stripe webhook receiver.",
+    "description": "The InvoiceGuard localhost web dashboard — invoice list, status filters, per-freelancer payout timing, per-invoice timelines, and the Stripe webhook receiver.",
     "inLanguage": "en",
     "isPartOf": {
       "@type": "WebSite",
@@ -116,9 +116,9 @@ invoiceguard dashboard --port 8080
 <p>A small FastAPI + Jinja2 web UI that shares the CLI's SQLite database. Binds to <code>127.0.0.1</code> by default (localhost only). The API docs (<code>/docs</code>, <code>/redoc</code>) are disabled.</p>
 <h2 id="pages">Pages</h2>
 <ul>
-<li><strong><code>GET /</code></strong> — invoice list with status filters (<code>draft</code>, <code>sent</code>, <code>partially-paid</code>, <code>paid</code>, <code>overdue</code>, <code>void</code>), totals (outstanding / overdue / collected), and per-status counts. Each row shows the invoice kind, amount, project, due date, current escalation stage — and, for partially-paid invoices, how much has been paid and what is left.
+<li><strong><code>GET /</code></strong> — invoice list with status filters (<code>draft</code>, <code>sent</code>, <code>partially-paid</code>, <code>paid</code>, <code>overdue</code>, <code>void</code>), totals (outstanding / overdue / collected), and per-status counts, plus a Payouts section with per-freelancer payout timing (due / overdue / upcoming / settled / no schedule, with next or missed payout date, as of today — the same rollup <code>payout schedule</code> and <code>freelancer list</code> use; hidden when the roster is empty, and freelancers with no billable invoices get no row). Append <code>?as_of=YYYY-MM-DD</code> to project the timing to that day instead (the header then reads <code>payout timing as of &lt;date&gt;</code> with a "back to today" link, and the status-filter and Details links keep the projection); an invalid date is a clean 400. Only the payout timing is projected — the invoice list, totals, and escalation stages stay as-of-today. Each row shows the invoice kind, amount, project, due date, current escalation stage — and, for partially-paid invoices, how much has been paid and what is left.
 </li>
-<li><strong><code>GET /invoices/{id}</code></strong> — invoice detail: amount, paid and outstanding balances, status, Stripe payment link, due date, a <strong>payments ledger</strong> (every recorded payment with date, method, and note), and a chronological timeline of dunning events and payments.
+<li><strong><code>GET /invoices/{id}</code></strong> — invoice detail: amount, paid and outstanding balances, status, Stripe payment link, due date, a <strong>payments ledger</strong> (every recorded payment with date, method, and note), and a chronological timeline of dunning events and payments. When the invoice is assigned to a freelancer, the Freelancer row also shows their payout timing (due / overdue / upcoming / settled / no schedule, with next or missed payout date, as of today — the same rollup as the index Payouts section; no phrase when the freelancer has no billable invoices). <code>?as_of=YYYY-MM-DD</code> projects that timing to the day (marked <code>(as of &lt;date&gt;)</code>, back link keeps the projection); the amounts and timeline stay as-of-today, and an invalid date is a clean 400.
 </li>
 <li><strong><code>GET /healthz</code></strong> — <code>{"ok": true}</code>, for uptime checks.
 </li>

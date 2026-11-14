@@ -137,13 +137,13 @@
     "text": "Exit behavior"
    }
   ],
-  "text": "The CLI entry point is invoiceguard (installed by pip). All commands below are from v0.10.0 — run invoiceguard --help or invoiceguard <group> --help for the same text locally. init invoiceguard init Creates ~/.invoiceguard/ : the config template, an empty SQLite database, and the three dunning email templates. Idempotent — existing files are left alone. client invoiceguard client add --name \"Acme Corp\" --email \"billing@acme.com\" [--phone +15551234567] invoiceguard client set-phone 1 [--phone +15551234567] # omit --phone to clear invoiceguard client set-email 1 [--email billing@acme.com] # omit --email to clear invoiceguard client set-dunning-policy 1 [--day1 N] [--day7 N] [--day15 N] [--reset] invoiceguard client list add requires --name ; --email is optional (needed later for dunning emails). --phone (E.164 form) enables SMS/WhatsApp escalation for that client; invalid numbers are rejected. set-phone updates or clears the phone number of an existing client. set-email updates or clears the email address of an existing client (dunning). set-dunning-policy sets per-client dunning stage thresholds (v0.7.0, agency mode): each --dayN is the days-overdue threshold for that stage; 0 disables the stage for that client; omit a flag to leave it unchanged. Thresholds must stay in escalation order (day1 → day7 → day15); negative values are rejected. --reset clears overrides back to the global defaults (1/7/15). list prints #id name email phone rows, plus a [dunning ...] marker for clients with policy overrides. freelancer (v0.8.0, agency mode) invoiceguard freelancer add --name \"Ali R.\" [--email ali@example.com] [--phone +15551234567] [--split-pct 70] invoiceguard freelancer set-email 1 [--email ali@example.com] # omit --email to clear invoiceguard freelancer set-phone 1 [--phone +15551234567] # omit --phone to clear invoiceguard freelancer set-split 1 --split-pct 70 # v0.11.0 invoiceguard freelancer list invoiceguard freelancer show 1 # v0.9.0 The agency roster: one row per team member. add requires --name ; --phone must be E.164 (invalid numbers are rejected). list prints #id name email phone rows. show (v0.9.0; payouts added in v0.10.0, revenue splits in v0.11.0, payout schedule line in v0.15.0, payout timing in v0.22.0) prints contact details, per-currency earnings — billed (attributed invoices in a real state; drafts and voids excluded), collected (payment-ledger sums), outstanding — plus paid out and still owed from the payout ledger, the attributed invoice lines with collected/outstanding per invoice, and the recorded payouts. When a revenue split is set it also prints the freelancer's expected share of each collected currency and what is still due to them after payouts. When a payout schedule is set it prints the schedule and the derived next payout date. Each currency line also carries payout timing (v0.22.0): due, overdue (with the missed run date), upcoming, settled, or no schedule — taken from the same agency summary rows, derived from the exact payout due / overdue rules as of --as-of (default today); an invalid date is a clean error, and freelancers with no billable invoices carry no timing phrase. Read-only. --split-pct (v0.11.0) records the freelancer's revenue-split percentage of collected earnings (0–100, validated before write); freelancer set-split changes it later. NULL (unset) means the freelancer is earnings bookkeeping only. Bookkeeping only — the split is reported, never transferred, and the payout guard is unchanged. set-schedule (v0.15.0) records a recurring payout schedule: --cadence weekly with --day 1–7 (ISO weekday, Monday–Sunday) or --cadence monthly with --day 1–31 (day of month, clamped to the month's last day when derived); clear-schedule clears it. Validated before write; a schedule never records or transfers a payout. Invoices are attributed to a freelancer with invoice assign (see below) — attribution is bookkeeping only and never changes dunning, payments, or invoice status. payout (v0.10.0, agency m"
+  "text": "The CLI entry point is invoiceguard (installed by pip). All commands below are from v0.10.0 — run invoiceguard --help or invoiceguard <group> --help for the same text locally. init invoiceguard init Creates ~/.invoiceguard/ : the config template, an empty SQLite database, and the three dunning email templates. Idempotent — existing files are left alone. client invoiceguard client add --name \"Acme Corp\" --email \"billing@acme.com\" [--phone +15551234567] invoiceguard client set-phone 1 [--phone +15551234567] # omit --phone to clear invoiceguard client set-email 1 [--email billing@acme.com] # omit --email to clear invoiceguard client set-dunning-policy 1 [--day1 N] [--day7 N] [--day15 N] [--reset] invoiceguard client list add requires --name ; --email is optional (needed later for dunning emails). --phone (E.164 form) enables SMS/WhatsApp escalation for that client; invalid numbers are rejected. set-phone updates or clears the phone number of an existing client. set-email updates or clears the email address of an existing client (dunning). set-dunning-policy sets per-client dunning stage thresholds (v0.7.0, agency mode): each --dayN is the days-overdue threshold for that stage; 0 disables the stage for that client; omit a flag to leave it unchanged. Thresholds must stay in escalation order (day1 → day7 → day15); negative values are rejected. --reset clears overrides back to the global defaults (1/7/15). list prints #id name email phone rows, plus a [dunning ...] marker for clients with policy overrides. freelancer (v0.8.0, agency mode) invoiceguard freelancer add --name \"Ali R.\" [--email ali@example.com] [--phone +15551234567] [--split-pct 70] invoiceguard freelancer set-email 1 [--email ali@example.com] # omit --email to clear invoiceguard freelancer set-phone 1 [--phone +15551234567] # omit --phone to clear invoiceguard freelancer set-split 1 --split-pct 70 # v0.11.0 invoiceguard freelancer list [--as-of 2026-10-28] # timing in v0.25.0 invoiceguard freelancer show 1 # v0.9.0 The agency roster: one row per team member. add requires --name ; --phone must be E.164 (invalid numbers are rejected). list prints #id name email phone rows. Each line also carries payout timing (v0.25.0): due, overdue (with the missed run date), upcoming, settled, or no schedule — the most urgent status across the freelancer's currencies, taken from the same payout_schedule_timing() rollup payout schedule uses, derived from the exact payout due / overdue rules as of --as-of (default: today); an invalid date is a clean error, and freelancers with no billable invoices carry no timing phrase. Read-only. show (v0.9.0; payouts added in v0.10.0, revenue splits in v0.11.0, payout schedule line in v0.15.0, payout timing in v0.22.0) prints contact details, per-currency earnings — billed (attributed invoices in a real state; drafts and voids excluded), collected (payment-ledger sums), outstanding — plus paid out and still owed from the payout ledger, the attributed invoice lines with collected/outstanding per invoice, and the recorded payouts. When a revenue split is set it also prints the freelancer's expected share of each collected currency and what is still due to them after payouts. When a payout schedule is set it prints the schedule and the derived next payout date. Each currency line also carries payout timing (v0.22.0): due, overdue (with the missed run date), upcoming, settled, or no schedule — taken from the same agency summary rows, derived from the exact payout due / overdue rules as of --as-of (default today); an invalid date is a clean error, and freelancers with no billable invoices carry no timing phrase. Read-only. --split-pct (v0.11.0) records the freelancer's revenue-split percentage of collected earnings (0–100, validated before write); freelancer set-split changes it later. NULL (unset) means the freelancer is earnings bookkeeping only. Bookkeeping only — the split is reported, never transferred, and the payout guard is unchanged. set-schedule "
  },
  {
   "url": "dashboard.html",
   "title": "Dashboard",
   "eyebrow": "User guide",
-  "description": "The InvoiceGuard localhost web dashboard — invoice list, status filters, per-invoice timelines, and the Stripe webhook receiver.",
+  "description": "The InvoiceGuard localhost web dashboard — invoice list, status filters, per-freelancer payout timing, per-invoice timelines, and the Stripe webhook receiver.",
   "headings": [
    {
     "id": "pages",
@@ -158,7 +158,7 @@
     "text": "Notes"
    }
   ],
-  "text": "invoiceguard dashboard # http://127.0.0.1:8000/ invoiceguard dashboard --port 8080 A small FastAPI + Jinja2 web UI that shares the CLI's SQLite database. Binds to 127.0.0.1 by default (localhost only). The API docs ( /docs , /redoc ) are disabled. Pages GET / — invoice list with status filters ( draft , sent , partially-paid , paid , overdue , void ), totals (outstanding / overdue / collected), and per-status counts. Each row shows the invoice kind, amount, project, due date, current escalation stage — and, for partially-paid invoices, how much has been paid and what is left. GET /invoices/{id} — invoice detail: amount, paid and outstanding balances, status, Stripe payment link, due date, a payments ledger (every recorded payment with date, method, and note), and a chronological timeline of dunning events and payments. GET /healthz — {\"ok\": true} , for uptime checks. GET /sign/{token} — the client's one-time contract signing page: renders the contract, collects a typed name and a drawn signature (see Contracts ). POST /sign/{token} — records the signature; returns a signed-receipt page. Unknown or already-used tokens return 404 / 400. POST /webhooks/stripe — the Stripe webhook receiver (see Webhooks ). Unknown status filters and missing invoices return a 404 page. Screenshots Captured from the real dashboard running locally against seeded demo data (every sample name is labeled (demo) ): Invoice list — status filters, totals, and escalation stages. Invoice detail — timeline of dunning events. Invoice detail — a partially-paid invoice: Paid/Outstanding amounts, the payments ledger, and payment events in the timeline. Notes The dashboard never inserts data on startup — it creates empty tables if the DB is fresh, nothing more. It reads and writes the same tables as the CLI; column names and types are frozen (additive migrations only). See Database . Webhook verification needs the signing secret — resolution order is documented in Webhooks . Without a real secret, POST /webhooks/stripe returns HTTP 500. Totals, defined: Outstanding = sum of outstanding balances over sent / overdue / partially-paid invoices; Overdue = the same over overdue invoices only; Collected = sum of all rows in the payment ledger. (Since v0.2.0; for older databases the ledger backfill makes the numbers identical to the old definitions.)"
+  "text": "invoiceguard dashboard # http://127.0.0.1:8000/ invoiceguard dashboard --port 8080 A small FastAPI + Jinja2 web UI that shares the CLI's SQLite database. Binds to 127.0.0.1 by default (localhost only). The API docs ( /docs , /redoc ) are disabled. Pages GET / — invoice list with status filters ( draft , sent , partially-paid , paid , overdue , void ), totals (outstanding / overdue / collected), and per-status counts, plus a Payouts section with per-freelancer payout timing (due / overdue / upcoming / settled / no schedule, with next or missed payout date, as of today — the same rollup payout schedule and freelancer list use; hidden when the roster is empty, and freelancers with no billable invoices get no row). Append ?as_of=YYYY-MM-DD to project the timing to that day instead (the header then reads payout timing as of <date> with a \"back to today\" link, and the status-filter and Details links keep the projection); an invalid date is a clean 400. Only the payout timing is projected — the invoice list, totals, and escalation stages stay as-of-today. Each row shows the invoice kind, amount, project, due date, current escalation stage — and, for partially-paid invoices, how much has been paid and what is left. GET /invoices/{id} — invoice detail: amount, paid and outstanding balances, status, Stripe payment link, due date, a payments ledger (every recorded payment with date, method, and note), and a chronological timeline of dunning events and payments. When the invoice is assigned to a freelancer, the Freelancer row also shows their payout timing (due / overdue / upcoming / settled / no schedule, with next or missed payout date, as of today — the same rollup as the index Payouts section; no phrase when the freelancer has no billable invoices). ?as_of=YYYY-MM-DD projects that timing to the day (marked (as of <date>) , back link keeps the projection); the amounts and timeline stay as-of-today, and an invalid date is a clean 400. GET /healthz — {\"ok\": true} , for uptime checks. GET /sign/{token} — the client's one-time contract signing page: renders the contract, collects a typed name and a drawn signature (see Contracts ). POST /sign/{token} — records the signature; returns a signed-receipt page. Unknown or already-used tokens return 404 / 400. POST /webhooks/stripe — the Stripe webhook receiver (see Webhooks ). Unknown status filters and missing invoices return a 404 page. Screenshots Captured from the real dashboard running locally against seeded demo data (every sample name is labeled (demo) ): Invoice list — status filters, totals, and escalation stages. Invoice detail — timeline of dunning events. Invoice detail — a partially-paid invoice: Paid/Outstanding amounts, the payments ledger, and payment events in the timeline. Notes The dashboard never inserts data on startup — it creates empty tables if the DB is fresh, nothing more. It reads and writes the same tables as the CLI; column names and types are frozen (additive migrations only). See Database . Webhook verification needs the signing secret — resolution order is documented in Webhooks . Without a real secret, POST /webhooks/stripe returns HTTP 500. Totals, defined: Outstanding = sum of outstanding balances over sent / overdue / partially-paid invoices; Overdue = the same over overdue invoices only; Collected = sum of all rows in the payment ledger. (Since v0.2.0; for older databases the ledger backfill makes the numbers identical to the old definitions.)"
  },
  {
   "url": "dunning.html",
@@ -353,11 +353,103 @@
   "description": "InvoiceGuard release history — newest first, no fluff.",
   "headings": [
    {
+    "id": "0310---2026-11-14",
+    "text": "[0.31.0] - 2026-11-14"
+   },
+   {
+    "id": "added",
+    "text": "Added"
+   },
+   {
+    "id": "honest-scope-0310",
+    "text": "Honest scope (0.31.0)"
+   },
+   {
+    "id": "0300---2026-11-13",
+    "text": "[0.30.0] - 2026-11-13"
+   },
+   {
+    "id": "added-2",
+    "text": "Added"
+   },
+   {
+    "id": "honest-scope-0300",
+    "text": "Honest scope (0.30.0)"
+   },
+   {
+    "id": "0290---2026-11-12",
+    "text": "[0.29.0] - 2026-11-12"
+   },
+   {
+    "id": "added-3",
+    "text": "Added"
+   },
+   {
+    "id": "honest-scope-0290",
+    "text": "Honest scope (0.29.0)"
+   },
+   {
+    "id": "0280---2026-11-11",
+    "text": "[0.28.0] - 2026-11-11"
+   },
+   {
+    "id": "added-4",
+    "text": "Added"
+   },
+   {
+    "id": "honest-scope-0280",
+    "text": "Honest scope (0.28.0)"
+   },
+   {
+    "id": "0270---2026-11-10",
+    "text": "[0.27.0] - 2026-11-10"
+   },
+   {
+    "id": "added-5",
+    "text": "Added"
+   },
+   {
+    "id": "honest-scope-0270",
+    "text": "Honest scope (0.27.0)"
+   },
+   {
+    "id": "0260---2026-11-09",
+    "text": "[0.26.0] - 2026-11-09"
+   },
+   {
+    "id": "added-6",
+    "text": "Added"
+   },
+   {
+    "id": "honest-scope-0260",
+    "text": "Honest scope (0.26.0)"
+   },
+   {
+    "id": "0251---2026-11-08",
+    "text": "[0.25.1] - 2026-11-08"
+   },
+   {
+    "id": "fixed",
+    "text": "Fixed"
+   },
+   {
+    "id": "0250---2026-11-07",
+    "text": "[0.25.0] - 2026-11-07"
+   },
+   {
+    "id": "added-7",
+    "text": "Added"
+   },
+   {
+    "id": "honest-scope-0250",
+    "text": "Honest scope (0.25.0)"
+   },
+   {
     "id": "0240---2026-11-06",
     "text": "[0.24.0] - 2026-11-06"
    },
    {
-    "id": "added",
+    "id": "added-8",
     "text": "Added"
    },
    {
@@ -369,7 +461,7 @@
     "text": "[0.23.0] - 2026-11-05"
    },
    {
-    "id": "added-2",
+    "id": "added-9",
     "text": "Added"
    },
    {
@@ -381,7 +473,7 @@
     "text": "[0.22.0] - 2026-11-04"
    },
    {
-    "id": "added-3",
+    "id": "added-10",
     "text": "Added"
    },
    {
@@ -393,7 +485,7 @@
     "text": "[0.21.0] - 2026-11-03"
    },
    {
-    "id": "added-4",
+    "id": "added-11",
     "text": "Added"
    },
    {
@@ -409,7 +501,7 @@
     "text": "[0.19.0] - 2026-11-01"
    },
    {
-    "id": "added-5",
+    "id": "added-12",
     "text": "Added"
    },
    {
@@ -421,7 +513,7 @@
     "text": "[0.18.0] - 2026-10-31"
    },
    {
-    "id": "added-6",
+    "id": "added-13",
     "text": "Added"
    },
    {
@@ -433,7 +525,7 @@
     "text": "[0.17.0] - 2026-10-30"
    },
    {
-    "id": "added-7",
+    "id": "added-14",
     "text": "Added"
    },
    {
@@ -445,7 +537,7 @@
     "text": "[0.16.0] - 2026-10-29"
    },
    {
-    "id": "added-8",
+    "id": "added-15",
     "text": "Added"
    },
    {
@@ -457,7 +549,7 @@
     "text": "[0.15.0] - 2026-10-28"
    },
    {
-    "id": "added-9",
+    "id": "added-16",
     "text": "Added"
    },
    {
@@ -469,7 +561,7 @@
     "text": "[0.14.0] - 2026-10-27"
    },
    {
-    "id": "added-10",
+    "id": "added-17",
     "text": "Added"
    },
    {
@@ -481,7 +573,7 @@
     "text": "[0.13.0] - 2026-10-26"
    },
    {
-    "id": "added-11",
+    "id": "added-18",
     "text": "Added"
    },
    {
@@ -493,7 +585,7 @@
     "text": "[0.12.0] - 2026-10-25"
    },
    {
-    "id": "added-12",
+    "id": "added-19",
     "text": "Added"
    },
    {
@@ -505,7 +597,7 @@
     "text": "[0.11.0] - 2026-10-24"
    },
    {
-    "id": "added-13",
+    "id": "added-20",
     "text": "Added"
    },
    {
@@ -517,7 +609,7 @@
     "text": "[0.10.0] - 2026-10-23"
    },
    {
-    "id": "added-14",
+    "id": "added-21",
     "text": "Added"
    },
    {
@@ -529,7 +621,7 @@
     "text": "[0.9.0] - 2026-10-22"
    },
    {
-    "id": "added-15",
+    "id": "added-22",
     "text": "Added"
    },
    {
@@ -541,11 +633,11 @@
     "text": "[0.8.4] - 2026-10-22"
    },
    {
-    "id": "fixed",
+    "id": "fixed-2",
     "text": "Fixed"
    },
    {
-    "id": "added-16",
+    "id": "added-23",
     "text": "Added"
    },
    {
@@ -561,7 +653,7 @@
     "text": "[0.8.3] - 2026-10-21"
    },
    {
-    "id": "fixed-2",
+    "id": "fixed-3",
     "text": "Fixed"
    },
    {
@@ -573,7 +665,7 @@
     "text": "[0.8.2] - 2026-10-20"
    },
    {
-    "id": "fixed-3",
+    "id": "fixed-4",
     "text": "Fixed"
    },
    {
@@ -585,7 +677,7 @@
     "text": "[0.8.1] - 2026-10-17"
    },
    {
-    "id": "fixed-4",
+    "id": "fixed-5",
     "text": "Fixed"
    },
    {
@@ -597,7 +689,7 @@
     "text": "[0.8.0] - 2026-10-16"
    },
    {
-    "id": "added-17",
+    "id": "added-24",
     "text": "Added"
    },
    {
@@ -609,7 +701,7 @@
     "text": "[0.7.1] - 2026-10-15"
    },
    {
-    "id": "fixed-5",
+    "id": "fixed-6",
     "text": "Fixed"
    },
    {
@@ -617,7 +709,7 @@
     "text": "[0.7.0] - 2026-10-14"
    },
    {
-    "id": "added-18",
+    "id": "added-25",
     "text": "Added"
    },
    {
@@ -629,7 +721,7 @@
     "text": "[0.6.5] - 2026-10-13"
    },
    {
-    "id": "fixed-6",
+    "id": "fixed-7",
     "text": "Fixed"
    },
    {
@@ -641,7 +733,7 @@
     "text": "[0.6.4] - 2026-10-12"
    },
    {
-    "id": "fixed-7",
+    "id": "fixed-8",
     "text": "Fixed"
    },
    {
@@ -653,11 +745,11 @@
     "text": "[0.6.3] - 2026-10-11"
    },
    {
-    "id": "fixed-8",
+    "id": "fixed-9",
     "text": "Fixed"
    },
    {
-    "id": "added-19",
+    "id": "added-26",
     "text": "Added"
    },
    {
@@ -669,7 +761,7 @@
     "text": "[0.6.2] - 2026-10-10"
    },
    {
-    "id": "fixed-9",
+    "id": "fixed-10",
     "text": "Fixed"
    },
    {
@@ -681,7 +773,7 @@
     "text": "[0.6.1] - 2026-10-09"
    },
    {
-    "id": "fixed-10",
+    "id": "fixed-11",
     "text": "Fixed"
    },
    {
@@ -693,7 +785,7 @@
     "text": "[0.6.0] - 2026-10-08"
    },
    {
-    "id": "added-20",
+    "id": "added-27",
     "text": "Added"
    },
    {
@@ -705,7 +797,7 @@
     "text": "[0.5.0] - 2026-10-07"
    },
    {
-    "id": "added-21",
+    "id": "added-28",
     "text": "Added"
    },
    {
@@ -717,7 +809,7 @@
     "text": "[0.4.0] - 2026-10-06"
    },
    {
-    "id": "added-22",
+    "id": "added-29",
     "text": "Added"
    },
    {
@@ -729,7 +821,7 @@
     "text": "[0.3.0] - 2026-10-05"
    },
    {
-    "id": "added-23",
+    "id": "added-30",
     "text": "Added"
    },
    {
@@ -745,7 +837,7 @@
     "text": "[0.2.0] - 2026-10-04"
    },
    {
-    "id": "added-24",
+    "id": "added-31",
     "text": "Added"
    },
    {
@@ -757,11 +849,11 @@
     "text": "[0.1.0] - 2026-10-02"
    },
    {
-    "id": "added-25",
+    "id": "added-32",
     "text": "Added"
    },
    {
-    "id": "fixed-11",
+    "id": "fixed-12",
     "text": "Fixed"
    },
    {
@@ -769,7 +861,7 @@
     "text": "Honest scope (v1)"
    }
   ],
-  "text": "Every release, newest first. InvoiceGuard follows semver. [0.24.0] - 2026-11-06 Agency-mode slice #18: payout timing on payout schedule . Slices #14–#17 put timing on the whole-book summary, its TOTALS lines, the per-freelancer view, and the suggestion lines, but the roster's pay-run view itself still showed only the schedule and the next payout date — telling a due freelancer from an upcoming one meant cross-checking payout due and payout overdue . This slice puts the timing on the schedule lines themselves. Added reports.payout_schedule_timing() — one entry per freelancer id in agency_summary() : payout_status rolled up across the freelancer's currencies with the same precedence agency_summary_totals() uses per currency — overdue beats due beats upcoming , with payout_currencies counting the currency rows in the winning status, missed_payout_date the earliest missed run among the overdue rows, and next_payout_date the earliest next run among the due / upcoming rows. Unanimous settled or no schedule currencies roll up to that shared status; a settled/no-schedule mix carries no status rather than a misleading one. Freelancers with no billable invoices get no entry. Read-only, like the rest of the command. invoiceguard payout schedule [--freelancer ID] [--as-of DATE] — each schedule line now appends its payout timing ( payout due (next payout ...) , payout overdue (missed ...) , payout upcoming (next payout ...) , payout settled , or payout no schedule ), with a currency count when more than one currency shares the winning status ( payout overdue (2 currencies, missed ...) ). --as-of projects the timing as of that day; an invalid --as-of is a clean error, not a traceback. Sorting, the schedule rendering, and the no freelancers on the roster empty case are unchanged; freelancers with no billable invoices carry no timing phrase. Read-only, like the rest of the command. Honest scope (0.24.0) A view, not a workflow: the status reports timing; recording a due or overdue payout is still payout settle-due / payout settle-overdue . Multi-freelancer workspaces remain the unshipped half of agency mode. [0.23.0] - 2026-11-05 Agency-mode slice #17: payout timing on payout suggest . Slices #14–#16 put timing on the whole-book summary, its TOTALS lines, and the per-freelancer view, but the answer to \"what do I pay next\" itself still carried no timing — telling an overdue suggestion from an upcoming one meant cross-checking payout due and payout overdue . This slice puts the timing on the suggestion lines themselves. Added reports.payout_suggestion_timing() — one entry per ( freelancer_id , currency ) in payout_suggestions() : payout_status derived from the exact payout due / overdue rules as of as_of (default: today) — overdue (with missed_payout_date ), due , upcoming , or no schedule — plus next_payout_date . A suggestion row is actionable by construction, so settled never appears here, unlike the agency summary which also covers settled rows. Read-only, like the rest of the command. invoiceguard payout suggest [--freelancer ID] [--as-of DATE] — each suggestion line now appends its payout timing ( payout due (next payout ...) , payout overdue (missed ...) , payout upcoming (next payout ...) , or payout no schedule ), for split-share rows and no-split available rows alike. --as-of projects the timing as of that day; an invalid --as-of is a clean error, not a traceback. Sorting, amounts, and the no payout suggestions empty case are unchanged. Read-only, like the rest of the command. Honest scope (0.23.0) A view, not a workflow: the status reports timing; recording a due or overdue payout is still payout settle-due / payout settle-overdue . Multi-freelancer workspaces remain the unshipped half of agency mode. [0.22.0] - 2026-11-04 Agency-mode slice #16: payout timing on freelancer show . Slices #14 and #15 put timing on the whole-book summary and its TOTALS lines, but drilling into one freelancer still showed only the schedule and the next pa"
+  "text": "Every release, newest first. InvoiceGuard follows semver. [0.31.0] - 2026-11-14 Agency-mode slice #25: payout timing in the invoice report CSV export. Slices #14–#24 put timing on every CLI view and on both dashboard pages — but the --csv export dropped it: the accountant's spreadsheet answered \"who owes us\" with no hint of \"who do we owe, and when\". This slice joins the same per-currency timing the text report's \"by freelancer\" lines carry onto each CSV row. Added invoiceguard invoice report [--as-of DATE] [--csv PATH] — each invoice CSV row now carries two trailing columns, payout_status (due / overdue / upcoming / settled / no schedule) and payout_date (the missed run date when overdue, the next payout date when due or upcoming, empty for settled / no schedule), taken from the same agency_summary() rows the text report joins onto its \"by freelancer\" lines — per currency, matching the row's own currency, projected with --as-of (default: today). Unassigned invoices carry empty cells rather than a misleading status. invoices_csv(rows, timing=None) takes the same per-(freelancer, currency) timing map; without it both columns stay empty, so a bare invoices_csv(rows) call gains no invented status. Pinned by a new test file tests/test_invoice_report_csv_timing.py (due, overdue, upcoming, settled, no-schedule, per-currency, unassigned, --as-of projection, bare-call empty columns). Docs: README invoice report row + roadmap + test count, docs/src/cli.md, docs/src/roadmap.md, and the changelog; generated docs pages rebuilt. Honest scope (0.31.0) The payments CSV ( --payments-csv ) is unchanged: it exports the payment ledger, which has no per-freelancer timing to join. Multi-freelancer workspaces remain the unshipped half of agency mode. [0.30.0] - 2026-11-13 Agency-mode slice #24: dashboard payout timing as of a projected date. Slices #14–#23 put timing on every CLI view and on both dashboard pages — but the dashboard was stuck on today: the CLI's --as-of had no web equivalent, so planning next week's pay run (\"who will be due on Friday?\") meant opening the CLI. This slice adds ?as_of=YYYY-MM-DD to the dashboard index and the invoice detail page, projecting the Payouts section and the detail page's Freelancer row to that day. Added Dashboard index GET /?as_of=YYYY-MM-DD — the Payouts section now shows each roster freelancer's payout timing as of that day (same payout_schedule_timing() rollup, same due / overdue / upcoming / settled / no-schedule phrases with next or missed payout date — no new library rules). The section header reads payout timing as of <date> with a \"back to today\" link; the status-filter and Details links keep the projection so the day survives navigation. Without ?as_of= the page is exactly as before. Dashboard invoice detail GET /invoices/{id}?as_of=YYYY-MM-DD — the Freelancer row's timing is projected to the same day, marked (as of <date>) , and the back link keeps the projection. An invalid date on either page is a clean 400, not a traceback. Pinned by a new test file tests/test_dashboard_as_of.py (projection to due, projection to overdue, invalid-date 400 on both pages, detail projection + back-link preservation, filter-link preservation, unprojected default). Docs: README dashboard section + roadmap + test count, docs/src/dashboard.md, docs/src/roadmap.md, and the changelog; generated docs pages rebuilt. Honest scope (0.30.0) Only the payout timing is projected: the invoice list, totals, escalation stages, and the detail page's amounts and timeline stay as-of-today. Recording a due or overdue payout is still payout settle-due / payout settle-overdue . Multi-freelancer workspaces remain the unshipped half of agency mode. [0.29.0] - 2026-11-12 Agency-mode slice #23: payout timing on the dashboard invoice detail. Slices #14–#22 put timing on every CLI view and on the dashboard index's Payouts section — but opening one invoice still answered only who did the work : telling whether that freelancer needs paying now "
  },
  {
   "url": "roadmap.html",
@@ -777,6 +869,6 @@
   "eyebrow": "Reference",
   "description": "What's planned for InvoiceGuard — honestly labeled as plans, not shipped features.",
   "headings": [],
-  "text": "These are plans, not promises — nothing below is shipped in v0.15.0. ~~ Real e-signature ~~ — shipped in v0.3.0: typed-name / drawn-signature capture on the contract, stored with the project, SHA-256 tamper evidence. ~~ Late-fee accrual calculator ~~ — shipped in v0.4.0: monthly-compounding accrual of contract §3 fees, invoice late-fees CLI, dashboard rows, dunning template variables. ~~ SMS / WhatsApp escalation ~~ — shipped in v0.5.0: day-15 also goes out as an SMS/WhatsApp message via Twilio when configured, plus invoice notify for one-off reminders. Agency mode — multi-freelancer workspaces (unshipped); per-client dunning policies shipped in v0.7.0 ( invoiceguard client set-dunning-policy ); freelancer roster + invoice attribution shipped in v0.8.0 ( invoiceguard freelancer add , invoiceguard invoice assign ); freelancer earnings shipped in v0.9.0 ( invoiceguard freelancer show , per-currency billed/collected/outstanding); freelancer payouts shipped in v0.10.0 ( invoiceguard payout record / payout list , per-currency payout ledger with an over-payout guard); revenue splits shipped in v0.11.0 ( freelancer add --split-pct / freelancer set-split , per-currency expected share + still-due-to-freelancer); payout suggestions shipped in v0.12.0 ( invoiceguard payout suggest , per-currency still-due share or still-held balance when no split is set); payout settlement shipped in v0.13.0 ( invoiceguard payout settle , records every suggestion at once through the payout guard, no-split freelancers skipped, --dry-run writes nothing). agency summary shipped in v0.14.0 ( invoiceguard agency summary , whole-book view per freelancer per currency with per-currency totals, read-only); payout schedules shipped in v0.15.0 ( freelancer set-schedule / clear-schedule , invoiceguard payout schedule with derived next payout date, read-only); payouts due shipped in v0.16.0 ( invoiceguard payout due , scheduled freelancers with an actionable payout on/inside the pay-run window, read-only); settle the pay run shipped in v0.17.0 ( invoiceguard payout settle-due , one payout per due row through the payout guard, no-split freelancers skipped, --dry-run writes nothing, second run is a no-op); payouts overdue shipped in v0.18.0 ( invoiceguard payout overdue , scheduled freelancers whose most recent payout date passed with an actionable payout and nothing recorded since that date, read-only); settle the missed pay runs shipped in v0.19.0 ( invoiceguard payout settle-overdue , one payout per overdue row through the payout guard, no-split freelancers skipped, --dry-run writes nothing, second run is a no-op); payout timing on the agency summary shipped in v0.20.0 ( invoiceguard agency summary [--as-of DATE] , per-currency due/overdue/upcoming/settled/no-schedule status with next or missed payout date, derived from the payout due / overdue rules, read-only); payout timing on the agency summary TOTALS shipped in v0.21.0 ( reports.agency_summary_totals() , per-currency rollup of the rows' own statuses — overdue beats due beats upcoming, with freelancer count and earliest missed/next date; a settled/no-schedule mix carries no status rather than a misleading one, read-only); payout timing on freelancer show shipped in v0.22.0 ( invoiceguard freelancer show ID [--as-of DATE] , per-currency due/overdue/upcoming/settled/no-schedule status with next or missed payout date, taken from the same agency summary rows, read-only); payout timing on payout suggest shipped in v0.23.0 ( invoiceguard payout suggest [--as-of DATE] , per-suggestion due/overdue/upcoming/no-schedule status with next or missed payout date, derived from the payout due / overdue rules, read-only); payout timing on payout schedule shipped in v0.24.0 ( invoiceguard payout schedule [--as-of DATE] , per-freelancer due/overdue/upcoming/settled/no-schedule status rolled up across currencies with the same overdue-beats-due-beats-upcoming precedence, read-only). ~~ Partial payments / payment plans ~~ — shipped i"
+  "text": "These are plans, not promises — nothing below is shipped in v0.15.0. ~~ Real e-signature ~~ — shipped in v0.3.0: typed-name / drawn-signature capture on the contract, stored with the project, SHA-256 tamper evidence. ~~ Late-fee accrual calculator ~~ — shipped in v0.4.0: monthly-compounding accrual of contract §3 fees, invoice late-fees CLI, dashboard rows, dunning template variables. ~~ SMS / WhatsApp escalation ~~ — shipped in v0.5.0: day-15 also goes out as an SMS/WhatsApp message via Twilio when configured, plus invoice notify for one-off reminders. Agency mode — multi-freelancer workspaces (unshipped); per-client dunning policies shipped in v0.7.0 ( invoiceguard client set-dunning-policy ); freelancer roster + invoice attribution shipped in v0.8.0 ( invoiceguard freelancer add , invoiceguard invoice assign ); freelancer earnings shipped in v0.9.0 ( invoiceguard freelancer show , per-currency billed/collected/outstanding); freelancer payouts shipped in v0.10.0 ( invoiceguard payout record / payout list , per-currency payout ledger with an over-payout guard); revenue splits shipped in v0.11.0 ( freelancer add --split-pct / freelancer set-split , per-currency expected share + still-due-to-freelancer); payout suggestions shipped in v0.12.0 ( invoiceguard payout suggest , per-currency still-due share or still-held balance when no split is set); payout settlement shipped in v0.13.0 ( invoiceguard payout settle , records every suggestion at once through the payout guard, no-split freelancers skipped, --dry-run writes nothing). agency summary shipped in v0.14.0 ( invoiceguard agency summary , whole-book view per freelancer per currency with per-currency totals, read-only); payout schedules shipped in v0.15.0 ( freelancer set-schedule / clear-schedule , invoiceguard payout schedule with derived next payout date, read-only); payouts due shipped in v0.16.0 ( invoiceguard payout due , scheduled freelancers with an actionable payout on/inside the pay-run window, read-only); settle the pay run shipped in v0.17.0 ( invoiceguard payout settle-due , one payout per due row through the payout guard, no-split freelancers skipped, --dry-run writes nothing, second run is a no-op); payouts overdue shipped in v0.18.0 ( invoiceguard payout overdue , scheduled freelancers whose most recent payout date passed with an actionable payout and nothing recorded since that date, read-only); settle the missed pay runs shipped in v0.19.0 ( invoiceguard payout settle-overdue , one payout per overdue row through the payout guard, no-split freelancers skipped, --dry-run writes nothing, second run is a no-op); payout timing on the agency summary shipped in v0.20.0 ( invoiceguard agency summary [--as-of DATE] , per-currency due/overdue/upcoming/settled/no-schedule status with next or missed payout date, derived from the payout due / overdue rules, read-only); payout timing on the agency summary TOTALS shipped in v0.21.0 ( reports.agency_summary_totals() , per-currency rollup of the rows' own statuses — overdue beats due beats upcoming, with freelancer count and earliest missed/next date; a settled/no-schedule mix carries no status rather than a misleading one, read-only); payout timing on freelancer show shipped in v0.22.0 ( invoiceguard freelancer show ID [--as-of DATE] , per-currency due/overdue/upcoming/settled/no-schedule status with next or missed payout date, taken from the same agency summary rows, read-only); payout timing on payout suggest shipped in v0.23.0 ( invoiceguard payout suggest [--as-of DATE] , per-suggestion due/overdue/upcoming/no-schedule status with next or missed payout date, derived from the payout due / overdue rules, read-only); payout timing on payout schedule shipped in v0.24.0 ( invoiceguard payout schedule [--as-of DATE] , per-freelancer due/overdue/upcoming/settled/no-schedule status rolled up across currencies with the same overdue-beats-due-beats-upcoming precedence, read-only). payout timing on freelancer list shipped in v0.25."
  }
 ]
