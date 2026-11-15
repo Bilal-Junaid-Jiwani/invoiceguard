@@ -1776,7 +1776,10 @@ def invoice_report(as_of, freelancer_id, csv_path, payments_csv_path):
     due, overdue (with the missed run date), upcoming, settled, or no
     schedule — per currency, matching the row's own currency, so the
     report answers "who do we owe, and when" alongside "who owes us".
-    The "unassigned" line carries no timing phrase. Never sends
+    The "unassigned" line carries no timing phrase. The `--csv` and
+    `--payments-csv` exports carry the same timing on each row
+    (`payout_status` / `payout_date` columns, joined through the
+    invoice's attribution and currency). Never sends
     anything and never changes invoice state.
     """
     if csv_path == "-" and payments_csv_path == "-":
@@ -1806,7 +1809,7 @@ def invoice_report(as_of, freelancer_id, csv_path, payments_csv_path):
         db.close()
         raise click.ClickException(str(e))
     inv_csv = invoices_csv(report["rows"], timing=timing) if csv_path else None
-    pay_csv = payments_csv(db) if payments_csv_path else None
+    pay_csv = payments_csv(db, timing=timing) if payments_csv_path else None
     db.close()
 
     notes = []

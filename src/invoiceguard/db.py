@@ -1086,6 +1086,7 @@ class DB:
         oldest first — the reconciliation view behind the CSV export."""
         rows = self.conn.execute(
             """SELECT pay.*, i.kind AS invoice_kind, i.currency AS currency,
+                      i.freelancer_id AS freelancer_id,
                       p.title AS project_title, c.name AS client_name
                FROM payments pay
                JOIN invoices i ON i.id = pay.invoice_id

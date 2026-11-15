@@ -226,6 +226,7 @@ def invoices_csv(rows: list[dict], timing: dict | None = None) -> str:
 PAYMENT_CSV_COLUMNS = [
     "payment_id", "invoice_id", "client", "project", "paid_at",
     "method", "amount", "currency", "note",
+    "payout_status", "payout_date",
 ]
 
 
@@ -822,21 +823,46 @@ def payout_schedule_timing(db: DB, freelancer_id: int | None = None,
     return timing
 
 
-def payments_csv(db: DB) -> str:
+def payments_csv(db: DB, timing: dict | None = None) -> str:
     """The full payment ledger as CSV — every recorded payment,
     including payments against invoices that are now paid in full,
     so the export reconciles against bank statements.
 
     Free-text cells (client, project, method, note) are neutralized
     against CSV formula injection (see `_csv_cell`).
+
+    Pass the same per-(freelancer, currency) agency-summary timing
+    map the text report joins onto its \"by freelancer\" lines and
+    each row also carries the attributed freelancer's payout timing:
+    the status (due / overdue / upcoming / settled / no schedule)
+    in ``payout_status`` and the date it refers to in
+    ``payout_date`` — the missed run date when overdue, the next
+    payout date when due or upcoming, empty for settled / no
+    schedule. The join is through the payment's invoice: its
+    attribution and its currency, so a payment in EUR carries the
+    freelancer's EUR timing, not the USD one. Payments on
+    unassigned invoices and freelancers with no timing entry carry
+    empty cells rather than a misleading status. Without ``timing``
+    both columns stay empty, so a bare ``payments_csv(db)`` call is
+    unchanged apart from the two new (empty) columns.
     """
     buf = io.StringIO()
     w = csv.writer(buf, lineterminator="\n")
     w.writerow(PAYMENT_CSV_COLUMNS)
     for p in db.all_payments():
+        status = ""
+        payout_date = ""
+        if timing is not None:
+            t = timing.get((p.get("freelancer_id"), p["currency"]), {})
+            status = t.get("payout_status") or ""
+            if status == "overdue":
+                payout_date = t.get("missed_payout_date") or ""
+            elif status in ("due", "upcoming"):
+                payout_date = t.get("next_payout_date") or ""
         w.writerow([_csv_cell(v) for v in [
             p["id"], p["invoice_id"], p["client_name"],
             p["project_title"], p["paid_at"], p["method"],
             _units(p["amount_cents"]), p["currency"], p["note"] or "",
+            status, payout_date,
         ]])
     return buf.getvalue()

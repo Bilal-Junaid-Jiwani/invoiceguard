@@ -2,6 +2,16 @@
 
 Every release, newest first. InvoiceGuard follows semver.
 
+## [0.32.0] - 2026-11-15
+
+Agency-mode slice #26: payout timing in the `invoice report` payments CSV export. Slices #14–#25 put timing on every CLI view, on both dashboard pages, and on the invoice CSV export — but the `--payments-csv` export dropped it: the payment ledger answered "what came in" with no hint of "who do we owe for this work, and when". This slice joins the same per-currency timing the text report's "by freelancer" lines carry onto each payment row, through the payment's invoice.
+
+### Added
+- **`invoiceguard invoice report [--as-of DATE] [--payments-csv PATH]`** — each payment CSV row now carries two trailing columns, `payout_status` (due / overdue / upcoming / settled / no schedule) and `payout_date` (the missed run date when overdue, the next payout date when due or upcoming, empty for settled / no schedule), taken from the same `agency_summary()` rows the text report joins onto its "by freelancer" lines — per currency, matching the payment's own currency, projected with `--as-of` (default: today). The join is through the payment's invoice: its attribution and its currency, so a payment in EUR carries the freelancer's EUR timing, not the USD one. Payments on unassigned invoices carry empty cells rather than a misleading status, and payments against invoices that are now paid in full still export — with timing. `payments_csv(db, timing=None)` takes the same per-(freelancer, currency) timing map; without it both columns stay empty, so a bare `payments_csv(db)` call gains no invented status. `db.all_payments()` now also returns the invoice's `freelancer_id` for the join. Pinned by a new test file `tests/test_invoice_report_payments_csv_timing.py` (due, overdue, upcoming, settled, no-schedule, per-currency, unassigned, `--as-of` projection, paid-invoice rows, bare-call empty columns). Docs: README invoice report row + roadmap + test count, docs/src/cli.md, docs/src/roadmap.md, and the changelog; generated docs pages rebuilt.
+
+### Honest scope (0.32.0)
+- The timing describes the freelancer's payout position as of `--as-of`, not the payment itself: a payment row never says "this payment settled the payout". Recording a due or overdue payout is still `payout settle-due` / `payout settle-overdue`. Multi-freelancer workspaces remain the unshipped half of agency mode.
+
 ## [0.31.0] - 2026-11-14
 
 Agency-mode slice #25: payout timing in the `invoice report` CSV export. Slices #14–#24 put timing on every CLI view and on both dashboard pages — but the `--csv` export dropped it: the accountant's spreadsheet answered "who owes us" with no hint of "who do we owe, and when". This slice joins the same per-currency timing the text report's "by freelancer" lines carry onto each CSV row.
