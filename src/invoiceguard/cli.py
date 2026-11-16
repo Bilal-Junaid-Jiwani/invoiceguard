@@ -19,10 +19,10 @@ from .late_fees import late_fee_summary
 from .messaging import (message_channel, messaging_configured,
                         messaging_from_config, normalize_phone,
                         render_message, send_message)
-from .reports import (agency_summary, agency_summary_totals,
-                      freelancer_earnings, invoices_csv,
-                      next_payout_date, payments_csv, payout_due,
-                      payout_overdue, payout_schedule,
+from .reports import (agency_summary, agency_summary_csv,
+                      agency_summary_totals, freelancer_earnings,
+                      invoices_csv, next_payout_date, payments_csv,
+                      payout_due, payout_overdue, payout_schedule,
                       payout_schedule_timing, payout_suggestion_timing,
                       payout_suggestions, receivables_report)
 from .stripe_links import create_payment_link, default_due_date
@@ -1191,7 +1191,10 @@ def agency():
 @click.option("--as-of", "as_of", default=None,
               help="Project payout timing as of YYYY-MM-DD "
                    "(default: today)")
-def agency_summary_cmd(freelancer_id, as_of):
+@click.option("--csv", "csv_path", default=None, metavar="PATH",
+              help="Also write the whole-book view as CSV to PATH "
+                   "('-' prints the CSV instead of the text summary)")
+def agency_summary_cmd(freelancer_id, as_of, csv_path):
     """Summarize the whole agency book, per freelancer per currency.
 
     One section per roster freelancer: billed, collected, outstanding,
@@ -1209,7 +1212,12 @@ def agency_summary_cmd(freelancer_id, as_of):
     unscheduled freelancers and no single status describes it.
     `payout suggest` lists only actionable rows and `freelancer show`
     covers one freelancer at a time; this is the whole book at a
-    glance. Read-only: nothing is recorded or transferred.
+    glance. The `--csv` export writes the same view as a spreadsheet:
+    one row per freelancer per currency plus one TOTALS row per
+    currency, with the same money columns and the same timing
+    (`payout_status` / `payout_date`) on every row — projected with
+    `--as-of` like the text lines. Read-only: nothing is recorded or
+    transferred.
     """
     db = _db()
     if freelancer_id is not None and not db.get_freelancer(freelancer_id):
@@ -1221,10 +1229,16 @@ def agency_summary_cmd(freelancer_id, as_of):
     except ValueError as e:
         db.close()
         raise click.ClickException(str(e))
+    csv_text = agency_summary_csv(rows, totals) if csv_path else None
     db.close()
     if not rows:
         click.echo("no freelancers on the roster")
         return
+    if csv_path == "-":
+        click.echo(csv_text, nl=False)
+        return
+    if csv_path:
+        Path(csv_path).write_text(csv_text, encoding="utf-8")
     ordered: list[int] = []
     by_freelancer: dict[int, list[dict]] = {}
     for r in rows:
@@ -1295,6 +1309,9 @@ def agency_summary_cmd(freelancer_id, as_of):
         # None (mixed settled + no schedule): no single status, so
         # no timing phrase rather than a misleading one.
         click.echo(line)
+    if csv_path:
+        click.echo(f"wrote agency summary CSV: {csv_path} "
+                   f"({len(rows) + len(totals)} rows)")
 
 
 # -- project --------------------------------------------------------------

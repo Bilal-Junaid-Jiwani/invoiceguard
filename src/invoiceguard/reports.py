@@ -512,6 +512,79 @@ def agency_summary_totals(db: DB, freelancer_id: int | None = None,
     return totals
 
 
+AGENCY_SUMMARY_CSV_COLUMNS = [
+    "freelancer_id", "freelancer_name", "currency", "split_pct",
+    "billed", "collected", "outstanding", "paid_out", "still_owed",
+    "suggested", "payout_status", "payout_date",
+]
+
+
+def _payout_date_for(status: str | None, row: dict) -> str:
+    """The date a payout status refers to (\"\" when it refers to none)."""
+    if status == "overdue":
+        return row.get("missed_payout_date") or ""
+    if status in ("due", "upcoming"):
+        return row.get("next_payout_date") or ""
+    return ""
+
+
+def agency_summary_csv(rows: list[dict],
+                       totals: dict[str, dict] | None = None) -> str:
+    """The whole-book agency view as CSV — one row per freelancer per
+    currency, then one TOTALS row per currency when *totals* is given.
+
+    Each row carries the same money the text summary prints (billed /
+    collected / outstanding / paid out / still owed, plus the suggested
+    payout where one exists) and the row's own payout timing: the
+    status (due / overdue / upcoming / settled / no schedule) in
+    ``payout_status`` and the date it refers to in ``payout_date`` —
+    the missed run date when overdue, the next payout date when due
+    or upcoming, empty for settled / no schedule. The rows already
+    carry their timing (see `agency_summary()`), so no timing map is
+    needed and a bare ``agency_summary_csv(rows)`` is complete apart
+    from the TOTALS rows. Freelancers with no billable invoices get
+    one row with an empty currency, zero amounts, and empty timing
+    cells rather than being dropped. Each TOTALS row carries the same
+    rollup timing the text summary prints on its TOTALS lines — the
+    most urgent status across the roster for that currency, with the
+    missed or next date; a mixed settled / no-schedule currency
+    carries empty timing cells rather than a misleading status.
+    Free-text cells (freelancer names) are neutralized against CSV
+    formula injection (see `_csv_cell`). Read-only.
+    """
+    buf = io.StringIO()
+    w = csv.writer(buf, lineterminator="\n")
+    w.writerow(AGENCY_SUMMARY_CSV_COLUMNS)
+    for r in rows:
+        status = r.get("payout_status") or ""
+        w.writerow([_csv_cell(v) for v in [
+            r["freelancer_id"], r["freelancer_name"],
+            r["currency"] or "",
+            "" if r["split_pct"] is None else r["split_pct"],
+            _units(r["invoiced_cents"]), _units(r["collected_cents"]),
+            _units(r["outstanding_cents"]), _units(r["paid_out_cents"]),
+            _units(r["still_owed_cents"]),
+            ("" if r["suggested_cents"] is None
+             else _units(r["suggested_cents"])),
+            status, _payout_date_for(status, r),
+        ]])
+    if totals:
+        for cur in sorted(totals):
+            t = totals[cur]
+            status = t.get("payout_status") or ""
+            w.writerow([_csv_cell(v) for v in [
+                "", "TOTALS", cur, "",
+                _units(t["invoiced_cents"]), _units(t["collected_cents"]),
+                _units(t["outstanding_cents"]),
+                _units(t["paid_out_cents"]),
+                _units(t["still_owed_cents"]),
+                (_units(t["suggested_cents"]) if t["has_suggested"]
+                 else ""),
+                status, _payout_date_for(status, t),
+            ]])
+    return buf.getvalue()
+
+
 def next_payout_date(cadence: str | None, day: int | None,
                      as_of: str | date | None = None) -> date | None:
     """Next payout date for a schedule, on or after as_of (today).
