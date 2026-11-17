@@ -24,7 +24,8 @@ from .reports import (agency_summary, agency_summary_csv,
                       invoices_csv, next_payout_date, payments_csv,
                       payout_due, payout_overdue, payout_schedule,
                       payout_schedule_timing, payout_suggestion_timing,
-                      payout_suggestions, receivables_report)
+                      payout_suggestions, payouts_csv,
+                      receivables_report)
 from .stripe_links import create_payment_link, default_due_date
 
 TEMPLATE_SOURCE = Path(__file__).resolve().parent / "email_templates"
@@ -619,7 +620,10 @@ def payout_record(freelancer_id, amount, currency, paid_at, method, note):
 @click.option("--as-of", "as_of", default=None,
               help="Project payout timing as of YYYY-MM-DD "
                    "(default: today)")
-def payout_list(freelancer_id, as_of):
+@click.option("--csv", "csv_path", default=None, metavar="PATH",
+              help="Also write the payout ledger as CSV to PATH "
+                   "('-' prints the CSV instead of the text list)")
+def payout_list(freelancer_id, as_of, csv_path):
     """List recorded payouts, newest first.
 
     Each freelancer's most recent payout line also carries payout
@@ -634,7 +638,12 @@ def payout_list(freelancer_id, as_of):
     appears once per freelancer, on their newest payout; older rows
     for the same freelancer carry no phrase. Freelancers with no
     billable invoices carry no timing phrase. An invalid `--as-of`
-    is a clean error, not a traceback. Read-only.
+    is a clean error, not a traceback. The `--csv` export writes
+    the same ledger as a spreadsheet: one row per payout with the
+    same timing in trailing `payout_status` / `payout_date`
+    columns, on the newest row per freelancer only — projected
+    with `--as-of` like the text lines. An empty ledger exports a
+    header-only CSV. Read-only.
     """
     db = _db()
     if freelancer_id is not None and not db.get_freelancer(freelancer_id):
@@ -646,7 +655,13 @@ def payout_list(freelancer_id, as_of):
         db.close()
         raise click.ClickException(str(e))
     rows = db.list_payouts(freelancer_id)
+    csv_text = payouts_csv(rows, timing) if csv_path else None
     db.close()
+    if csv_path == "-":
+        click.echo(csv_text, nl=False)
+        return
+    if csv_path:
+        Path(csv_path).write_text(csv_text, encoding="utf-8")
     seen: set[int] = set()
     for p in rows:
         timing_txt = ""
@@ -678,6 +693,9 @@ def payout_list(freelancer_id, as_of):
                    f"{('  ' + p['method']) if p['method'] else ''}"
                    f"{('  \"' + p['note'] + '\"') if p['note'] else ''}"
                    + timing_txt)
+    if csv_path:
+        click.echo(f"wrote payout list CSV: {csv_path} "
+                   f"({len(rows)} rows)")
 
 @payout.command("suggest")
 @click.option("--freelancer", "freelancer_id", type=int, default=None,

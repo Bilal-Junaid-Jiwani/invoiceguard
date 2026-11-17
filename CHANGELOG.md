@@ -2,6 +2,16 @@
 
 Every release, newest first. InvoiceGuard follows semver.
 
+## [0.34.0] - 2026-11-17
+
+Agency-mode slice #28: CSV export for `payout list`. Slices #14–#27 put payout timing on every CLI view, on both dashboard pages, and on the invoice report and agency summary CSV exports — but the payout ledger itself had no spreadsheet export at all: the accountant's record of what the agency already sent still had to be retyped from the text list. This slice adds `--csv PATH` (or `-` for stdout) to `payout list`, writing the same ledger as a spreadsheet.
+
+### Added
+- **`invoiceguard payout list [--freelancer ID] [--as-of DATE] [--csv PATH]`** — one CSV row per recorded payout, newest first, with the same columns the text list prints (payout id, freelancer, currency, amount, paid-at, method, note), plus the same per-freelancer payout timing in trailing `payout_status` / `payout_date` columns — on the newest row per freelancer only, exactly like the text list (the missed run date when overdue, the next payout date when due or upcoming, empty for settled / no schedule), taken from the same `payout_schedule_timing()` rollup — no new library rules, projected with `--as-of` (default: today). Older rows for the same freelancer carry empty timing cells; a freelancer with no timing entry carries empty cells rather than a misleading status. `-` prints the CSV to stdout instead of the text list; a file path writes the file and still prints the text list with a `wrote payout list CSV` note. An empty ledger exports a header-only CSV. `reports.payouts_csv(rows, timing=None)` is the library call — without a timing map both columns stay empty. Pinned by a new test file `tests/test_payout_list_csv.py` (header + money columns, due, overdue, upcoming, settled, no-schedule, timing only on newest row, per-freelancer timing, `--as-of` projection, `--freelancer` filter, file + stdout modes, empty ledger, invalid `--as-of`, bare library call with and without timing, CSV formula-injection neutralization). Docs: README payout list row + roadmap + test count, docs/src/cli.md, docs/src/roadmap.md, and the changelog; generated docs pages rebuilt.
+
+### Honest scope (0.34.0)
+- A view, not a workflow: the export reports the freelancer's payout position as of `--as-of`, not a settlement. Recording a due or overdue payout is still `payout settle-due` / `payout settle-overdue`. Multi-freelancer workspaces remain the unshipped half of agency mode.
+
 ## [0.33.0] - 2026-11-16
 
 Agency-mode slice #27: CSV export for `agency summary`. Slices #14–#26 put payout timing on every CLI view, on both dashboard pages, and on both `invoice report` CSV exports — but the whole-book view itself had no spreadsheet export at all: the accountant's whole-book sheet still had to be retyped from the text summary. This slice adds `--csv PATH` (or `-` for stdout) to `agency summary`, writing the same view as a spreadsheet.

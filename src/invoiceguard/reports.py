@@ -939,3 +939,57 @@ def payments_csv(db: DB, timing: dict | None = None) -> str:
             status, payout_date,
         ]])
     return buf.getvalue()
+
+
+PAYOUT_CSV_COLUMNS = [
+    "payout_id", "freelancer", "currency", "amount", "paid_at",
+    "method", "note",
+    "payout_status", "payout_date",
+]
+
+
+def payouts_csv(rows: list[dict], timing: dict | None = None) -> str:
+    """The payout ledger as CSV — one row per recorded payout.
+
+    *rows* are `db.list_payouts()` dicts, newest first. Free-text
+    cells (freelancer name, method, note) are neutralized against
+    CSV formula injection (see `_csv_cell`).
+
+    Pass the same per-freelancer timing map `payout list` appends to
+    its text lines (`payout_schedule_timing()`, keyed by freelancer
+    id) and each freelancer's newest payout row also carries their
+    payout timing: the status (due / overdue / upcoming / settled /
+    no schedule) in ``payout_status`` and the date it refers to in
+    ``payout_date`` — the missed run date when overdue, the next
+    payout date when due or upcoming, empty for settled / no
+    schedule. The timing appears once per freelancer, on their
+    newest row — older rows carry empty cells, exactly like the
+    text list. A freelancer with no timing entry (no billable
+    invoices, or a mixed settled / no-schedule rollup with no
+    single status) carries empty cells rather than a misleading
+    status. Without ``timing`` both columns stay empty, so a bare
+    ``payouts_csv(rows)`` call is unchanged apart from the two new
+    (empty) columns. Read-only.
+    """
+    buf = io.StringIO()
+    w = csv.writer(buf, lineterminator="\n")
+    w.writerow(PAYOUT_CSV_COLUMNS)
+    seen: set[int] = set()
+    for p in rows:
+        status = ""
+        payout_date = ""
+        fid = p["freelancer_id"]
+        if timing is not None and fid not in seen:
+            # Newest-first rows: the first row per freelancer is
+            # their most recent payout, so the timing appears once.
+            seen.add(fid)
+            t = timing.get(fid, {})
+            status = t.get("payout_status") or ""
+            payout_date = _payout_date_for(status, t)
+        w.writerow([_csv_cell(v) for v in [
+            p["id"], p["freelancer_name"], p["currency"],
+            _units(p["amount_cents"]), p["paid_at"],
+            p["method"] or "", p["note"] or "",
+            status, payout_date,
+        ]])
+    return buf.getvalue()
