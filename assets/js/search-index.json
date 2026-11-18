@@ -353,11 +353,35 @@
   "description": "InvoiceGuard release history — newest first, no fluff.",
   "headings": [
    {
+    "id": "0350---2026-11-18",
+    "text": "[0.35.0] - 2026-11-18"
+   },
+   {
+    "id": "added",
+    "text": "Added"
+   },
+   {
+    "id": "honest-scope-0350",
+    "text": "Honest scope (0.35.0)"
+   },
+   {
+    "id": "0340---2026-11-17",
+    "text": "[0.34.0] - 2026-11-17"
+   },
+   {
+    "id": "added-2",
+    "text": "Added"
+   },
+   {
+    "id": "honest-scope-0340",
+    "text": "Honest scope (0.34.0)"
+   },
+   {
     "id": "0330---2026-11-16",
     "text": "[0.33.0] - 2026-11-16"
    },
    {
-    "id": "added",
+    "id": "added-3",
     "text": "Added"
    },
    {
@@ -369,7 +393,7 @@
     "text": "[0.32.0] - 2026-11-15"
    },
    {
-    "id": "added-2",
+    "id": "added-4",
     "text": "Added"
    },
    {
@@ -381,7 +405,7 @@
     "text": "[0.31.0] - 2026-11-14"
    },
    {
-    "id": "added-3",
+    "id": "added-5",
     "text": "Added"
    },
    {
@@ -393,7 +417,7 @@
     "text": "[0.30.0] - 2026-11-13"
    },
    {
-    "id": "added-4",
+    "id": "added-6",
     "text": "Added"
    },
    {
@@ -405,7 +429,7 @@
     "text": "[0.29.0] - 2026-11-12"
    },
    {
-    "id": "added-5",
+    "id": "added-7",
     "text": "Added"
    },
    {
@@ -417,7 +441,7 @@
     "text": "[0.28.0] - 2026-11-11"
    },
    {
-    "id": "added-6",
+    "id": "added-8",
     "text": "Added"
    },
    {
@@ -429,7 +453,7 @@
     "text": "[0.27.0] - 2026-11-10"
    },
    {
-    "id": "added-7",
+    "id": "added-9",
     "text": "Added"
    },
    {
@@ -441,7 +465,7 @@
     "text": "[0.26.0] - 2026-11-09"
    },
    {
-    "id": "added-8",
+    "id": "added-10",
     "text": "Added"
    },
    {
@@ -461,7 +485,7 @@
     "text": "[0.25.0] - 2026-11-07"
    },
    {
-    "id": "added-9",
+    "id": "added-11",
     "text": "Added"
    },
    {
@@ -473,7 +497,7 @@
     "text": "[0.24.0] - 2026-11-06"
    },
    {
-    "id": "added-10",
+    "id": "added-12",
     "text": "Added"
    },
    {
@@ -485,7 +509,7 @@
     "text": "[0.23.0] - 2026-11-05"
    },
    {
-    "id": "added-11",
+    "id": "added-13",
     "text": "Added"
    },
    {
@@ -497,7 +521,7 @@
     "text": "[0.22.0] - 2026-11-04"
    },
    {
-    "id": "added-12",
+    "id": "added-14",
     "text": "Added"
    },
    {
@@ -509,7 +533,7 @@
     "text": "[0.21.0] - 2026-11-03"
    },
    {
-    "id": "added-13",
+    "id": "added-15",
     "text": "Added"
    },
    {
@@ -525,7 +549,7 @@
     "text": "[0.19.0] - 2026-11-01"
    },
    {
-    "id": "added-14",
+    "id": "added-16",
     "text": "Added"
    },
    {
@@ -537,7 +561,7 @@
     "text": "[0.18.0] - 2026-10-31"
    },
    {
-    "id": "added-15",
+    "id": "added-17",
     "text": "Added"
    },
    {
@@ -549,7 +573,7 @@
     "text": "[0.17.0] - 2026-10-30"
    },
    {
-    "id": "added-16",
+    "id": "added-18",
     "text": "Added"
    },
    {
@@ -561,7 +585,7 @@
     "text": "[0.16.0] - 2026-10-29"
    },
    {
-    "id": "added-17",
+    "id": "added-19",
     "text": "Added"
    },
    {
@@ -573,7 +597,7 @@
     "text": "[0.15.0] - 2026-10-28"
    },
    {
-    "id": "added-18",
+    "id": "added-20",
     "text": "Added"
    },
    {
@@ -585,7 +609,7 @@
     "text": "[0.14.0] - 2026-10-27"
    },
    {
-    "id": "added-19",
+    "id": "added-21",
     "text": "Added"
    },
    {
@@ -597,7 +621,7 @@
     "text": "[0.13.0] - 2026-10-26"
    },
    {
-    "id": "added-20",
+    "id": "added-22",
     "text": "Added"
    },
    {
@@ -609,7 +633,7 @@
     "text": "[0.12.0] - 2026-10-25"
    },
    {
-    "id": "added-21",
+    "id": "added-23",
     "text": "Added"
    },
    {
@@ -621,7 +645,7 @@
     "text": "[0.11.0] - 2026-10-24"
    },
    {
-    "id": "added-22",
+    "id": "added-24",
     "text": "Added"
    },
    {
@@ -633,7 +657,7 @@
     "text": "[0.10.0] - 2026-10-23"
    },
    {
-    "id": "added-23",
+    "id": "added-25",
     "text": "Added"
    },
    {
@@ -645,7 +669,7 @@
     "text": "[0.9.0] - 2026-10-22"
    },
    {
-    "id": "added-24",
+    "id": "added-26",
     "text": "Added"
    },
    {
@@ -661,7 +685,7 @@
     "text": "Fixed"
    },
    {
-    "id": "added-25",
+    "id": "added-27",
     "text": "Added"
    },
    {
@@ -713,7 +737,7 @@
     "text": "[0.8.0] - 2026-10-16"
    },
    {
-    "id": "added-26",
+    "id": "added-28",
     "text": "Added"
    },
    {
@@ -733,7 +757,7 @@
     "text": "[0.7.0] - 2026-10-14"
    },
    {
-    "id": "added-27",
+    "id": "added-29",
     "text": "Added"
    },
    {
@@ -773,7 +797,7 @@
     "text": "Fixed"
    },
    {
-    "id": "added-28",
+    "id": "added-30",
     "text": "Added"
    },
    {
@@ -809,7 +833,7 @@
     "text": "[0.6.0] - 2026-10-08"
    },
    {
-    "id": "added-29",
+    "id": "added-31",
     "text": "Added"
    },
    {
@@ -821,7 +845,7 @@
     "text": "[0.5.0] - 2026-10-07"
    },
    {
-    "id": "added-30",
+    "id": "added-32",
     "text": "Added"
    },
    {
@@ -833,7 +857,7 @@
     "text": "[0.4.0] - 2026-10-06"
    },
    {
-    "id": "added-31",
+    "id": "added-33",
     "text": "Added"
    },
    {
@@ -845,7 +869,7 @@
     "text": "[0.3.0] - 2026-10-05"
    },
    {
-    "id": "added-32",
+    "id": "added-34",
     "text": "Added"
    },
    {
@@ -861,7 +885,7 @@
     "text": "[0.2.0] - 2026-10-04"
    },
    {
-    "id": "added-33",
+    "id": "added-35",
     "text": "Added"
    },
    {
@@ -873,7 +897,7 @@
     "text": "[0.1.0] - 2026-10-02"
    },
    {
-    "id": "added-34",
+    "id": "added-36",
     "text": "Added"
    },
    {
@@ -885,7 +909,7 @@
     "text": "Honest scope (v1)"
    }
   ],
-  "text": "Every release, newest first. InvoiceGuard follows semver. [0.33.0] - 2026-11-16 Agency-mode slice #27: CSV export for agency summary . Slices #14–#26 put payout timing on every CLI view, on both dashboard pages, and on both invoice report CSV exports — but the whole-book view itself had no spreadsheet export at all: the accountant's whole-book sheet still had to be retyped from the text summary. This slice adds --csv PATH (or - for stdout) to agency summary , writing the same view as a spreadsheet. Added invoiceguard agency summary [--freelancer ID] [--as-of DATE] [--csv PATH] — one CSV row per freelancer per currency with the same money columns the text summary prints (billed, collected, outstanding, paid out, still owed, plus the suggested payout where one exists), plus one TOTALS row per currency carrying the same rollup timing the TOTALS lines print. Every row carries its payout timing in trailing payout_status / payout_date columns (the missed run date when overdue, the next payout date when due or upcoming, empty for settled / no schedule), taken straight from the rows' own timing fields — no new library rules, projected with --as-of (default: today). Freelancers with no billable invoices get one row with an empty currency, zero amounts, and empty timing cells rather than being dropped; a mixed settled / no-schedule currency carries empty timing on its TOTALS row rather than a misleading status. - prints the CSV to stdout instead of the text summary; a file path writes the file and still prints the text summary with a wrote agency summary CSV note. reports.agency_summary_csv(rows, totals=None) is the library call — without totals it returns just the freelancer rows, timing columns still populated. Pinned by a new test file tests/test_agency_summary_csv.py (header + money columns, due, overdue, upcoming, settled, no-schedule, per-currency, no-billable row, mixed-status TOTALS, --as-of projection, --freelancer filter, file + stdout modes, empty roster, invalid --as-of , bare library call, CSV formula-injection neutralization). Docs: README agency summary row + roadmap + test count, docs/src/cli.md, docs/src/roadmap.md, and the changelog; generated docs pages rebuilt. Honest scope (0.33.0) A view, not a workflow: the export reports the freelancer's payout position as of --as-of , not a settlement. Recording a due or overdue payout is still payout settle-due / payout settle-overdue . Multi-freelancer workspaces remain the unshipped half of agency mode. [0.32.0] - 2026-11-15 Agency-mode slice #26: payout timing in the invoice report payments CSV export. Slices #14–#25 put timing on every CLI view, on both dashboard pages, and on the invoice CSV export — but the --payments-csv export dropped it: the payment ledger answered \"what came in\" with no hint of \"who do we owe for this work, and when\". This slice joins the same per-currency timing the text report's \"by freelancer\" lines carry onto each payment row, through the payment's invoice. Added invoiceguard invoice report [--as-of DATE] [--payments-csv PATH] — each payment CSV row now carries two trailing columns, payout_status (due / overdue / upcoming / settled / no schedule) and payout_date (the missed run date when overdue, the next payout date when due or upcoming, empty for settled / no schedule), taken from the same agency_summary() rows the text report joins onto its \"by freelancer\" lines — per currency, matching the payment's own currency, projected with --as-of (default: today). The join is through the payment's invoice: its attribution and its currency, so a payment in EUR carries the freelancer's EUR timing, not the USD one. Payments on unassigned invoices carry empty cells rather than a misleading status, and payments against invoices that are now paid in full still export — with timing. payments_csv(db, timing=None) takes the same per-(freelancer, currency) timing map; without it both columns stay empty, so a bare payments_csv(db) call gains no invented status. db."
+  "text": "Every release, newest first. InvoiceGuard follows semver. [0.35.0] - 2026-11-18 Agency-mode slice #29: CSV export for payout due and payout overdue . Slices #14–#28 put payout timing on every CLI view, on both dashboard pages, and on the invoice report, agency summary, and payout ledger CSV exports — but the pay run itself had no spreadsheet export at all: the \"who do we pay this week, and who did we miss?\" lists still had to be retyped from the text output. This slice adds --csv PATH (or - for stdout) to both payout due and payout overdue , writing the same pay run as a spreadsheet through one shared library call. Added invoiceguard payout due [--freelancer ID] [--as-of DATE] [--within-days N] [--csv PATH] — one CSV row per due freelancer per currency, in the same order the text list prints them, with the same columns the text lines print (freelancer id, freelancer, currency, the still-due split share, the still-held balance, the schedule's cadence and day, and the next payout date). No-split rows carry an empty suggested cell and the still-held balance in available , exactly like the text list's \"(available — no split set)\" label; due rows carry an empty missed_payout_date cell rather than an invented missed date. Projected with --as-of and --within-days like the text list. - prints the CSV to stdout instead of the text list; a file path writes the file and still prints the text list with a wrote payout due CSV note. An empty pay run exports a header-only CSV. reports.pay_run_csv(rows) is the library call. Pinned by a new test file tests/test_payout_due_overdue_csv.py (header + money columns, split and no-split rows, --within-days , --as-of projection, --freelancer filter, file + stdout modes, empty pay run, empty roster, invalid --as-of , unknown-freelancer error, bare library call, CSV formula-injection neutralization). invoiceguard payout overdue [--freelancer ID] [--as-of DATE] [--csv PATH] — the same export for the missed pay runs: one row per overdue freelancer per currency with the same columns, plus the missed_payout_date the text lines print. Due-today freelancers never appear here (they are in payout due ), and freelancers paid at or after the missed run produce no row — the same payout_overdue() rules the text list uses, projected with --as-of . Same file/stdout modes and wrote payout overdue CSV note; an empty missed run exports a header-only CSV. Pinned by the same new test file (header + money columns, no-split rows, due-today exclusion, paid-at-missed-run exclusion, --freelancer filter, file mode, empty missed run, invalid --as-of ). Honest scope (0.35.0) A view, not a workflow: the export reports the pay run as of --as-of , not a settlement. Recording a due or overdue payout is still payout settle-due / payout settle-overdue . Multi-freelancer workspaces remain the unshipped half of agency mode. [0.34.0] - 2026-11-17 Agency-mode slice #28: CSV export for payout list . Slices #14–#27 put payout timing on every CLI view, on both dashboard pages, and on the invoice report and agency summary CSV exports — but the payout ledger itself had no spreadsheet export at all: the accountant's record of what the agency already sent still had to be retyped from the text list. This slice adds --csv PATH (or - for stdout) to payout list , writing the same ledger as a spreadsheet. Added invoiceguard payout list [--freelancer ID] [--as-of DATE] [--csv PATH] — one CSV row per recorded payout, newest first, with the same columns the text list prints (payout id, freelancer, currency, amount, paid-at, method, note), plus the same per-freelancer payout timing in trailing payout_status / payout_date columns — on the newest row per freelancer only, exactly like the text list (the missed run date when overdue, the next payout date when due or upcoming, empty for settled / no schedule), taken from the same payout_schedule_timing() rollup — no new library rules, projected with --as-of (default: today). Older rows for the same freelancer "
  },
  {
   "url": "roadmap.html",
