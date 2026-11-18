@@ -22,10 +22,10 @@ from .messaging import (message_channel, messaging_configured,
 from .reports import (agency_summary, agency_summary_csv,
                       agency_summary_totals, freelancer_earnings,
                       invoices_csv, next_payout_date, payments_csv,
-                      payout_due, payout_overdue, payout_schedule,
-                      payout_schedule_timing, payout_suggestion_timing,
-                      payout_suggestions, payouts_csv,
-                      receivables_report)
+                      pay_run_csv, payout_due, payout_overdue,
+                      payout_schedule, payout_schedule_timing,
+                      payout_suggestion_timing, payout_suggestions,
+                      payouts_csv, receivables_report)
 from .stripe_links import create_payment_link, default_due_date
 
 TEMPLATE_SOURCE = Path(__file__).resolve().parent / "email_templates"
@@ -911,7 +911,10 @@ def payout_schedule_cmd(freelancer_id, as_of):
 @click.option("--within-days", "within_days", type=int, default=0,
               help="Also include payouts due within this many days "
                    "after --as-of (default: 0, due on the day only)")
-def payout_due_cmd(freelancer_id, as_of, within_days):
+@click.option("--csv", "csv_path", default=None, metavar="PATH",
+              help="Also write the pay run as CSV to PATH "
+                   "('-' prints the CSV instead of the text list)")
+def payout_due_cmd(freelancer_id, as_of, within_days, csv_path):
     """Show the payouts due on this pay run.
 
     The join of `payout schedule` and `payout suggest`: a scheduled
@@ -920,9 +923,14 @@ def payout_due_cmd(freelancer_id, as_of, within_days):
     and who still has an actionable payout — a still-due split
     share, or a still-held balance when no split is set. Unscheduled
     freelancers are never due, and a due date with nothing to pay
-    produces no row. Read-only: record the run with `payout
-    settle-due` (just this pay run) or `payout settle` (the whole
-    book), which enforce their own guards.
+    produces no row. The `--csv` export writes the same pay run as
+    a spreadsheet: one row per due freelancer per currency with the
+    same columns the text list prints (freelancer, currency, the
+    still-due share or — with no split set — the still-held balance,
+    the schedule, and the next payout date). An empty pay run
+    exports a header-only CSV. Read-only: record the run with
+    `payout settle-due` (just this pay run) or `payout settle`
+    (the whole book), which enforce their own guards.
     """
     db = _db()
     if freelancer_id is not None and not db.get_freelancer(freelancer_id):
@@ -935,28 +943,36 @@ def payout_due_cmd(freelancer_id, as_of, within_days):
         db.close()
         raise click.ClickException(str(e))
     roster_empty = not db.list_freelancers()
+    csv_text = pay_run_csv(rows) if csv_path else None
     db.close()
+    if csv_path == "-":
+        click.echo(csv_text, nl=False)
+        return
+    if csv_path:
+        Path(csv_path).write_text(csv_text, encoding="utf-8")
     if roster_empty:
         click.echo("no freelancers on the roster")
-        return
-    if not rows:
+    elif not rows:
         click.echo("no payouts due")
-        return
-    for r in rows:
-        sched = _fmt_schedule(r["payout_cadence"], r["payout_day"])
-        if r["suggested_cents"] is not None:
-            click.echo(f"#{r['freelancer_id']:>3}  "
-                       f"{r['freelancer_name']:<25} "
-                       f"{r['currency']} "
-                       f"{r['suggested_cents'] / 100:>12,.2f}  "
-                       f"due {r['next_payout_date']} ({sched})")
-        else:
-            click.echo(f"#{r['freelancer_id']:>3}  "
-                       f"{r['freelancer_name']:<25} "
-                       f"{r['currency']} "
-                       f"{r['available_cents'] / 100:>12,.2f}  "
-                       f"due {r['next_payout_date']} ({sched}) "
-                       f"(available — no split set)")
+    else:
+        for r in rows:
+            sched = _fmt_schedule(r["payout_cadence"], r["payout_day"])
+            if r["suggested_cents"] is not None:
+                click.echo(f"#{r['freelancer_id']:>3}  "
+                           f"{r['freelancer_name']:<25} "
+                           f"{r['currency']} "
+                           f"{r['suggested_cents'] / 100:>12,.2f}  "
+                           f"due {r['next_payout_date']} ({sched})")
+            else:
+                click.echo(f"#{r['freelancer_id']:>3}  "
+                           f"{r['freelancer_name']:<25} "
+                           f"{r['currency']} "
+                           f"{r['available_cents'] / 100:>12,.2f}  "
+                           f"due {r['next_payout_date']} ({sched}) "
+                           f"(available — no split set)")
+    if csv_path:
+        click.echo(f"wrote payout due CSV: {csv_path} "
+                   f"({len(rows)} rows)")
 
 
 @payout.command("overdue")
@@ -964,7 +980,10 @@ def payout_due_cmd(freelancer_id, as_of, within_days):
               help="Only show overdue payouts for this freelancer")
 @click.option("--as-of", "as_of", default=None,
               help="Pay-run date YYYY-MM-DD (default: today)")
-def payout_overdue_cmd(freelancer_id, as_of):
+@click.option("--csv", "csv_path", default=None, metavar="PATH",
+              help="Also write the missed pay runs as CSV to PATH "
+                   "('-' prints the CSV instead of the text list)")
+def payout_overdue_cmd(freelancer_id, as_of, csv_path):
     """Show payouts overdue from a missed pay run.
 
     The backward half of `payout due`: a scheduled freelancer whose
@@ -974,9 +993,15 @@ def payout_overdue_cmd(freelancer_id, as_of):
     recorded for that currency since that missed date. A freelancer
     due on the pay-run date itself appears in `payout due`, not here,
     and money collected since the last run waits for the next run.
-    Read-only: record a missed run with `payout settle-overdue`
-    (just the missed runs) or `payout record` (one amount by hand)
-    or `payout settle` (the whole book).
+    The `--csv` export writes the same missed runs as a spreadsheet:
+    one row per overdue freelancer per currency with the same columns
+    the text list prints (freelancer, currency, the still-due share
+    or — with no split set — the still-held balance, the schedule,
+    the missed payout date, and the next payout date). An empty
+    missed run exports a header-only CSV. Read-only: record a missed
+    run with `payout settle-overdue` (just the missed runs) or
+    `payout record` (one amount by hand) or `payout settle` (the
+    whole book).
     """
     db = _db()
     if freelancer_id is not None and not db.get_freelancer(freelancer_id):
@@ -988,30 +1013,38 @@ def payout_overdue_cmd(freelancer_id, as_of):
         db.close()
         raise click.ClickException(str(e))
     roster_empty = not db.list_freelancers()
+    csv_text = pay_run_csv(rows) if csv_path else None
     db.close()
+    if csv_path == "-":
+        click.echo(csv_text, nl=False)
+        return
+    if csv_path:
+        Path(csv_path).write_text(csv_text, encoding="utf-8")
     if roster_empty:
         click.echo("no freelancers on the roster")
-        return
-    if not rows:
+    elif not rows:
         click.echo("no overdue payouts")
-        return
-    for r in rows:
-        sched = _fmt_schedule(r["payout_cadence"], r["payout_day"])
-        if r["suggested_cents"] is not None:
-            click.echo(f"#{r['freelancer_id']:>3}  "
-                       f"{r['freelancer_name']:<25} "
-                       f"{r['currency']} "
-                       f"{r['suggested_cents'] / 100:>12,.2f}  "
-                       f"missed {r['missed_payout_date']} ({sched}), "
-                       f"next payout {r['next_payout_date']}")
-        else:
-            click.echo(f"#{r['freelancer_id']:>3}  "
-                       f"{r['freelancer_name']:<25} "
-                       f"{r['currency']} "
-                       f"{r['available_cents'] / 100:>12,.2f}  "
-                       f"missed {r['missed_payout_date']} ({sched}), "
-                       f"next payout {r['next_payout_date']} "
-                       f"(available — no split set)")
+    else:
+        for r in rows:
+            sched = _fmt_schedule(r["payout_cadence"], r["payout_day"])
+            if r["suggested_cents"] is not None:
+                click.echo(f"#{r['freelancer_id']:>3}  "
+                           f"{r['freelancer_name']:<25} "
+                           f"{r['currency']} "
+                           f"{r['suggested_cents'] / 100:>12,.2f}  "
+                           f"missed {r['missed_payout_date']} ({sched}), "
+                           f"next payout {r['next_payout_date']}")
+            else:
+                click.echo(f"#{r['freelancer_id']:>3}  "
+                           f"{r['freelancer_name']:<25} "
+                           f"{r['currency']} "
+                           f"{r['available_cents'] / 100:>12,.2f}  "
+                           f"missed {r['missed_payout_date']} ({sched}), "
+                           f"next payout {r['next_payout_date']} "
+                           f"(available — no split set)")
+    if csv_path:
+        click.echo(f"wrote payout overdue CSV: {csv_path} "
+                   f"({len(rows)} rows)")
 
 
 @payout.command("settle-due")

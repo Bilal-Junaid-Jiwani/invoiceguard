@@ -993,3 +993,45 @@ def payouts_csv(rows: list[dict], timing: dict | None = None) -> str:
             status, payout_date,
         ]])
     return buf.getvalue()
+
+
+PAY_RUN_CSV_COLUMNS = [
+    "freelancer_id", "freelancer", "currency", "suggested",
+    "available", "payout_cadence", "payout_day", "next_payout_date",
+    "missed_payout_date",
+]
+
+
+def pay_run_csv(rows: list[dict]) -> str:
+    """The pay run as CSV — one row per `payout_due` / `payout_overdue`
+    row, in the same order the text lists print them.
+
+    *rows* are `payout_due()` or `payout_overdue()` dicts. The columns
+    mirror what the text lists print: the freelancer, the currency,
+    the amount to pay — the still-due split share in ``suggested``
+    (empty when no split is set: the text list prints the still-held
+    balance instead, labeled as available, and the ``available``
+    column carries it either way) — and the schedule the text line
+    shows in parentheses (``payout_cadence`` / ``payout_day``) with
+    the ``next_payout_date`` it is due on. Overdue rows also carry
+    the ``missed_payout_date`` the text line prints; due rows carry
+    an empty cell there rather than an invented missed date.
+
+    Free-text cells (freelancer name) are neutralized against CSV
+    formula injection (see `_csv_cell`). An empty pay run exports a
+    header-only CSV. Read-only.
+    """
+    buf = io.StringIO()
+    w = csv.writer(buf, lineterminator="\n")
+    w.writerow(PAY_RUN_CSV_COLUMNS)
+    for r in rows:
+        w.writerow([_csv_cell(v) for v in [
+            r["freelancer_id"], r["freelancer_name"], r["currency"],
+            _units(r["suggested_cents"])
+            if r["suggested_cents"] is not None else "",
+            _units(r["available_cents"]),
+            r["payout_cadence"], r["payout_day"],
+            r["next_payout_date"],
+            r.get("missed_payout_date") or "",
+        ]])
+    return buf.getvalue()

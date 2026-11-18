@@ -2,6 +2,17 @@
 
 Every release, newest first. InvoiceGuard follows semver.
 
+## [0.35.0] - 2026-11-18
+
+Agency-mode slice #29: CSV export for `payout due` and `payout overdue`. Slices #14–#28 put payout timing on every CLI view, on both dashboard pages, and on the invoice report, agency summary, and payout ledger CSV exports — but the pay run itself had no spreadsheet export at all: the "who do we pay this week, and who did we miss?" lists still had to be retyped from the text output. This slice adds `--csv PATH` (or `-` for stdout) to both `payout due` and `payout overdue`, writing the same pay run as a spreadsheet through one shared library call.
+
+### Added
+- **`invoiceguard payout due [--freelancer ID] [--as-of DATE] [--within-days N] [--csv PATH]`** — one CSV row per due freelancer per currency, in the same order the text list prints them, with the same columns the text lines print (freelancer id, freelancer, currency, the still-due split share, the still-held balance, the schedule's cadence and day, and the next payout date). No-split rows carry an empty `suggested` cell and the still-held balance in `available`, exactly like the text list's "(available — no split set)" label; due rows carry an empty `missed_payout_date` cell rather than an invented missed date. Projected with `--as-of` and `--within-days` like the text list. `-` prints the CSV to stdout instead of the text list; a file path writes the file and still prints the text list with a `wrote payout due CSV` note. An empty pay run exports a header-only CSV. `reports.pay_run_csv(rows)` is the library call. Pinned by a new test file `tests/test_payout_due_overdue_csv.py` (header + money columns, split and no-split rows, `--within-days`, `--as-of` projection, `--freelancer` filter, file + stdout modes, empty pay run, empty roster, invalid `--as-of`, unknown-freelancer error, bare library call, CSV formula-injection neutralization).
+- **`invoiceguard payout overdue [--freelancer ID] [--as-of DATE] [--csv PATH]`** — the same export for the missed pay runs: one row per overdue freelancer per currency with the same columns, plus the `missed_payout_date` the text lines print. Due-today freelancers never appear here (they are in `payout due`), and freelancers paid at or after the missed run produce no row — the same `payout_overdue()` rules the text list uses, projected with `--as-of`. Same file/stdout modes and `wrote payout overdue CSV` note; an empty missed run exports a header-only CSV. Pinned by the same new test file (header + money columns, no-split rows, due-today exclusion, paid-at-missed-run exclusion, `--freelancer` filter, file mode, empty missed run, invalid `--as-of`).
+
+### Honest scope (0.35.0)
+- A view, not a workflow: the export reports the pay run as of `--as-of`, not a settlement. Recording a due or overdue payout is still `payout settle-due` / `payout settle-overdue`. Multi-freelancer workspaces remain the unshipped half of agency mode.
+
 ## [0.34.0] - 2026-11-17
 
 Agency-mode slice #28: CSV export for `payout list`. Slices #14–#27 put payout timing on every CLI view, on both dashboard pages, and on the invoice report and agency summary CSV exports — but the payout ledger itself had no spreadsheet export at all: the accountant's record of what the agency already sent still had to be retyped from the text list. This slice adds `--csv PATH` (or `-` for stdout) to `payout list`, writing the same ledger as a spreadsheet.
