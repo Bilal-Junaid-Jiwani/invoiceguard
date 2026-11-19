@@ -1035,3 +1035,65 @@ def pay_run_csv(rows: list[dict]) -> str:
             r.get("missed_payout_date") or "",
         ]])
     return buf.getvalue()
+
+
+PAYOUT_SUGGESTIONS_CSV_COLUMNS = [
+    "freelancer_id", "freelancer", "currency", "suggested",
+    "available", "collected", "paid_out", "split_pct",
+    "payout_status", "payout_date",
+]
+
+
+def payout_suggestions_csv(rows: list[dict],
+                           timing: dict | None = None) -> str:
+    """The payout suggestions as CSV — one row per `payout_suggest`
+    row, in the same order the text list prints them.
+
+    *rows* are `payout_suggestions()` dicts. The columns mirror what
+    the text list prints: the freelancer, the currency, the amount to
+    pay — the still-due split share in ``suggested`` (empty when no
+    split is set: the text list prints the still-held balance
+    instead, labeled as available, and the ``available`` column
+    carries it either way) — plus the money the text line shows in
+    parentheses (``collected`` and ``paid_out``) and the ``split_pct``
+    the share was derived from (empty when no split is set).
+
+    Pass the same per-(freelancer, currency) timing map the text
+    list joins onto its lines (`payout_suggestion_timing()`) and each
+    row also carries that timing: the status (due / overdue /
+    upcoming / no schedule) in ``payout_status`` and the date it
+    refers to in ``payout_date`` — the missed run date when overdue,
+    the next payout date when due or upcoming, empty for no schedule.
+    A suggestion row is actionable by construction, so ``settled``
+    never appears here. Without ``timing`` both columns stay empty,
+    so a bare ``payout_suggestions_csv(rows)`` call is unchanged
+    apart from the two new (empty) columns.
+
+    Free-text cells (freelancer name) are neutralized against CSV
+    formula injection (see `_csv_cell`). An empty suggestion list
+    exports a header-only CSV. Read-only.
+    """
+    buf = io.StringIO()
+    w = csv.writer(buf, lineterminator="\n")
+    w.writerow(PAYOUT_SUGGESTIONS_CSV_COLUMNS)
+    for r in rows:
+        status = ""
+        payout_date = ""
+        if timing is not None:
+            t = timing.get((r["freelancer_id"], r["currency"]), {})
+            status = t.get("payout_status") or ""
+            if status == "overdue":
+                payout_date = t.get("missed_payout_date") or ""
+            elif status in ("due", "upcoming"):
+                payout_date = t.get("next_payout_date") or ""
+        w.writerow([_csv_cell(v) for v in [
+            r["freelancer_id"], r["freelancer_name"], r["currency"],
+            _units(r["suggested_cents"])
+            if r["suggested_cents"] is not None else "",
+            _units(r["available_cents"]),
+            _units(r["collected_cents"]),
+            _units(r["paid_out_cents"]),
+            "" if r["split_pct"] is None else r["split_pct"],
+            status, payout_date,
+        ]])
+    return buf.getvalue()

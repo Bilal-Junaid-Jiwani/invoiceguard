@@ -25,7 +25,8 @@ from .reports import (agency_summary, agency_summary_csv,
                       pay_run_csv, payout_due, payout_overdue,
                       payout_schedule, payout_schedule_timing,
                       payout_suggestion_timing, payout_suggestions,
-                      payouts_csv, receivables_report)
+                      payout_suggestions_csv, payouts_csv,
+                      receivables_report)
 from .stripe_links import create_payment_link, default_due_date
 
 TEMPLATE_SOURCE = Path(__file__).resolve().parent / "email_templates"
@@ -703,7 +704,10 @@ def payout_list(freelancer_id, as_of, csv_path):
 @click.option("--as-of", "as_of", default=None,
               help="Project payout timing as of YYYY-MM-DD "
                    "(default: today)")
-def payout_suggest(freelancer_id, as_of):
+@click.option("--csv", "csv_path", default=None, metavar="PATH",
+              help="Also write the suggestions as CSV to PATH "
+                   "('-' prints the CSV instead of the text list)")
+def payout_suggest(freelancer_id, as_of, csv_path):
     """Suggest what to pay each freelancer next, per currency.
 
     Derived from collected earnings and the payout ledger — read-only,
@@ -715,8 +719,15 @@ def payout_suggest(freelancer_id, as_of):
     (with the missed run date), upcoming, or no schedule — so the
     answer to "what do I pay next" also answers "does it need paying
     now" without cross-checking `payout due` and `payout overdue`.
-    Record all suggestions at once with `payout settle`, or one amount
-    by hand with `payout record`, which enforces its own guard.
+    The `--csv` export writes the same suggestions as a spreadsheet:
+    one row per suggestion per currency with the same columns the
+    text lines print (freelancer, currency, the still-due share — or
+    the still-held balance when no split is set — collected, paid out,
+    and the split) plus the same timing in trailing `payout_status` /
+    `payout_date` columns. An empty suggestion list exports a
+    header-only CSV. Record all suggestions at once with
+    `payout settle`, or one amount by hand with `payout record`,
+    which enforces its own guard.
     """
     db = _db()
     if freelancer_id is not None and not db.get_freelancer(freelancer_id):
@@ -728,9 +739,18 @@ def payout_suggest(freelancer_id, as_of):
     except ValueError as e:
         db.close()
         raise click.ClickException(str(e))
+    csv_text = payout_suggestions_csv(rows, timing) if csv_path else None
     db.close()
+    if csv_path == "-":
+        click.echo(csv_text, nl=False)
+        return
+    if csv_path:
+        Path(csv_path).write_text(csv_text, encoding="utf-8")
     if not rows:
         click.echo("no payout suggestions")
+        if csv_path:
+            click.echo(f"wrote payout suggest CSV: {csv_path} "
+                       f"({len(rows)} rows)")
         return
     for r in rows:
         t = timing.get((r["freelancer_id"], r["currency"]), {})
@@ -759,6 +779,9 @@ def payout_suggest(freelancer_id, as_of):
                        f"(available — no split set; set one with "
                        f"`freelancer set-split` for a share suggestion)"
                        + timing_txt)
+    if csv_path:
+        click.echo(f"wrote payout suggest CSV: {csv_path} "
+                   f"({len(rows)} rows)")
 
 
 @payout.command("settle")
