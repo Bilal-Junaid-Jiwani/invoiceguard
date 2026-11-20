@@ -6,6 +6,19 @@ description: InvoiceGuard release history — newest first, no fluff.
 
 Every release, newest first. InvoiceGuard follows semver.
 
+## [0.37.0] - 2026-11-20
+
+Agency-mode slice #31: CSV export for `payout schedule`. Slices #14–#30 put payout timing on every CLI view, on both dashboard pages, and on the invoice report, agency summary, payout ledger, pay-run, and suggestion CSV exports — but the "who gets paid when" roster itself had no spreadsheet export at all: the schedule list still had to be retyped from the text lines. This slice adds `--csv PATH` (or `-` for stdout) to `payout schedule`, writing the same schedules as a spreadsheet through one shared library call. It also fixes a version drift: 0.36.0 shipped with `invoiceguard --version` still printing 0.35.0.
+
+### Added
+- **`invoiceguard payout schedule [--freelancer ID] [--as-of DATE] [--csv PATH]`** — one CSV row per roster freelancer, in the same order the text list prints them, with the same columns the text lines print (freelancer id, freelancer, schedule cadence and day, next payout date), plus the same payout timing in trailing `payout_status` / `payout_date` columns — the missed run date when overdue, the next payout date when due or upcoming, empty for settled / no schedule — taken from the same `payout_schedule_timing()` map the text lines use, projected with `--as-of` (default: today). Unscheduled rows carry empty schedule and date cells, exactly like the text list's "no schedule set" line; freelancers with no billable invoices carry empty timing cells rather than a misleading status, and a freelancer whose currencies disagree carries no status rather than a guessed one. `-` prints the CSV to stdout instead of the text list; a file path writes the file and still prints the text list with a `wrote payout schedule CSV` note. An empty roster exports a header-only CSV. `reports.payout_schedule_csv(rows, timing=None)` is the library call — without a timing map both columns stay empty. Pinned by a new test file `tests/test_payout_schedule_csv.py` (header + columns, scheduled and unscheduled rows, due / overdue / upcoming / settled / no-schedule / no-billable timing, `--as-of` projection, `--freelancer` filter, file + stdout modes, empty roster, invalid `--as-of`, unknown-freelancer error, bare library call with and without timing, mixed-status empty cells, CSV formula-injection neutralization). Docs: README payout schedule row + roadmap + test count, docs/src/cli.md, docs/src/roadmap.md, and the changelog; generated docs pages rebuilt.
+
+### Fixed
+- **`invoiceguard --version` printed the previous release's version** — 0.36.0 shipped with `__init__.__version__` still at 0.35.0 (the release commit bumped pyproject.toml but not the module), so the installed 0.36.0 reported itself as 0.35.0. The module version is now 0.37.0, matching pyproject.toml, and a new regression test (`test_version_matches_pyproject`) asserts the two agree and that `--version` prints the packaged version, so a future release commit cannot silently drift again.
+
+### Honest scope (0.37.0)
+- A view, not a workflow: the export reports the schedules as of `--as-of`, not a settlement. Recording a payout is still `payout settle` / `payout record`. Multi-freelancer workspaces remain the unshipped half of agency mode.
+
 ## [0.36.0] - 2026-11-19
 
 Agency-mode slice #30: CSV export for `payout suggest`. Slices #14–#29 put payout timing on every CLI view, on both dashboard pages, and on the invoice report, agency summary, payout ledger, and pay-run CSV exports — but the "what do I pay next" list itself had no spreadsheet export at all: the suggestion list still had to be retyped from the text lines. This slice adds `--csv PATH` (or `-` for stdout) to `payout suggest`, writing the same suggestions as a spreadsheet through one shared library call.

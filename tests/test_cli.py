@@ -319,3 +319,27 @@ def test_check_due_reports_disabled_dunning_client(home):
     assert res.exit_code == 0, res.output
     assert "skipped dunning (invoice #1)" in res.output
     assert "dunning disabled for this client" in res.output
+
+
+def test_version_matches_pyproject():
+    """`invoiceguard --version` must print the packaged version.
+
+    Regression: 0.36.0 shipped with `__init__.__version__` still at
+    0.35.0 (the release commit bumped pyproject.toml but not the
+    module), so `--version` lied by one release while PyPI said
+    0.36.0. The packaged version in pyproject.toml is the single
+    source of truth; the module version must track it.
+    """
+    import re
+    from pathlib import Path
+
+    import invoiceguard
+
+    pyproject = Path(__file__).resolve().parent.parent / "pyproject.toml"
+    m = re.search(r'^version = "([^"]+)"', pyproject.read_text(),
+                  re.MULTILINE)
+    assert m, "no version in pyproject.toml"
+    assert invoiceguard.__version__ == m.group(1)
+    res = CliRunner().invoke(cli, ["--version"])
+    assert res.exit_code == 0, res.output
+    assert m.group(1) in res.output

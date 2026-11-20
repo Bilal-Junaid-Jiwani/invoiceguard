@@ -1097,3 +1097,61 @@ def payout_suggestions_csv(rows: list[dict],
             status, payout_date,
         ]])
     return buf.getvalue()
+
+
+PAYOUT_SCHEDULE_CSV_COLUMNS = [
+    "freelancer_id", "freelancer", "payout_cadence", "payout_day",
+    "next_payout_date", "payout_status", "payout_date",
+]
+
+
+def payout_schedule_csv(rows: list[dict],
+                        timing: dict | None = None) -> str:
+    """The payout schedules as CSV — one row per `payout_schedule`
+    row, in the same order the text list prints them.
+
+    *rows* are `payout_schedule()` dicts. The columns mirror what the
+    text list prints: the freelancer, the schedule (``payout_cadence``
+    / ``payout_day``) and the derived ``next_payout_date`` — all three
+    empty when no schedule is set, exactly like the text list's
+    "no schedule set" line.
+
+    Pass the same per-freelancer timing map the text list joins onto
+    its lines (`payout_schedule_timing()`) and each row also carries
+    that timing: the status (due / overdue / upcoming / settled /
+    no schedule) in ``payout_status`` and the date it refers to in
+    ``payout_date`` — the missed run date when overdue, the next
+    payout date when due or upcoming, empty for settled / no schedule.
+    A freelancer whose currencies disagree (some settled, some
+    unscheduled) carries no status in the map, so both cells stay
+    empty rather than carrying a misleading one; freelancers with no
+    billable invoices have no timing entry at all and also carry empty
+    cells. Without ``timing`` both columns stay empty, so a bare
+    ``payout_schedule_csv(rows)`` call is unchanged apart from the two
+    new (empty) columns.
+
+    Free-text cells (freelancer name) are neutralized against CSV
+    formula injection (see `_csv_cell`). An empty roster exports a
+    header-only CSV. Read-only.
+    """
+    buf = io.StringIO()
+    w = csv.writer(buf, lineterminator="\n")
+    w.writerow(PAYOUT_SCHEDULE_CSV_COLUMNS)
+    for r in rows:
+        status = ""
+        payout_date = ""
+        if timing is not None:
+            t = timing.get(r["freelancer_id"], {})
+            status = t.get("payout_status") or ""
+            if status == "overdue":
+                payout_date = t.get("missed_payout_date") or ""
+            elif status in ("due", "upcoming"):
+                payout_date = t.get("next_payout_date") or ""
+        w.writerow([_csv_cell(v) for v in [
+            r["freelancer_id"], r["freelancer_name"],
+            r["payout_cadence"] or "",
+            "" if r["payout_day"] is None else r["payout_day"],
+            r["next_payout_date"] or "",
+            status, payout_date,
+        ]])
+    return buf.getvalue()

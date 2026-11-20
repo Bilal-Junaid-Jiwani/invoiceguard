@@ -23,7 +23,8 @@ from .reports import (agency_summary, agency_summary_csv,
                       agency_summary_totals, freelancer_earnings,
                       invoices_csv, next_payout_date, payments_csv,
                       pay_run_csv, payout_due, payout_overdue,
-                      payout_schedule, payout_schedule_timing,
+                      payout_schedule, payout_schedule_csv,
+                      payout_schedule_timing,
                       payout_suggestion_timing, payout_suggestions,
                       payout_suggestions_csv, payouts_csv,
                       receivables_report)
@@ -862,7 +863,10 @@ def payout_settle(freelancer_id, currency, method, paid_at, dry_run):
 @click.option("--as-of", "as_of", default=None,
               help="Project next payout dates as of YYYY-MM-DD "
                    "(default: today)")
-def payout_schedule_cmd(freelancer_id, as_of):
+@click.option("--csv", "csv_path", default=None, metavar="PATH",
+              help="Also write the schedules as CSV to PATH "
+                   "('-' prints the CSV instead of the text list)")
+def payout_schedule_cmd(freelancer_id, as_of, csv_path):
     """Show each freelancer's payout schedule and next payout date.
 
     Derived from the schedule set with `freelancer set-schedule` —
@@ -877,7 +881,12 @@ def payout_schedule_cmd(freelancer_id, as_of):
     freelancer need paying now\" without cross-checking `payout due`
     and `payout overdue`. Freelancers with no billable invoices
     carry no timing phrase. An invalid `--as-of` is a clean error,
-    not a traceback.
+    not a traceback. The `--csv` export writes the same schedules as
+    a spreadsheet: one row per roster freelancer with the same
+    columns the text lines print (freelancer, schedule cadence and
+    day, next payout date) plus the same timing in trailing
+    `payout_status` / `payout_date` columns. An empty roster exports
+    a header-only CSV.
     """
     db = _db()
     if freelancer_id is not None and not db.get_freelancer(freelancer_id):
@@ -889,9 +898,18 @@ def payout_schedule_cmd(freelancer_id, as_of):
     except ValueError as e:
         db.close()
         raise click.ClickException(str(e))
+    csv_text = payout_schedule_csv(rows, timing) if csv_path else None
     db.close()
+    if csv_path == "-":
+        click.echo(csv_text, nl=False)
+        return
+    if csv_path:
+        Path(csv_path).write_text(csv_text, encoding="utf-8")
     if not rows:
         click.echo("no freelancers on the roster")
+        if csv_path:
+            click.echo(f"wrote payout schedule CSV: {csv_path} "
+                       f"({len(rows)} rows)")
         return
     for r in rows:
         t = timing.get(r["freelancer_id"], {})
@@ -924,6 +942,9 @@ def payout_schedule_cmd(freelancer_id, as_of):
                        f"{sched:<22} next payout "
                        f"{r['next_payout_date']}"
                        + timing_txt)
+    if csv_path:
+        click.echo(f"wrote payout schedule CSV: {csv_path} "
+                   f"({len(rows)} rows)")
 
 
 @payout.command("due")
