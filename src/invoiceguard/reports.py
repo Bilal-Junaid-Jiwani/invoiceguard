@@ -223,6 +223,63 @@ def invoices_csv(rows: list[dict], timing: dict | None = None) -> str:
     return buf.getvalue()
 
 
+FREELANCER_LIST_CSV_COLUMNS = [
+    "freelancer_id", "freelancer", "email", "phone", "split_pct",
+    "payout_status", "payout_date",
+]
+
+
+def freelancer_list_csv(rows: list,
+                        timing: dict | None = None) -> str:
+    """The freelancer roster as CSV — one row per `list_freelancers`
+    row, in the same order the text list prints them.
+
+    *rows* are `list_freelancers()` rows (sqlite rows or dicts). The
+    columns mirror what the text list prints: the freelancer, their
+    contact details, and the revenue-split percentage when one is set
+    (empty when no split is set, exactly like the text list omitting
+    the split) — the split is the stored value, not a formatted
+    percent, matching the other CSV exports.
+
+    Pass the same per-freelancer timing map the text list joins onto
+    its lines (`payout_schedule_timing()`) and each row also carries
+    that timing: the status (due / overdue / upcoming / settled /
+    no schedule) in ``payout_status`` and the date it refers to in
+    ``payout_date`` — the missed run date when overdue, the next
+    payout date when due or upcoming, empty for settled / no schedule.
+    A freelancer whose currencies disagree (some settled, some
+    unscheduled) carries no status in the map, so both cells stay
+    empty rather than carrying a misleading one; freelancers with no
+    billable invoices have no timing entry at all and also carry empty
+    cells. Without ``timing`` both columns stay empty, so a bare
+    ``freelancer_list_csv(rows)`` call is unchanged apart from the two
+    new (empty) columns.
+
+    Free-text cells (freelancer name, email, phone) are neutralized
+    against CSV formula injection (see `_csv_cell`). An empty roster
+    exports a header-only CSV. Read-only.
+    """
+    buf = io.StringIO()
+    w = csv.writer(buf, lineterminator="\n")
+    w.writerow(FREELANCER_LIST_CSV_COLUMNS)
+    for r in rows:
+        status = ""
+        payout_date = ""
+        if timing is not None:
+            t = timing.get(r["id"], {})
+            status = t.get("payout_status") or ""
+            if status == "overdue":
+                payout_date = t.get("missed_payout_date") or ""
+            elif status in ("due", "upcoming"):
+                payout_date = t.get("next_payout_date") or ""
+        w.writerow([_csv_cell(v) for v in [
+            r["id"], r["name"], r["email"] or "", r["phone"] or "",
+            "" if r["split_pct"] is None else r["split_pct"],
+            status, payout_date,
+        ]])
+    return buf.getvalue()
+
+
 PAYMENT_CSV_COLUMNS = [
     "payment_id", "invoice_id", "client", "project", "paid_at",
     "method", "amount", "currency", "note",

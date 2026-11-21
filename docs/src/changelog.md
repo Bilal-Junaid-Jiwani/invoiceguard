@@ -6,6 +6,16 @@ description: InvoiceGuard release history — newest first, no fluff.
 
 Every release, newest first. InvoiceGuard follows semver.
 
+## [0.38.0] - 2026-11-21
+
+Agency-mode slice #32: CSV export for `freelancer list`. Slices #14–#31 put payout timing on every CLI view, on both dashboard pages, and on the invoice report, agency summary, payout ledger, pay-run, suggestion, and schedule CSV exports — but the roster itself had no spreadsheet export at all: the agency's contact list still had to be retyped from the text lines. This slice adds `--csv PATH` (or `-` for stdout) to `freelancer list`, writing the same roster as a spreadsheet through one shared library call.
+
+### Added
+- **`invoiceguard freelancer list [--as-of DATE] [--csv PATH]`** — one CSV row per roster freelancer, in the same order the text list prints them, with the same columns the text lines print (freelancer id, freelancer, email, phone, split percentage when set), plus the same payout timing in trailing `payout_status` / `payout_date` columns — the missed run date when overdue, the next payout date when due or upcoming, empty for settled / no schedule — taken from the same `payout_schedule_timing()` map the text lines use, projected with `--as-of` (default: today). No-split rows carry an empty `split_pct` cell rather than an invented 0, exactly like the text list omitting the split; freelancers with no billable invoices carry empty timing cells rather than a misleading status, and a freelancer whose currencies disagree carries no status rather than a guessed one. `-` prints the CSV to stdout instead of the text list; a file path writes the file and still prints the text list with a `wrote freelancer list CSV` note. An empty roster exports a header-only CSV. `reports.freelancer_list_csv(rows, timing=None)` is the library call — without a timing map both columns stay empty. Pinned by a new test file `tests/test_freelancer_list_csv.py` (header + columns, contact columns, split and no-split rows, due / overdue / upcoming / settled / no-schedule / no-billable timing, `--as-of` projection, file + stdout modes, empty roster, invalid `--as-of`, bare library call with and without timing, mixed-status empty cells, CSV formula-injection neutralization). Docs: README freelancer list row + roadmap + test count, docs/src/cli.md, docs/src/roadmap.md, and the changelog; generated docs pages rebuilt.
+
+### Honest scope (0.38.0)
+- A view, not a workflow: the export reports the roster as of `--as-of`, not a settlement. Recording a payout is still `payout settle` / `payout record`. Multi-freelancer workspaces remain the unshipped half of agency mode.
+
 ## [0.37.0] - 2026-11-20
 
 Agency-mode slice #31: CSV export for `payout schedule`. Slices #14–#30 put payout timing on every CLI view, on both dashboard pages, and on the invoice report, agency summary, payout ledger, pay-run, and suggestion CSV exports — but the "who gets paid when" roster itself had no spreadsheet export at all: the schedule list still had to be retyped from the text lines. This slice adds `--csv PATH` (or `-` for stdout) to `payout schedule`, writing the same schedules as a spreadsheet through one shared library call. It also fixes a version drift: 0.36.0 shipped with `invoiceguard --version` still printing 0.35.0.

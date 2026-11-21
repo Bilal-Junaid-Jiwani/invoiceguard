@@ -21,6 +21,7 @@ from .messaging import (message_channel, messaging_configured,
                         render_message, send_message)
 from .reports import (agency_summary, agency_summary_csv,
                       agency_summary_totals, freelancer_earnings,
+                      freelancer_list_csv,
                       invoices_csv, next_payout_date, payments_csv,
                       pay_run_csv, payout_due, payout_overdue,
                       payout_schedule, payout_schedule_csv,
@@ -404,7 +405,10 @@ def freelancer_clear_schedule(freelancer_id):
 @click.option("--as-of", "as_of", default=None,
               help="Project payout timing as of YYYY-MM-DD "
                    "(default: today)")
-def freelancer_list(as_of):
+@click.option("--csv", "csv_path", default=None, metavar="PATH",
+              help="Also write the roster as CSV to PATH "
+                   "('-' prints the CSV instead of the text list)")
+def freelancer_list(as_of, csv_path):
     """List freelancers.
 
     Each line also carries payout timing, taken from the same
@@ -417,7 +421,11 @@ def freelancer_list(as_of):
     paying now" without cross-checking `payout due` and
     `payout overdue`. Freelancers with no billable invoices carry
     no timing phrase. An invalid `--as-of` is a clean error, not a
-    traceback. Read-only.
+    traceback. The `--csv` export writes the same roster as a
+    spreadsheet: one row per freelancer with the same columns the
+    text lines print (freelancer, email, phone, split) plus the same
+    timing in trailing `payout_status` / `payout_date` columns. An
+    empty roster exports a header-only CSV. Read-only.
     """
     db = _db()
     rows = db.list_freelancers()
@@ -426,7 +434,13 @@ def freelancer_list(as_of):
     except ValueError as e:
         db.close()
         raise click.ClickException(str(e))
+    csv_text = freelancer_list_csv(rows, timing) if csv_path else None
     db.close()
+    if csv_path == "-":
+        click.echo(csv_text, nl=False)
+        return
+    if csv_path:
+        Path(csv_path).write_text(csv_text, encoding="utf-8")
     for r in rows:
         split = f" {_fmt_split(r['split_pct'])}" \
             if r["split_pct"] is not None else ""
@@ -451,6 +465,9 @@ def freelancer_list(as_of):
             timing_txt = ""
         click.echo(f"#{r['id']:>3}  {r['name']:<30} {r['email'] or '':<28} "
                    f"{r['phone'] or ''}{split}" + timing_txt)
+    if csv_path:
+        click.echo(f"wrote freelancer list CSV: {csv_path} "
+                   f"({len(rows)} rows)")
 
 
 @freelancer.command("show")
