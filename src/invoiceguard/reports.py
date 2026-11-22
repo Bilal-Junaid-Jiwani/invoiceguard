@@ -280,6 +280,87 @@ def freelancer_list_csv(rows: list,
     return buf.getvalue()
 
 
+FREELANCER_SHOW_CSV_COLUMNS = [
+    "freelancer_id", "freelancer", "email", "phone", "split_pct",
+    "schedule_cadence", "schedule_day", "currency",
+    "billed", "collected", "outstanding", "invoice_count",
+    "paid_out", "still_owed",
+    "expected_share", "still_due_to_freelancer",
+    "payout_status", "payout_date",
+]
+
+
+def freelancer_show_csv(freelancer, rows: list[dict],
+                         timing: dict | None = None) -> str:
+    """One freelancer's detail view as CSV — one row per
+    `freelancer_earnings()` row, in the same order the text view
+    prints them.
+
+    *freelancer* is the `get_freelancer()` row (sqlite row or dict)
+    and *rows* are that freelancer's `freelancer_earnings()` rows.
+    The columns mirror what the text view prints: the freelancer's
+    contact details and revenue-split percentage when one is set
+    (empty when no split is set, exactly like the text view omitting
+    the split), the payout schedule's cadence and day (both empty
+    when no schedule is set), and per currency the same money the
+    earnings lines print — billed, collected, outstanding, invoice
+    count, paid out, still owed — plus the split-derived expected
+    share of what was collected and what is still due to the
+    freelancer after payouts. Those two share cells are empty on
+    no-split rows and on the no-billable row, exactly like the text
+    view printing no share there, rather than an invented 0.
+
+    Pass the same per-currency timing map the text view joins onto
+    its earnings lines (the `agency_summary()` rows keyed by
+    currency) and each row also carries that timing: the status (due
+    / overdue / upcoming / settled / no schedule) in
+    ``payout_status`` and the date it refers to in ``payout_date``
+    — the missed run date when overdue, the next payout date when
+    due or upcoming, empty for settled / no schedule. The
+    no-billable row has no currency and no timing entry, so both
+    cells stay empty rather than carrying a misleading status.
+    Without ``timing`` both columns stay empty, so a bare
+    ``freelancer_show_csv(f, rows)`` call is unchanged apart from
+    the two new (empty) columns.
+
+    Free-text cells (freelancer name, email, phone) are neutralized
+    against CSV formula injection (see `_csv_cell`). The attributed
+    invoice lines and the recorded payouts stay text-only: this
+    exports the earnings detail, not the whole screen. Read-only.
+    """
+    buf = io.StringIO()
+    w = csv.writer(buf, lineterminator="\n")
+    w.writerow(FREELANCER_SHOW_CSV_COLUMNS)
+    for r in rows:
+        currency = r["currency"] or ""
+        status = ""
+        payout_date = ""
+        if timing is not None and currency:
+            t = timing.get(currency, {})
+            status = t.get("payout_status") or ""
+            payout_date = _payout_date_for(status, t)
+        has_share = bool(currency) and \
+            r["expected_payout_cents"] is not None
+        w.writerow([_csv_cell(v) for v in [
+            freelancer["id"], freelancer["name"],
+            freelancer["email"] or "", freelancer["phone"] or "",
+            "" if freelancer["split_pct"] is None
+            else freelancer["split_pct"],
+            freelancer["payout_cadence"] or "",
+            "" if freelancer["payout_day"] is None
+            else freelancer["payout_day"],
+            currency,
+            _units(r["invoiced_cents"]), _units(r["collected_cents"]),
+            _units(r["outstanding_cents"]), r["invoice_count"],
+            _units(r["paid_out_cents"]), _units(r["still_owed_cents"]),
+            (_units(r["expected_payout_cents"]) if has_share else ""),
+            (_units(r["still_due_to_freelancer_cents"])
+             if has_share else ""),
+            status, payout_date,
+        ]])
+    return buf.getvalue()
+
+
 PAYMENT_CSV_COLUMNS = [
     "payment_id", "invoice_id", "client", "project", "paid_at",
     "method", "amount", "currency", "note",

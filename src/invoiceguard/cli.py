@@ -21,7 +21,7 @@ from .messaging import (message_channel, messaging_configured,
                         render_message, send_message)
 from .reports import (agency_summary, agency_summary_csv,
                       agency_summary_totals, freelancer_earnings,
-                      freelancer_list_csv,
+                      freelancer_list_csv, freelancer_show_csv,
                       invoices_csv, next_payout_date, payments_csv,
                       pay_run_csv, payout_due, payout_overdue,
                       payout_schedule, payout_schedule_csv,
@@ -475,7 +475,10 @@ def freelancer_list(as_of, csv_path):
 @click.option("--as-of", "as_of", default=None,
               help="Project payout timing as of YYYY-MM-DD "
                    "(default: today)")
-def freelancer_show(freelancer_id, as_of):
+@click.option("--csv", "csv_path", default=None, metavar="PATH",
+              help="Also write the earnings detail as CSV to PATH "
+                   "('-' prints the CSV instead of the text view)")
+def freelancer_show(freelancer_id, as_of, csv_path):
     """Show a freelancer: contact details, earnings, payouts, invoices.
 
     Earnings are per currency: billed (attributed invoices in a real
@@ -492,7 +495,12 @@ def freelancer_show(freelancer_id, as_of):
     paying now" without cross-checking `payout due` and
     `payout overdue`. The `schedule:` line's next payout date is
     projected to `--as-of` as well. The attributed invoice lines and the recorded
-    payouts follow. Read-only.
+    payouts follow. The `--csv` export writes the earnings detail as
+    a spreadsheet: one row per currency with the same contact,
+    schedule, and money columns the text lines print, plus the same
+    timing in trailing `payout_status` / `payout_date` columns — the
+    attributed invoice lines and the recorded payouts stay text-only.
+    Read-only.
     """
     db = _db()
     try:
@@ -503,6 +511,7 @@ def freelancer_show(freelancer_id, as_of):
         db.close()
         raise click.ClickException(str(e))
     f = db.get_freelancer(freelancer_id)
+    csv_text = freelancer_show_csv(f, rows, timing) if csv_path else None
     attributed = [dict(r) for r in db.list_invoices()
                   if r["freelancer_id"] == freelancer_id
                   and r["status"] not in ("draft", "void")]
@@ -512,6 +521,11 @@ def freelancer_show(freelancer_id, as_of):
                                    - inv["paid_cents"])
     payouts = db.list_payouts(freelancer_id)
     db.close()
+    if csv_path == "-":
+        click.echo(csv_text, nl=False)
+        return
+    if csv_path:
+        Path(csv_path).write_text(csv_text, encoding="utf-8")
 
     def _money(cents):
         return f"{cents / 100:,.2f}"
@@ -588,6 +602,9 @@ def freelancer_show(freelancer_id, as_of):
             if p["note"]:
                 detail += f"  \"{p['note']}\""
             click.echo(f"    #{p['id']:<4} {detail}")
+    if csv_path:
+        click.echo(f"wrote freelancer show CSV: {csv_path} "
+                   f"({len(rows)} rows)")
 
 
 # -- payout (agency mode) ----------------------------------------------
