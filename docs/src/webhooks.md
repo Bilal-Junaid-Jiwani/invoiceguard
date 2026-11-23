@@ -5,6 +5,8 @@ description: Stripe webhook setup for InvoiceGuard — endpoint, signing-secret 
 ---
 `POST /webhooks/stripe` (served by the [dashboard](dashboard.html)) lets Stripe tell InvoiceGuard when a client pays. On a verified `checkout.session.completed` event whose payment has actually settled, the matching invoice is marked `paid` automatically.
 
+**Idempotency (v0.41.0):** Stripe delivers events at least once. The endpoint records each processed event id and acknowledges redeliveries without re-applying them, and a checkout session can never record its payment twice (a `checkout.session.completed` followed by `checkout.session.async_payment_succeeded` for the same session records the money once) — a replayed partial payment can no longer inflate the ledger or close an invoice early.
+
 ## Setup
 
 1. Stripe dashboard → **Developers → Webhooks → Add endpoint**.

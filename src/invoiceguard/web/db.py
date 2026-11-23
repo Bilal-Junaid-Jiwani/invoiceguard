@@ -57,6 +57,7 @@ CREATE TABLE IF NOT EXISTS invoices(
   freelancer_id INTEGER REFERENCES freelancers(id),
   stripe_url TEXT,
   stripe_session_id TEXT,
+  stripe_link_id TEXT,
   due_date TEXT,
   sent_at TEXT,
   paid_at TEXT,
@@ -94,6 +95,12 @@ CREATE INDEX IF NOT EXISTS idx_signatures_token
   ON signatures(token);
 CREATE INDEX IF NOT EXISTS idx_signatures_project
   ON signatures(project_id);
+CREATE TABLE IF NOT EXISTS webhook_events(
+  event_id TEXT PRIMARY KEY,
+  event_type TEXT NOT NULL,
+  invoice_id INTEGER REFERENCES invoices(id),
+  received_at TEXT NOT NULL
+);
 """
 
 STAGE_ORDER = {"day1": 1, "day7": 2, "day15": 3}
@@ -349,6 +356,55 @@ def build_timeline(inv: dict, events: list[dict],
     return tl
 
 
+# -- webhook idempotency ----------------------------------------------
+def webhook_event_seen(event_id: str) -> bool:
+    """True if this Stripe event id was already processed by the web app.
+
+    Mirrors the core DB helper the standalone handler uses: Stripe
+    delivers events at least once, so the served endpoint drops a
+    redelivery of an already-processed event instead of applying it
+    twice (a replayed partial-payment event must never record the same
+    payment again and flip an invoice to fully-paid early).
+    """
+    conn = get_conn()
+    try:
+        return conn.execute(
+            "SELECT 1 FROM webhook_events WHERE event_id = ?",
+            (event_id,),
+        ).fetchone() is not None
+    finally:
+        conn.close()
+
+
+def webhook_event_invoice(event_id: str) -> int | None:
+    """Invoice id recorded for an already-processed event, or None."""
+    conn = get_conn()
+    try:
+        row = conn.execute(
+            "SELECT invoice_id FROM webhook_events WHERE event_id = ?",
+            (event_id,),
+        ).fetchone()
+        return row["invoice_id"] if row else None
+    finally:
+        conn.close()
+
+
+def mark_webhook_event_processed(event_id: str, event_type: str,
+                                 invoice_id: int | None = None) -> None:
+    """Record that a Stripe event id was handled. Idempotent."""
+    conn = get_conn()
+    try:
+        conn.execute(
+            "INSERT OR IGNORE INTO webhook_events"
+            "(event_id, event_type, invoice_id, received_at) "
+            "VALUES (?, ?, ?, ?)",
+            (event_id, event_type, invoice_id, now_iso()),
+        )
+        conn.commit()
+    finally:
+        conn.close()
+
+
 def mark_invoice_paid(stripe_session_id: str, invoice_id_hint: int | None = None,
                       amount_cents: int | None = None) -> int | None:
     """Mark the invoice for a completed checkout session as paid.
@@ -360,9 +416,21 @@ def mark_invoice_paid(stripe_session_id: str, invoice_id_hint: int | None = None
     (the core record_payment() refuses to book payments on void invoices),
     so a late or stray webhook must not resurrect a voided invoice.
     Returns the invoice id marked, or None when nothing matched.
+
+    Idempotent per checkout session: if the ledger already holds a
+    payment recorded for this session id, the call is a no-op that
+    returns the invoice id — a redelivered event (or a second, distinct
+    event for the same session, e.g. async_payment_succeeded following
+    a completed event that already carried the money) can never record
+    the same session's payment twice.
     """
     conn = get_conn()
     try:
+        # Serialize the read-check-write against concurrent deliveries
+        # of the same event/session: BEGIN IMMEDIATE takes the write
+        # lock up front, so the session-dedupe check below cannot be
+        # raced by a second connection doing the same check.
+        conn.execute("BEGIN IMMEDIATE")
         target: int | None = None
         if invoice_id_hint is not None:
             row = conn.execute(
@@ -371,12 +439,17 @@ def mark_invoice_paid(stripe_session_id: str, invoice_id_hint: int | None = None
             if row:
                 target = row["id"]
         if target is None and stripe_session_id:
-            row = conn.execute(
-                "SELECT id FROM invoices WHERE stripe_session_id = ?",
-                (stripe_session_id,),
-            ).fetchone()
-            if row:
-                target = row["id"]
+            # Fallback: match a previously recorded checkout SESSION id.
+            # Only cs_ values can be session ids — the column held
+            # payment-link ids (plink_...) on invoices created before
+            # v0.41.0, and those must never satisfy this lookup.
+            if stripe_session_id.startswith("cs_"):
+                row = conn.execute(
+                    "SELECT id FROM invoices WHERE stripe_session_id = ?",
+                    (stripe_session_id,),
+                ).fetchone()
+                if row:
+                    target = row["id"]
         if target is None:
             return None
         inv = conn.execute(
@@ -388,6 +461,13 @@ def mark_invoice_paid(stripe_session_id: str, invoice_id_hint: int | None = None
         if inv["status"] == "void":
             return None  # void is terminal: a payment must not resurrect
                          # a voided invoice
+        if stripe_session_id:
+            dup = conn.execute(
+                "SELECT 1 FROM payments WHERE invoice_id = ? AND note = ?",
+                (target, f"stripe session {stripe_session_id}"),
+            ).fetchone()
+            if dup:
+                return target  # this session already recorded its payment
         already = conn.execute(
             "SELECT COALESCE(SUM(amount_cents), 0) FROM payments "
             "WHERE invoice_id = ?",
@@ -480,13 +560,20 @@ def sign_contract(token: str, signer_name: str,
         contract_hash = hashlib.sha256(
             signed_text.encode("utf-8")).hexdigest()
         signed_at = now_iso()
-        conn.execute(
+        # Atomic single-use enforcement: the UPDATE itself re-tests
+        # status='pending', so two concurrent submissions on the same
+        # link cannot both succeed — the loser's UPDATE matches no row
+        # (rowcount 0) and is rejected as already used, instead of
+        # silently overwriting the winner's signer record.
+        cur = conn.execute(
             "UPDATE signatures SET status = 'signed', signer_name = ?, "
             "signature_image = ?, contract_hash = ?, signed_at = ? "
-            "WHERE id = ?",
+            "WHERE id = ? AND status = 'pending'",
             (signer_name, signature_image, contract_hash, signed_at,
              row["id"]),
         )
+        if cur.rowcount != 1:
+            raise ValueError("this signature request was already used")
         conn.execute(
             "UPDATE projects SET contract_ack = 1, contract_ack_at = ? "
             "WHERE id = ?",

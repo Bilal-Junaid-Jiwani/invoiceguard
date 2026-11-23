@@ -11,6 +11,7 @@ All settings live in `~/.invoiceguard/config.yaml` (written by `invoiceguard ini
 # Stripe — get test keys at https://dashboard.stripe.com/test/apikeys
 stripe_secret_key: "sk_test_..."        # or env INVOICEGUARD_STRIPE_SECRET_KEY
 stripe_webhook_secret: "whsec_..."       # or env INVOICEGUARD_STRIPE_WEBHOOK_SECRET
+dashboard_token: "a-long-random-token"   # or env INVOICEGUARD_DASHBOARD_TOKEN (dashboard pages, v0.41.0)
 
 # SMTP — how dunning emails are sent
 smtp:
@@ -43,6 +44,7 @@ Never commit this file with real secrets. The repo's `.gitignore` covers `config
 |---|---|
 | `INVOICEGUARD_STRIPE_SECRET_KEY` | `stripe_secret_key` |
 | `INVOICEGUARD_STRIPE_WEBHOOK_SECRET` | `stripe_webhook_secret` (webhook endpoint) |
+| `INVOICEGUARD_DASHBOARD_TOKEN` | `dashboard_token` (dashboard pages) |
 | `INVOICEGUARD_SMTP_PASSWORD` | `smtp.password` |
 | `INVOICEGUARD_TWILIO_ACCOUNT_SID` | `messaging.account_sid` |
 | `INVOICEGUARD_TWILIO_AUTH_TOKEN` | `messaging.auth_token` |

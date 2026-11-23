@@ -96,10 +96,14 @@ def test_migration_adds_column_to_old_db(home):
     cols = {r[1] for r in conn.execute("PRAGMA table_info(invoices)")}
     conn.close()
     assert "freelancer_id" in cols
-    # idempotent: reopening via DB does not lose data
+    # idempotent: reopening via DB keeps the migrated column (later
+    # additive migrations may add further columns of their own, e.g.
+    # stripe_link_id in v0.41.0, but never remove this one)
     d = DB(path)
-    assert {r[1] for r in
-            d.conn.execute("PRAGMA table_info(invoices)")} == cols
+    reopened = {r[1] for r in
+                d.conn.execute("PRAGMA table_info(invoices)")}
+    assert "freelancer_id" in reopened
+    assert reopened >= cols
     d.close()
 
 

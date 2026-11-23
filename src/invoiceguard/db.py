@@ -59,6 +59,7 @@ CREATE TABLE IF NOT EXISTS invoices(
     freelancer_id INTEGER REFERENCES freelancers(id),
     stripe_url TEXT,
     stripe_session_id TEXT,
+    stripe_link_id TEXT,
     due_date TEXT,
     sent_at TEXT,
     paid_at TEXT,
@@ -195,6 +196,24 @@ def migrate_signatures_contract_md(conn: sqlite3.Connection) -> None:
     cols = {r[1] for r in conn.execute("PRAGMA table_info(signatures)")}
     if "contract_md" not in cols:
         conn.execute("ALTER TABLE signatures ADD COLUMN contract_md TEXT")
+        conn.commit()
+
+
+def migrate_invoices_stripe_link_id(conn: sqlite3.Connection) -> None:
+    """Additive migration: invoices.stripe_link_id (v0.41.0).
+
+    Before v0.41.0 the CLI stored the Stripe Payment Link id (plink_...)
+    in invoices.stripe_session_id, a column whose readers expect a
+    checkout session id (cs_...) — so the web webhook's session-id
+    fallback lookup could never match a CLI-created invoice. The link
+    id now lives in its own column and stripe_session_id holds session
+    ids only. Existing plink_ values stay where they are (history);
+    the fallback lookup only ever matches cs_ values. Idempotent —
+    safe to call on every connect.
+    """
+    cols = {r[1] for r in conn.execute("PRAGMA table_info(invoices)")}
+    if "stripe_link_id" not in cols:
+        conn.execute("ALTER TABLE invoices ADD COLUMN stripe_link_id TEXT")
         conn.commit()
 
 
@@ -355,6 +374,7 @@ class DB:
         migrate_clients_phone(self.conn)
         migrate_clients_dunning_policy(self.conn)
         migrate_invoices_freelancer_id(self.conn)
+        migrate_invoices_stripe_link_id(self.conn)
         migrate_signatures_contract_md(self.conn)
         migrate_payouts(self.conn)
         migrate_freelancers_split_pct(self.conn)
@@ -688,13 +708,20 @@ class DB:
         contract_hash = hashlib.sha256(
             signed_text.encode("utf-8")).hexdigest()
         signed_at = now_iso()
-        self.conn.execute(
+        # Atomic single-use enforcement: the UPDATE itself re-tests
+        # status='pending', so two concurrent submissions on the same
+        # link cannot both succeed — the loser's UPDATE matches no row
+        # (rowcount 0) and is rejected as already used, instead of
+        # silently overwriting the winner's signer record.
+        cur = self.conn.execute(
             "UPDATE signatures SET status = 'signed', signer_name = ?, "
             "signature_image = ?, contract_hash = ?, signed_at = ? "
-            "WHERE id = ?",
+            "WHERE id = ? AND status = 'pending'",
             (signer_name, signature_image, contract_hash, signed_at,
              req["id"]),
         )
+        if cur.rowcount != 1:
+            raise ValueError("this signature request was already used")
         self.conn.execute(
             "UPDATE projects SET contract_ack = 1, contract_ack_at = ? "
             "WHERE id = ?",

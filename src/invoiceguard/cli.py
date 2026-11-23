@@ -1682,7 +1682,11 @@ def invoice_create(project_id, kind, amount, due_days):
         iid,
         status="sent",
         stripe_url=url,
-        stripe_session_id=link_id,
+        # The payment-LINK id (plink_...) lives in its own column since
+        # v0.41.0: stripe_session_id holds checkout session ids (cs_...)
+        # only, so the web webhook's session-id fallback lookup compares
+        # like with like (before, it could never match a CLI invoice).
+        stripe_link_id=link_id,
         sent_at=datetime.now(timezone.utc).isoformat(),
     )
     db.close()
@@ -2146,9 +2150,21 @@ def dashboard(port, host):
     """Launch the InvoiceGuard web dashboard (local web UI)."""
     import uvicorn
 
-    from .web.main import app
+    from .web.main import app, dashboard_token
 
     click.echo(f"InvoiceGuard dashboard: http://{host}:{port}/")
+    if dashboard_token():
+        click.echo("Dashboard token auth is ON — open the dashboard "
+                   "with ?token=<your token> (or send an "
+                   "'Authorization: Bearer <token>' header).")
+    else:
+        click.echo(
+            "WARNING: no dashboard token configured — the dashboard "
+            "pages are UNAUTHENTICATED. Set INVOICEGUARD_DASHBOARD_TOKEN "
+            "or dashboard_token in the config file to require a token, "
+            "especially before binding anything but 127.0.0.1.",
+            err=True,
+        )
     uvicorn.run(app, host=host, port=port)
 
 

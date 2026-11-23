@@ -111,6 +111,14 @@ def _apply_event(db: DB, event: dict) -> str:
         invoice_id = (obj.get("metadata") or {}).get("invoiceguard_invoice_id")
         if invoice_id:
             inv = db.get_invoice(int(invoice_id))
+            if inv and inv["status"] == "void":
+                # Void is terminal: record_payment() would raise, and
+                # the unhandled exception would leave the event
+                # unmarked — a poison event that crashes on every
+                # redelivery. A client can still pay an outstanding
+                # link after the invoice was voided; ignore it the
+                # same way the FastAPI path does (returns None there).
+                return "ignored:void"
             if inv and inv["status"] != "paid":
                 session_amount = obj.get("amount_total")
                 amount_cents = (
@@ -119,6 +127,12 @@ def _apply_event(db: DB, event: dict) -> str:
                     else db.outstanding_cents(int(invoice_id))
                 )
                 amount_cents = min(amount_cents, db.outstanding_cents(int(invoice_id)))
+                if amount_cents <= 0:
+                    # Zero-amount session (e.g. a fully discounted
+                    # checkout): nothing to record — record_payment()
+                    # would raise "payment amount must be positive"
+                    # and poison the event the same way.
+                    return "ignored:zero_amount"
                 db.record_payment(
                     int(invoice_id),
                     amount_cents,

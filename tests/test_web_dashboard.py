@@ -70,14 +70,15 @@ def _signed(secret: str, payload: dict, tamper: bool = False) -> tuple[bytes, st
 def _event(session_id: str, etype: str = "checkout.session.completed",
            metadata: dict | None = None,
            payment_status: str | None = None,
-           amount_total: int | None = None) -> dict:
+           amount_total: int | None = None,
+           event_id: str = "evt_test_1") -> dict:
     session = {"id": session_id, "object": "checkout.session",
                "metadata": metadata or {}}
     if payment_status is not None:
         session["payment_status"] = payment_status
     if amount_total is not None:
         session["amount_total"] = amount_total
-    return {"id": "evt_test_1", "object": "event", "type": etype,
+    return {"id": event_id, "object": "event", "type": etype,
             "data": {"object": session}}
 
 
@@ -194,8 +195,11 @@ def test_webhook_idempotent_when_already_paid(client):
 
 
 def _seed_plink_invoice(db_path, session_ref="plink_test_999"):
-    """Insert an invoice the way the CLI leaves it: stripe_session_id
-    holds the Payment Link id (plink_...), NOT a checkout session id."""
+    """Insert an invoice the way pre-0.41.0 CLIs left it: stripe_session_id
+    holds the Payment Link id (plink_...), NOT a checkout session id.
+    (Since 0.41.0 the link id lives in stripe_link_id; databases in the
+    wild still carry the plink_ value here, and the webhook must keep
+    handling those invoices via the metadata hint.)"""
     conn = sqlite3.connect(db_path)
     pid = conn.execute("SELECT id FROM projects LIMIT 1").fetchone()[0]
     cur = conn.execute(
@@ -256,7 +260,11 @@ def test_webhook_unpaid_payment_status_records_nothing(client):
     r = post(tc, _event("cs_test_ach_1",
                         etype="checkout.session.async_payment_succeeded",
                         metadata={"invoiceguard_invoice_id": str(iid)},
-                        payment_status="paid", amount_total=75000))
+                        payment_status="paid", amount_total=75000,
+                        # a distinct Stripe event -> its own event id
+                        # (only redeliveries reuse an id, and those are
+                        # deduped since 0.41.0)
+                        event_id="evt_test_2"))
     assert r.status_code == 200
     assert r.json()["marked_invoice_id"] == iid
     assert _status(db, iid)[0] == "paid"

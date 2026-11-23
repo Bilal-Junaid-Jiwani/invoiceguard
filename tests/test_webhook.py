@@ -157,3 +157,46 @@ def test_handle_event_unknown_type_ignored(db, sample_project):
                                "data": {"object": {}}})
     assert action.startswith("ignored:")
     assert db.get_invoice(iid)["status"] == "sent"
+
+
+def _session_event(event_id: str, session_id: str, invoice_id: int,
+                   amount_total: int) -> dict:
+    return {
+        "id": event_id,
+        "type": "checkout.session.completed",
+        "data": {"object": {
+            "id": session_id,
+            "amount_total": amount_total,
+            "metadata": {"invoiceguard_invoice_id": str(invoice_id)},
+        }},
+    }
+
+
+def test_handle_event_void_invoice_ignored_not_poison(db, sample_project):
+    """0.41.0 (audit Bug 1): a payment completing for a VOID invoice
+    crashed handle_event with record_payment's uncaught ValueError —
+    and since the event was never marked processed, every redelivery
+    crashed again (poison event). It is now ignored gracefully and
+    marked processed, mirroring the FastAPI path."""
+    iid = db.add_invoice(sample_project["id"], "deposit", 100_000, "USD",
+                         status="sent")
+    db.update_invoice(iid, status="void")
+    evt = _session_event("evt_void_1", "cs_void_1", iid, 100_000)
+    assert handle_event(db, evt) == "ignored:void"
+    assert db.payments(iid) == []
+    assert db.get_invoice(iid)["status"] == "void"
+    # marked processed: the redelivery is a duplicate, not a re-crash
+    assert handle_event(db, evt) == "ignored:duplicate_event"
+
+
+def test_handle_event_zero_amount_ignored_not_poison(db, sample_project):
+    """0.41.0 (audit Bug 1): a zero-amount session (fully discounted
+    checkout) crashed the same way via 'payment amount must be
+    positive'. Now ignored gracefully and marked processed."""
+    iid = db.add_invoice(sample_project["id"], "deposit", 100_000, "USD",
+                         status="sent")
+    evt = _session_event("evt_zero_1", "cs_zero_1", iid, 0)
+    assert handle_event(db, evt) == "ignored:zero_amount"
+    assert db.payments(iid) == []
+    assert db.get_invoice(iid)["status"] == "sent"
+    assert handle_event(db, evt) == "ignored:duplicate_event"

@@ -21,6 +21,12 @@ A small FastAPI + Jinja2 web UI that shares the CLI's SQLite database. Binds to 
 
 Unknown status filters and missing invoices return a 404 page.
 
+## Authentication (v0.41.0)
+
+The two pages above expose client names/emails, amounts, and payment history, so they require a **dashboard token** when one is configured: set `INVOICEGUARD_DASHBOARD_TOKEN` or `dashboard_token` in the config file (see [Configuration](configuration.html)). Present it as an `Authorization: Bearer <token>` header, or open the dashboard once with `?token=<token>` in the URL — a successful visit sets an HttpOnly cookie so the in-dashboard links keep working. Requests without a valid token get HTTP 401.
+
+When **no** token is configured the pages are unauthenticated, and startup logs and prints a loud warning saying so — that mode is for trusted localhost only; never expose the app beyond one without a token (put it behind TLS if you do: the token travels in headers/cookies). The webhook endpoint (verified by Stripe signature), the `/sign/{token}` pages (the URL token is the capability), and `/healthz` are never token-gated.
+
 ## Screenshots
 
 Captured from the real dashboard running locally against seeded demo data (every sample name is labeled `(demo)`):
