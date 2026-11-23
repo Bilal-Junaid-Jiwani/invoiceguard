@@ -103,6 +103,8 @@
           <ul class="toc-list">
 <li><a href="#pages">Pages</a>
 </li>
+<li><a href="#authentication-v0410">Authentication (v0.41.0)</a>
+</li>
 <li><a href="#screenshots">Screenshots</a>
 </li>
 <li><a href="#notes">Notes</a>
@@ -130,6 +132,9 @@ invoiceguard dashboard --port 8080
 </li>
 </ul>
 <p>Unknown status filters and missing invoices return a 404 page.</p>
+<h2 id="authentication-v0410">Authentication (v0.41.0)</h2>
+<p>The two pages above expose client names/emails, amounts, and payment history, so they require a <strong>dashboard token</strong> when one is configured: set <code>INVOICEGUARD_DASHBOARD_TOKEN</code> or <code>dashboard_token</code> in the config file (see <a href="configuration.html">Configuration</a>). Present it as an <code>Authorization: Bearer &lt;token&gt;</code> header, or open the dashboard once with <code>?token=&lt;token&gt;</code> in the URL — a successful visit sets an HttpOnly cookie so the in-dashboard links keep working. Requests without a valid token get HTTP 401.</p>
+<p>When <strong>no</strong> token is configured the pages are unauthenticated, and startup logs and prints a loud warning saying so — that mode is for trusted localhost only; never expose the app beyond one without a token (put it behind TLS if you do: the token travels in headers/cookies). The webhook endpoint (verified by Stripe signature), the <code>/sign/{token}</code> pages (the URL token is the capability), and <code>/healthz</code> are never token-gated.</p>
 <h2 id="screenshots">Screenshots</h2>
 <p>Captured from the real dashboard running locally against seeded demo data (every sample name is labeled <code>(demo)</code>):</p>
 <p><img src="assets/img/dashboard-list.png" alt="Invoice list" loading="lazy"></p>
@@ -164,6 +169,8 @@ invoiceguard dashboard --port 8080
     <p class="toc-label">On this page</p>
     <ul class="toc-list">
 <li><a href="#pages">Pages</a>
+</li>
+<li><a href="#authentication-v0410">Authentication (v0.41.0)</a>
 </li>
 <li><a href="#screenshots">Screenshots</a>
 </li>

@@ -109,6 +109,7 @@
 <pre class="codeblock" data-lang="yaml"><code># Stripe — get test keys at https://dashboard.stripe.com/test/apikeys
 stripe_secret_key: "sk_test_..."        # or env INVOICEGUARD_STRIPE_SECRET_KEY
 stripe_webhook_secret: "whsec_..."       # or env INVOICEGUARD_STRIPE_WEBHOOK_SECRET
+dashboard_token: "a-long-random-token"   # or env INVOICEGUARD_DASHBOARD_TOKEN (dashboard pages, v0.41.0)
 
 # SMTP — how dunning emails are sent
 smtp:
@@ -134,7 +135,7 @@ app:
 </code></pre>
 <p>Never commit this file with real secrets. The repo's <code>.gitignore</code> covers <code>config.yaml</code>, <code>.env</code>, <code>*.key</code>, and the local DB.</p>
 <h2 id="environment-variables">Environment variables</h2>
-<div class="table-wrap"><table><thead><tr><th>Variable</th><th>Overrides</th></tr></thead><tbody><tr><td><code>INVOICEGUARD_STRIPE_SECRET_KEY</code></td><td><code>stripe_secret_key</code></td></tr><tr><td><code>INVOICEGUARD_STRIPE_WEBHOOK_SECRET</code></td><td><code>stripe_webhook_secret</code> (webhook endpoint)</td></tr><tr><td><code>INVOICEGUARD_SMTP_PASSWORD</code></td><td><code>smtp.password</code></td></tr><tr><td><code>INVOICEGUARD_TWILIO_ACCOUNT_SID</code></td><td><code>messaging.account_sid</code></td></tr><tr><td><code>INVOICEGUARD_TWILIO_AUTH_TOKEN</code></td><td><code>messaging.auth_token</code></td></tr><tr><td><code>INVOICEGUARD_TWILIO_FROM_NUMBER</code></td><td><code>messaging.from_number</code></td></tr><tr><td><code>STRIPE_WEBHOOK_SECRET</code></td><td>legacy alias for the webhook secret (lowest priority)</td></tr><tr><td><code>INVOICEGUARD_CONFIG</code></td><td>path of the config file itself (default <code>~/.invoiceguard/config.yaml</code>)</td></tr><tr><td><code>INVOICEGUARD_DB</code></td><td>path of the SQLite database (default <code>~/.invoiceguard/invoiceguard.db</code>)</td></tr></tbody></table></div>
+<div class="table-wrap"><table><thead><tr><th>Variable</th><th>Overrides</th></tr></thead><tbody><tr><td><code>INVOICEGUARD_STRIPE_SECRET_KEY</code></td><td><code>stripe_secret_key</code></td></tr><tr><td><code>INVOICEGUARD_STRIPE_WEBHOOK_SECRET</code></td><td><code>stripe_webhook_secret</code> (webhook endpoint)</td></tr><tr><td><code>INVOICEGUARD_DASHBOARD_TOKEN</code></td><td><code>dashboard_token</code> (dashboard pages)</td></tr><tr><td><code>INVOICEGUARD_SMTP_PASSWORD</code></td><td><code>smtp.password</code></td></tr><tr><td><code>INVOICEGUARD_TWILIO_ACCOUNT_SID</code></td><td><code>messaging.account_sid</code></td></tr><tr><td><code>INVOICEGUARD_TWILIO_AUTH_TOKEN</code></td><td><code>messaging.auth_token</code></td></tr><tr><td><code>INVOICEGUARD_TWILIO_FROM_NUMBER</code></td><td><code>messaging.from_number</code></td></tr><tr><td><code>STRIPE_WEBHOOK_SECRET</code></td><td>legacy alias for the webhook secret (lowest priority)</td></tr><tr><td><code>INVOICEGUARD_CONFIG</code></td><td>path of the config file itself (default <code>~/.invoiceguard/config.yaml</code>)</td></tr><tr><td><code>INVOICEGUARD_DB</code></td><td>path of the SQLite database (default <code>~/.invoiceguard/invoiceguard.db</code>)</td></tr></tbody></table></div>
 <h2 id="webhook-secret-resolution-order">Webhook secret resolution order</h2>
 <p>The dashboard's <code>POST /webhooks/stripe</code> endpoint resolves its signing secret like this:</p>
 <ol>

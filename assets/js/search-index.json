@@ -88,7 +88,7 @@
     "text": "Templates"
    }
   ],
-  "text": "All settings live in ~/.invoiceguard/config.yaml (written by invoiceguard init ). Secrets can also come from environment variables — env always wins over the YAML file, never the reverse. The config file # Stripe — get test keys at https://dashboard.stripe.com/test/apikeys stripe_secret_key: \"sk_test_...\" # or env INVOICEGUARD_STRIPE_SECRET_KEY stripe_webhook_secret: \"whsec_...\" # or env INVOICEGUARD_STRIPE_WEBHOOK_SECRET # SMTP — how dunning emails are sent smtp: host: \"smtp.gmail.com\" port: 587 username: \"you@example.com\" password: \"APP_PASSWORD\" # or env INVOICEGUARD_SMTP_PASSWORD from_addr: \"you@example.com\" use_tls: true # Web-facing base URL (used to point the Stripe webhook at this app) app: base_url: \"http://localhost:8000\" # SMS / WhatsApp escalation (optional, v0.5.0) — when set, the day-15 # formal notice also goes out as a short message via Twilio. Leave unset # for email-only dunning. Get credentials at https://console.twilio.com # messaging: # channel: \"sms\" # or \"whatsapp\" # account_sid: \"AC_...\" # or env INVOICEGUARD_TWILIO_ACCOUNT_SID # auth_token: \"your-auth-token\" # or env INVOICEGUARD_TWILIO_AUTH_TOKEN # from_number: \"+10000000000\" # your Twilio number, E.164 Never commit this file with real secrets. The repo's .gitignore covers config.yaml , .env , *.key , and the local DB. Environment variables Variable Overrides INVOICEGUARD_STRIPE_SECRET_KEY stripe_secret_key INVOICEGUARD_STRIPE_WEBHOOK_SECRET stripe_webhook_secret (webhook endpoint) INVOICEGUARD_SMTP_PASSWORD smtp.password INVOICEGUARD_TWILIO_ACCOUNT_SID messaging.account_sid INVOICEGUARD_TWILIO_AUTH_TOKEN messaging.auth_token INVOICEGUARD_TWILIO_FROM_NUMBER messaging.from_number STRIPE_WEBHOOK_SECRET legacy alias for the webhook secret (lowest priority) INVOICEGUARD_CONFIG path of the config file itself (default ~/.invoiceguard/config.yaml ) INVOICEGUARD_DB path of the SQLite database (default ~/.invoiceguard/invoiceguard.db ) Webhook secret resolution order The dashboard's POST /webhooks/stripe endpoint resolves its signing secret like this: INVOICEGUARD_STRIPE_WEBHOOK_SECRET environment variable stripe_webhook_secret in the config file Legacy STRIPE_WEBHOOK_SECRET environment variable (kept for backward compatibility) Placeholder values ( whsec_... , sk_test_... , APP_PASSWORD , anything ending in ... ) count as unconfigured . If no real secret is found, the endpoint returns HTTP 500 with a message telling you exactly what to set. See Webhooks . Templates ~/.invoiceguard/templates/ holds day1.md , day7.md , day15.md — plain markdown with {variables} . templates_dir() resolves next to the config file, so a custom INVOICEGUARD_CONFIG keeps its templates alongside it. See Dunning engine . Warning invoiceguard check-due refuses to run until smtp.host is set to something real — the template default ( smtp.example.com ) is rejected with an error telling you to edit the config first."
+  "text": "All settings live in ~/.invoiceguard/config.yaml (written by invoiceguard init ). Secrets can also come from environment variables — env always wins over the YAML file, never the reverse. The config file # Stripe — get test keys at https://dashboard.stripe.com/test/apikeys stripe_secret_key: \"sk_test_...\" # or env INVOICEGUARD_STRIPE_SECRET_KEY stripe_webhook_secret: \"whsec_...\" # or env INVOICEGUARD_STRIPE_WEBHOOK_SECRET dashboard_token: \"a-long-random-token\" # or env INVOICEGUARD_DASHBOARD_TOKEN (dashboard pages, v0.41.0) # SMTP — how dunning emails are sent smtp: host: \"smtp.gmail.com\" port: 587 username: \"you@example.com\" password: \"APP_PASSWORD\" # or env INVOICEGUARD_SMTP_PASSWORD from_addr: \"you@example.com\" use_tls: true # Web-facing base URL (used to point the Stripe webhook at this app) app: base_url: \"http://localhost:8000\" # SMS / WhatsApp escalation (optional, v0.5.0) — when set, the day-15 # formal notice also goes out as a short message via Twilio. Leave unset # for email-only dunning. Get credentials at https://console.twilio.com # messaging: # channel: \"sms\" # or \"whatsapp\" # account_sid: \"AC_...\" # or env INVOICEGUARD_TWILIO_ACCOUNT_SID # auth_token: \"your-auth-token\" # or env INVOICEGUARD_TWILIO_AUTH_TOKEN # from_number: \"+10000000000\" # your Twilio number, E.164 Never commit this file with real secrets. The repo's .gitignore covers config.yaml , .env , *.key , and the local DB. Environment variables Variable Overrides INVOICEGUARD_STRIPE_SECRET_KEY stripe_secret_key INVOICEGUARD_STRIPE_WEBHOOK_SECRET stripe_webhook_secret (webhook endpoint) INVOICEGUARD_DASHBOARD_TOKEN dashboard_token (dashboard pages) INVOICEGUARD_SMTP_PASSWORD smtp.password INVOICEGUARD_TWILIO_ACCOUNT_SID messaging.account_sid INVOICEGUARD_TWILIO_AUTH_TOKEN messaging.auth_token INVOICEGUARD_TWILIO_FROM_NUMBER messaging.from_number STRIPE_WEBHOOK_SECRET legacy alias for the webhook secret (lowest priority) INVOICEGUARD_CONFIG path of the config file itself (default ~/.invoiceguard/config.yaml ) INVOICEGUARD_DB path of the SQLite database (default ~/.invoiceguard/invoiceguard.db ) Webhook secret resolution order The dashboard's POST /webhooks/stripe endpoint resolves its signing secret like this: INVOICEGUARD_STRIPE_WEBHOOK_SECRET environment variable stripe_webhook_secret in the config file Legacy STRIPE_WEBHOOK_SECRET environment variable (kept for backward compatibility) Placeholder values ( whsec_... , sk_test_... , APP_PASSWORD , anything ending in ... ) count as unconfigured . If no real secret is found, the endpoint returns HTTP 500 with a message telling you exactly what to set. See Webhooks . Templates ~/.invoiceguard/templates/ holds day1.md , day7.md , day15.md — plain markdown with {variables} . templates_dir() resolves next to the config file, so a custom INVOICEGUARD_CONFIG keeps its templates alongside it. See Dunning engine . Warning invoiceguard check-due refuses to run until smtp.host is set to something real — the template default ( smtp.example.com ) is rejected with an error telling you to edit the config first."
  },
  {
   "url": "cli.html",
@@ -150,6 +150,10 @@
     "text": "Pages"
    },
    {
+    "id": "authentication-v0410",
+    "text": "Authentication (v0.41.0)"
+   },
+   {
     "id": "screenshots",
     "text": "Screenshots"
    },
@@ -158,7 +162,7 @@
     "text": "Notes"
    }
   ],
-  "text": "invoiceguard dashboard # http://127.0.0.1:8000/ invoiceguard dashboard --port 8080 A small FastAPI + Jinja2 web UI that shares the CLI's SQLite database. Binds to 127.0.0.1 by default (localhost only). The API docs ( /docs , /redoc ) are disabled. Pages GET / — invoice list with status filters ( draft , sent , partially-paid , paid , overdue , void ), totals (outstanding / overdue / collected), and per-status counts, plus a Payouts section with per-freelancer payout timing (due / overdue / upcoming / settled / no schedule, with next or missed payout date, as of today — the same rollup payout schedule and freelancer list use; hidden when the roster is empty, and freelancers with no billable invoices get no row). Append ?as_of=YYYY-MM-DD to project the timing to that day instead (the header then reads payout timing as of <date> with a \"back to today\" link, and the status-filter and Details links keep the projection); an invalid date is a clean 400. Only the payout timing is projected — the invoice list, totals, and escalation stages stay as-of-today. Each row shows the invoice kind, amount, project, due date, current escalation stage — and, for partially-paid invoices, how much has been paid and what is left. GET /invoices/{id} — invoice detail: amount, paid and outstanding balances, status, Stripe payment link, due date, a payments ledger (every recorded payment with date, method, and note), and a chronological timeline of dunning events and payments. When the invoice is assigned to a freelancer, the Freelancer row also shows their payout timing (due / overdue / upcoming / settled / no schedule, with next or missed payout date, as of today — the same rollup as the index Payouts section; no phrase when the freelancer has no billable invoices). ?as_of=YYYY-MM-DD projects that timing to the day (marked (as of <date>) , back link keeps the projection); the amounts and timeline stay as-of-today, and an invalid date is a clean 400. GET /healthz — {\"ok\": true} , for uptime checks. GET /sign/{token} — the client's one-time contract signing page: renders the contract, collects a typed name and a drawn signature (see Contracts ). POST /sign/{token} — records the signature; returns a signed-receipt page. Unknown or already-used tokens return 404 / 400. POST /webhooks/stripe — the Stripe webhook receiver (see Webhooks ). Unknown status filters and missing invoices return a 404 page. Screenshots Captured from the real dashboard running locally against seeded demo data (every sample name is labeled (demo) ): Invoice list — status filters, totals, and escalation stages. Invoice detail — timeline of dunning events. Invoice detail — a partially-paid invoice: Paid/Outstanding amounts, the payments ledger, and payment events in the timeline. Notes The dashboard never inserts data on startup — it creates empty tables if the DB is fresh, nothing more. It reads and writes the same tables as the CLI; column names and types are frozen (additive migrations only). See Database . Webhook verification needs the signing secret — resolution order is documented in Webhooks . Without a real secret, POST /webhooks/stripe returns HTTP 500. Totals, defined: Outstanding = sum of outstanding balances over sent / overdue / partially-paid invoices; Overdue = the same over overdue invoices only; Collected = sum of all rows in the payment ledger. (Since v0.2.0; for older databases the ledger backfill makes the numbers identical to the old definitions.)"
+  "text": "invoiceguard dashboard # http://127.0.0.1:8000/ invoiceguard dashboard --port 8080 A small FastAPI + Jinja2 web UI that shares the CLI's SQLite database. Binds to 127.0.0.1 by default (localhost only). The API docs ( /docs , /redoc ) are disabled. Pages GET / — invoice list with status filters ( draft , sent , partially-paid , paid , overdue , void ), totals (outstanding / overdue / collected), and per-status counts, plus a Payouts section with per-freelancer payout timing (due / overdue / upcoming / settled / no schedule, with next or missed payout date, as of today — the same rollup payout schedule and freelancer list use; hidden when the roster is empty, and freelancers with no billable invoices get no row). Append ?as_of=YYYY-MM-DD to project the timing to that day instead (the header then reads payout timing as of <date> with a \"back to today\" link, and the status-filter and Details links keep the projection); an invalid date is a clean 400. Only the payout timing is projected — the invoice list, totals, and escalation stages stay as-of-today. Each row shows the invoice kind, amount, project, due date, current escalation stage — and, for partially-paid invoices, how much has been paid and what is left. GET /invoices/{id} — invoice detail: amount, paid and outstanding balances, status, Stripe payment link, due date, a payments ledger (every recorded payment with date, method, and note), and a chronological timeline of dunning events and payments. When the invoice is assigned to a freelancer, the Freelancer row also shows their payout timing (due / overdue / upcoming / settled / no schedule, with next or missed payout date, as of today — the same rollup as the index Payouts section; no phrase when the freelancer has no billable invoices). ?as_of=YYYY-MM-DD projects that timing to the day (marked (as of <date>) , back link keeps the projection); the amounts and timeline stay as-of-today, and an invalid date is a clean 400. GET /healthz — {\"ok\": true} , for uptime checks. GET /sign/{token} — the client's one-time contract signing page: renders the contract, collects a typed name and a drawn signature (see Contracts ). POST /sign/{token} — records the signature; returns a signed-receipt page. Unknown or already-used tokens return 404 / 400. POST /webhooks/stripe — the Stripe webhook receiver (see Webhooks ). Unknown status filters and missing invoices return a 404 page. Authentication (v0.41.0) The two pages above expose client names/emails, amounts, and payment history, so they require a dashboard token when one is configured: set INVOICEGUARD_DASHBOARD_TOKEN or dashboard_token in the config file (see Configuration ). Present it as an Authorization: Bearer <token> header, or open the dashboard once with ?token=<token> in the URL — a successful visit sets an HttpOnly cookie so the in-dashboard links keep working. Requests without a valid token get HTTP 401. When no token is configured the pages are unauthenticated, and startup logs and prints a loud warning saying so — that mode is for trusted localhost only; never expose the app beyond one without a token (put it behind TLS if you do: the token travels in headers/cookies). The webhook endpoint (verified by Stripe signature), the /sign/{token} pages (the URL token is the capability), and /healthz are never token-gated. Screenshots Captured from the real dashboard running locally against seeded demo data (every sample name is labeled (demo) ): Invoice list — status filters, totals, and escalation stages. Invoice detail — timeline of dunning events. Invoice detail — a partially-paid invoice: Paid/Outstanding amounts, the payments ledger, and payment events in the timeline. Notes The dashboard never inserts data on startup — it creates empty tables if the DB is fresh, nothing more. It reads and writes the same tables as the CLI; column names and types are frozen (additive migrations only). See Database . Webhook verification needs the signing secret — resolution order is document"
  },
  {
   "url": "dunning.html",
@@ -228,7 +232,7 @@
     "text": "Offline smoke test"
    }
   ],
-  "text": "POST /webhooks/stripe (served by the dashboard ) lets Stripe tell InvoiceGuard when a client pays. On a verified checkout.session.completed event whose payment has actually settled, the matching invoice is marked paid automatically. Setup Stripe dashboard → Developers → Webhooks → Add endpoint . URL: https://YOUR-HOST/webhooks/stripe . Select the events checkout.session.completed and checkout.session.async_payment_succeeded (the second is how delayed payment methods like ACH report that the money actually arrived). Copy the Signing secret ( whsec_... ) and configure it (below). Signing-secret resolution order The endpoint resolves the secret like this — first hit wins: INVOICEGUARD_STRIPE_WEBHOOK_SECRET environment variable stripe_webhook_secret in ~/.invoiceguard/config.yaml Legacy STRIPE_WEBHOOK_SECRET environment variable (backward compatibility) Placeholder values ( whsec_... , anything ending in ... ) count as unconfigured . With no real secret, the endpoint returns HTTP 500 with a message telling you exactly what to set. Bad signatures return HTTP 400 . Note This resolution order is a v0.1.0 fix. Previously the endpoint only honored the undocumented bare STRIPE_WEBHOOK_SECRET env var, so anyone following the README got 500s. See the changelog . Events handled Stripe event Result checkout.session.completed invoice marked paid (matched by the invoiceguard_invoice_id metadata on the payment link; invoice_id is a tolerated legacy alias; falls back to matching stripe_session_id ) — only when the session's payment_status is paid (or absent, as in older payloads) checkout.session.async_payment_succeeded same as above — this is the event that marks the invoice paid for delayed payment methods payment_link.expired ignored — nothing is auto-voided in v1; void from the CLI or dashboard anything else ignored Delayed payments (0.8.4): for ACH debits and other delayed methods, checkout.session.completed fires with payment_status: unpaid while the money is still in transit. That event now records nothing ( ignored:payment_unpaid ) — before 0.8.4 the invoice was marked paid on money that had not arrived. When the payment clears, Stripe sends checkout.session.async_payment_succeeded and the invoice is marked paid then. Already-paid invoices are left alone ( ignored:already_paid ); void invoices are likewise ignored — void is terminal, so a webhook never resurrects one; events without invoice metadata are ignored. Idempotent on event id (v0.7.1): every processed event's Stripe id is recorded in a webhook_events table, so a retried delivery (Stripe resends events until it gets a 2xx) returns ignored:duplicate_event instead of re-recording. Before this, replaying the same partial-payment event recorded a second payment row — enough retries could mark an invoice fully-paid on half the money. Distinct events for the same invoice are still processed normally. Offline smoke test Signature verification uses real stripe.Webhook.construct_event HMAC checks and works with no network: INVOICEGUARD_DB=/tmp/ig-demo.db python seed_demo.py --fresh INVOICEGUARD_DB=/tmp/ig-demo.db INVOICEGUARD_STRIPE_WEBHOOK_SECRET=whsec_test_x \\ invoiceguard dashboard # POST a locally-signed test payload to http://127.0.0.1:8000/webhooks/stripe The test suite covers this path end to end, including the metadata-key regression ( invoiceguard_invoice_id vs invoice_id ) and the secret-resolution regression."
+  "text": "POST /webhooks/stripe (served by the dashboard ) lets Stripe tell InvoiceGuard when a client pays. On a verified checkout.session.completed event whose payment has actually settled, the matching invoice is marked paid automatically. Idempotency (v0.41.0): Stripe delivers events at least once. The endpoint records each processed event id and acknowledges redeliveries without re-applying them, and a checkout session can never record its payment twice (a checkout.session.completed followed by checkout.session.async_payment_succeeded for the same session records the money once) — a replayed partial payment can no longer inflate the ledger or close an invoice early. Setup Stripe dashboard → Developers → Webhooks → Add endpoint . URL: https://YOUR-HOST/webhooks/stripe . Select the events checkout.session.completed and checkout.session.async_payment_succeeded (the second is how delayed payment methods like ACH report that the money actually arrived). Copy the Signing secret ( whsec_... ) and configure it (below). Signing-secret resolution order The endpoint resolves the secret like this — first hit wins: INVOICEGUARD_STRIPE_WEBHOOK_SECRET environment variable stripe_webhook_secret in ~/.invoiceguard/config.yaml Legacy STRIPE_WEBHOOK_SECRET environment variable (backward compatibility) Placeholder values ( whsec_... , anything ending in ... ) count as unconfigured . With no real secret, the endpoint returns HTTP 500 with a message telling you exactly what to set. Bad signatures return HTTP 400 . Note This resolution order is a v0.1.0 fix. Previously the endpoint only honored the undocumented bare STRIPE_WEBHOOK_SECRET env var, so anyone following the README got 500s. See the changelog . Events handled Stripe event Result checkout.session.completed invoice marked paid (matched by the invoiceguard_invoice_id metadata on the payment link; invoice_id is a tolerated legacy alias; falls back to matching stripe_session_id ) — only when the session's payment_status is paid (or absent, as in older payloads) checkout.session.async_payment_succeeded same as above — this is the event that marks the invoice paid for delayed payment methods payment_link.expired ignored — nothing is auto-voided in v1; void from the CLI or dashboard anything else ignored Delayed payments (0.8.4): for ACH debits and other delayed methods, checkout.session.completed fires with payment_status: unpaid while the money is still in transit. That event now records nothing ( ignored:payment_unpaid ) — before 0.8.4 the invoice was marked paid on money that had not arrived. When the payment clears, Stripe sends checkout.session.async_payment_succeeded and the invoice is marked paid then. Already-paid invoices are left alone ( ignored:already_paid ); void invoices are likewise ignored — void is terminal, so a webhook never resurrects one; events without invoice metadata are ignored. Idempotent on event id (v0.7.1): every processed event's Stripe id is recorded in a webhook_events table, so a retried delivery (Stripe resends events until it gets a 2xx) returns ignored:duplicate_event instead of re-recording. Before this, replaying the same partial-payment event recorded a second payment row — enough retries could mark an invoice fully-paid on half the money. Distinct events for the same invoice are still processed normally. Offline smoke test Signature verification uses real stripe.Webhook.construct_event HMAC checks and works with no network: INVOICEGUARD_DB=/tmp/ig-demo.db python seed_demo.py --fresh INVOICEGUARD_DB=/tmp/ig-demo.db INVOICEGUARD_STRIPE_WEBHOOK_SECRET=whsec_test_x \\ invoiceguard dashboard # POST a locally-signed test payload to http://127.0.0.1:8000/webhooks/stripe The test suite covers this path end to end, including the metadata-key regression ( invoiceguard_invoice_id vs invoice_id ) and the secret-resolution regression."
  },
  {
   "url": "contracts.html",
@@ -353,11 +357,27 @@
   "description": "InvoiceGuard release history — newest first, no fluff.",
   "headings": [
    {
+    "id": "0410---2026-11-23",
+    "text": "[0.41.0] - 2026-11-23"
+   },
+   {
+    "id": "fixed",
+    "text": "Fixed"
+   },
+   {
+    "id": "added",
+    "text": "Added"
+   },
+   {
+    "id": "honest-scope-0410",
+    "text": "Honest scope (0.41.0)"
+   },
+   {
     "id": "0400---2026-11-23",
     "text": "[0.40.0] - 2026-11-23"
    },
    {
-    "id": "added",
+    "id": "added-2",
     "text": "Added"
    },
    {
@@ -369,7 +389,7 @@
     "text": "[0.39.0] - 2026-11-22"
    },
    {
-    "id": "added-2",
+    "id": "added-3",
     "text": "Added"
    },
    {
@@ -381,7 +401,7 @@
     "text": "[0.38.0] - 2026-11-21"
    },
    {
-    "id": "added-3",
+    "id": "added-4",
     "text": "Added"
    },
    {
@@ -393,11 +413,11 @@
     "text": "[0.37.0] - 2026-11-20"
    },
    {
-    "id": "added-4",
+    "id": "added-5",
     "text": "Added"
    },
    {
-    "id": "fixed",
+    "id": "fixed-2",
     "text": "Fixed"
    },
    {
@@ -409,7 +429,7 @@
     "text": "[0.36.0] - 2026-11-19"
    },
    {
-    "id": "added-5",
+    "id": "added-6",
     "text": "Added"
    },
    {
@@ -421,7 +441,7 @@
     "text": "[0.35.0] - 2026-11-18"
    },
    {
-    "id": "added-6",
+    "id": "added-7",
     "text": "Added"
    },
    {
@@ -433,7 +453,7 @@
     "text": "[0.34.0] - 2026-11-17"
    },
    {
-    "id": "added-7",
+    "id": "added-8",
     "text": "Added"
    },
    {
@@ -445,7 +465,7 @@
     "text": "[0.33.0] - 2026-11-16"
    },
    {
-    "id": "added-8",
+    "id": "added-9",
     "text": "Added"
    },
    {
@@ -457,7 +477,7 @@
     "text": "[0.32.0] - 2026-11-15"
    },
    {
-    "id": "added-9",
+    "id": "added-10",
     "text": "Added"
    },
    {
@@ -469,7 +489,7 @@
     "text": "[0.31.0] - 2026-11-14"
    },
    {
-    "id": "added-10",
+    "id": "added-11",
     "text": "Added"
    },
    {
@@ -481,7 +501,7 @@
     "text": "[0.30.0] - 2026-11-13"
    },
    {
-    "id": "added-11",
+    "id": "added-12",
     "text": "Added"
    },
    {
@@ -493,7 +513,7 @@
     "text": "[0.29.0] - 2026-11-12"
    },
    {
-    "id": "added-12",
+    "id": "added-13",
     "text": "Added"
    },
    {
@@ -505,7 +525,7 @@
     "text": "[0.28.0] - 2026-11-11"
    },
    {
-    "id": "added-13",
+    "id": "added-14",
     "text": "Added"
    },
    {
@@ -517,7 +537,7 @@
     "text": "[0.27.0] - 2026-11-10"
    },
    {
-    "id": "added-14",
+    "id": "added-15",
     "text": "Added"
    },
    {
@@ -529,7 +549,7 @@
     "text": "[0.26.0] - 2026-11-09"
    },
    {
-    "id": "added-15",
+    "id": "added-16",
     "text": "Added"
    },
    {
@@ -541,7 +561,7 @@
     "text": "[0.25.1] - 2026-11-08"
    },
    {
-    "id": "fixed-2",
+    "id": "fixed-3",
     "text": "Fixed"
    },
    {
@@ -549,7 +569,7 @@
     "text": "[0.25.0] - 2026-11-07"
    },
    {
-    "id": "added-16",
+    "id": "added-17",
     "text": "Added"
    },
    {
@@ -561,7 +581,7 @@
     "text": "[0.24.0] - 2026-11-06"
    },
    {
-    "id": "added-17",
+    "id": "added-18",
     "text": "Added"
    },
    {
@@ -573,7 +593,7 @@
     "text": "[0.23.0] - 2026-11-05"
    },
    {
-    "id": "added-18",
+    "id": "added-19",
     "text": "Added"
    },
    {
@@ -585,7 +605,7 @@
     "text": "[0.22.0] - 2026-11-04"
    },
    {
-    "id": "added-19",
+    "id": "added-20",
     "text": "Added"
    },
    {
@@ -597,7 +617,7 @@
     "text": "[0.21.0] - 2026-11-03"
    },
    {
-    "id": "added-20",
+    "id": "added-21",
     "text": "Added"
    },
    {
@@ -613,7 +633,7 @@
     "text": "[0.19.0] - 2026-11-01"
    },
    {
-    "id": "added-21",
+    "id": "added-22",
     "text": "Added"
    },
    {
@@ -625,7 +645,7 @@
     "text": "[0.18.0] - 2026-10-31"
    },
    {
-    "id": "added-22",
+    "id": "added-23",
     "text": "Added"
    },
    {
@@ -637,7 +657,7 @@
     "text": "[0.17.0] - 2026-10-30"
    },
    {
-    "id": "added-23",
+    "id": "added-24",
     "text": "Added"
    },
    {
@@ -649,7 +669,7 @@
     "text": "[0.16.0] - 2026-10-29"
    },
    {
-    "id": "added-24",
+    "id": "added-25",
     "text": "Added"
    },
    {
@@ -661,7 +681,7 @@
     "text": "[0.15.0] - 2026-10-28"
    },
    {
-    "id": "added-25",
+    "id": "added-26",
     "text": "Added"
    },
    {
@@ -673,7 +693,7 @@
     "text": "[0.14.0] - 2026-10-27"
    },
    {
-    "id": "added-26",
+    "id": "added-27",
     "text": "Added"
    },
    {
@@ -685,7 +705,7 @@
     "text": "[0.13.0] - 2026-10-26"
    },
    {
-    "id": "added-27",
+    "id": "added-28",
     "text": "Added"
    },
    {
@@ -697,7 +717,7 @@
     "text": "[0.12.0] - 2026-10-25"
    },
    {
-    "id": "added-28",
+    "id": "added-29",
     "text": "Added"
    },
    {
@@ -709,7 +729,7 @@
     "text": "[0.11.0] - 2026-10-24"
    },
    {
-    "id": "added-29",
+    "id": "added-30",
     "text": "Added"
    },
    {
@@ -721,7 +741,7 @@
     "text": "[0.10.0] - 2026-10-23"
    },
    {
-    "id": "added-30",
+    "id": "added-31",
     "text": "Added"
    },
    {
@@ -733,7 +753,7 @@
     "text": "[0.9.0] - 2026-10-22"
    },
    {
-    "id": "added-31",
+    "id": "added-32",
     "text": "Added"
    },
    {
@@ -745,11 +765,11 @@
     "text": "[0.8.4] - 2026-10-22"
    },
    {
-    "id": "fixed-3",
+    "id": "fixed-4",
     "text": "Fixed"
    },
    {
-    "id": "added-32",
+    "id": "added-33",
     "text": "Added"
    },
    {
@@ -765,7 +785,7 @@
     "text": "[0.8.3] - 2026-10-21"
    },
    {
-    "id": "fixed-4",
+    "id": "fixed-5",
     "text": "Fixed"
    },
    {
@@ -777,7 +797,7 @@
     "text": "[0.8.2] - 2026-10-20"
    },
    {
-    "id": "fixed-5",
+    "id": "fixed-6",
     "text": "Fixed"
    },
    {
@@ -789,7 +809,7 @@
     "text": "[0.8.1] - 2026-10-17"
    },
    {
-    "id": "fixed-6",
+    "id": "fixed-7",
     "text": "Fixed"
    },
    {
@@ -801,7 +821,7 @@
     "text": "[0.8.0] - 2026-10-16"
    },
    {
-    "id": "added-33",
+    "id": "added-34",
     "text": "Added"
    },
    {
@@ -813,7 +833,7 @@
     "text": "[0.7.1] - 2026-10-15"
    },
    {
-    "id": "fixed-7",
+    "id": "fixed-8",
     "text": "Fixed"
    },
    {
@@ -821,7 +841,7 @@
     "text": "[0.7.0] - 2026-10-14"
    },
    {
-    "id": "added-34",
+    "id": "added-35",
     "text": "Added"
    },
    {
@@ -833,7 +853,7 @@
     "text": "[0.6.5] - 2026-10-13"
    },
    {
-    "id": "fixed-8",
+    "id": "fixed-9",
     "text": "Fixed"
    },
    {
@@ -845,7 +865,7 @@
     "text": "[0.6.4] - 2026-10-12"
    },
    {
-    "id": "fixed-9",
+    "id": "fixed-10",
     "text": "Fixed"
    },
    {
@@ -857,11 +877,11 @@
     "text": "[0.6.3] - 2026-10-11"
    },
    {
-    "id": "fixed-10",
+    "id": "fixed-11",
     "text": "Fixed"
    },
    {
-    "id": "added-35",
+    "id": "added-36",
     "text": "Added"
    },
    {
@@ -873,7 +893,7 @@
     "text": "[0.6.2] - 2026-10-10"
    },
    {
-    "id": "fixed-11",
+    "id": "fixed-12",
     "text": "Fixed"
    },
    {
@@ -885,7 +905,7 @@
     "text": "[0.6.1] - 2026-10-09"
    },
    {
-    "id": "fixed-12",
+    "id": "fixed-13",
     "text": "Fixed"
    },
    {
@@ -897,7 +917,7 @@
     "text": "[0.6.0] - 2026-10-08"
    },
    {
-    "id": "added-36",
+    "id": "added-37",
     "text": "Added"
    },
    {
@@ -909,7 +929,7 @@
     "text": "[0.5.0] - 2026-10-07"
    },
    {
-    "id": "added-37",
+    "id": "added-38",
     "text": "Added"
    },
    {
@@ -921,7 +941,7 @@
     "text": "[0.4.0] - 2026-10-06"
    },
    {
-    "id": "added-38",
+    "id": "added-39",
     "text": "Added"
    },
    {
@@ -933,7 +953,7 @@
     "text": "[0.3.0] - 2026-10-05"
    },
    {
-    "id": "added-39",
+    "id": "added-40",
     "text": "Added"
    },
    {
@@ -949,7 +969,7 @@
     "text": "[0.2.0] - 2026-10-04"
    },
    {
-    "id": "added-40",
+    "id": "added-41",
     "text": "Added"
    },
    {
@@ -961,11 +981,11 @@
     "text": "[0.1.0] - 2026-10-02"
    },
    {
-    "id": "added-41",
+    "id": "added-42",
     "text": "Added"
    },
    {
-    "id": "fixed-13",
+    "id": "fixed-14",
     "text": "Fixed"
    },
    {
@@ -973,7 +993,7 @@
     "text": "Honest scope (v1)"
    }
   ],
-  "text": "Every release, newest first. InvoiceGuard follows semver. [0.40.0] - 2026-11-23 Agency-mode slice #34: CSV export for the attributed invoice lines of freelancer show . Slice #33 put the earnings detail in a spreadsheet, but the invoice lines underneath it — the per-invoice amount, collected, and outstanding that the earnings lines only summarize — still had to be retyped from the text view. This slice adds --invoices-csv PATH (or - for stdout) to freelancer show , writing the same attributed invoice lines as a spreadsheet through one shared library call. Added invoiceguard freelancer show ID [--as-of DATE] [--csv PATH] [--invoices-csv PATH] — one CSV row per attributed invoice, in the same id order the text view prints them, with the same columns the text lines print (invoice id, client, currency, amount, collected, outstanding, status — with the freelancer id and name on every row so the file stands alone), plus the same timing in trailing payout_status / payout_date columns — the missed run date when overdue, the next payout date when due or upcoming, empty for settled / no schedule — taken from the same agency_summary() rows keyed by currency the earnings lines use, projected with --as-of (default: today). Drafts and voids stay excluded, exactly like the text view; a freelancer with no attributed invoices exports a header-only CSV. - prints the CSV to stdout instead of the text view; a file path writes the file and still prints the text view with a wrote freelancer show invoices CSV note. --csv and --invoices-csv can be used together to separate files; only one may print to stdout. reports.freelancer_show_invoices_csv(freelancer, invoices, timing=None) is the library call — without a timing map both columns stay empty. Pinned by a new test file tests/test_freelancer_show_invoices_csv.py (header + money columns, multi-invoice rows in id order, drafts/voids excluded, per-currency timing, --as-of projection, no-attributed-invoices header-only export, file + stdout modes, both CSVs to files, both to stdout is a clean error, invalid --as-of clean error, unknown-freelancer error, bare library call with and without timing, CSV formula-injection neutralization). Docs: README freelancer show row + roadmap + test count, docs/src/cli.md, docs/src/roadmap.md, and the changelog; generated docs pages rebuilt. Honest scope (0.40.0) A view, not a workflow: the export reports the freelancer's attributed invoices as of --as-of , not a settlement. Recording a payout is still payout settle / payout record . The recorded payouts stay text-only — this exports the earnings detail and the invoice lines, not the whole screen. Multi-freelancer workspaces remain the unshipped half of agency mode. [0.39.0] - 2026-11-22 Agency-mode slice #33: CSV export for freelancer show . Slices #14–#32 put payout timing on every CLI view, on both dashboard pages, and on the invoice report, agency summary, payout ledger, pay-run, suggestion, schedule, and roster CSV exports — but drilling into one freelancer still had to be retyped from the text view: the per-freelancer earnings detail, with its split-derived expected share and still-due-to-freelancer columns, appeared in no spreadsheet at all. This slice adds --csv PATH (or - for stdout) to freelancer show , writing the same earnings detail as a spreadsheet through one shared library call. Added invoiceguard freelancer show ID [--as-of DATE] [--csv PATH] — one CSV row per currency earnings line, in the same order the text view prints them, with the same columns the text lines print (freelancer id, freelancer, email, phone, split percentage when set, schedule cadence and day, currency, billed, collected, outstanding, invoice count, paid out, still owed, expected share of collected, still due to the freelancer after payouts), plus the same payout timing in trailing payout_status / payout_date columns — the missed run date when overdue, the next payout date when due or upcoming, empty for settled / no schedule — taken"
+  "text": "Every release, newest first. InvoiceGuard follows semver. [0.41.0] - 2026-11-23 Security release — the fixes from a full security audit of the web app, both Stripe webhook paths, and the e-signature flow (2 High, 1 Medium, 2 plain bugs; every finding reproduced before it was fixed). No new user-facing features; everyone who serves the dashboard app or receives Stripe webhooks should upgrade. Fixed Stripe webhook replays could over-record payments and close an invoice on partial money (High). The served POST /webhooks/stripe endpoint never deduped Stripe event ids, and mark_invoice_paid never deduped checkout sessions — so when Stripe redelivered a partial-payment event (its normal at-least-once retry), each delivery booked the payment again until the invoice flipped to paid (reproduced: one $40 session delivered 3× recorded $100 and closed a $100 invoice). The endpoint now records processed event ids in a webhook_events table (the same table the standalone handler already used) and acknowledges redeliveries without re-applying them; mark_invoice_paid additionally refuses to record a second payment for a session id already in the ledger, which also closes the two-distinct-events-one-session variant ( checkout.session.completed followed by checkout.session.async_payment_succeeded ), and its read-check-write now runs under BEGIN IMMEDIATE so concurrent deliveries cannot race the dedupe check. The dashboard pages had no authentication (High). GET / and GET /invoices/{id} rendered every client's name/email, amounts, and payment history to anyone who could reach the app — and the documented webhook/signing deployment (public host, Docker port publish) puts those pages on the same surface as the routes that must be public. The data pages now require a dashboard token when one is configured (see Added); the webhook (Stripe-signature verified), /sign/{token} (capability URL), and /healthz stay open, as they must. Contract signing was a check-then-act race (Medium). Both sign_contract implementations (web layer and core DB) checked status = 'pending' and then updated without re-testing it, so two concurrent submissions on one single-use link both succeeded and issued conflicting receipts, the stored signer being whoever committed last. The UPDATE now carries AND status = 'pending' and the loser is rejected with \"already used\" (rowcount-checked) — single-use is enforced atomically, pinned by deterministic concurrency tests that hold the check→act window open. The standalone webhook handler crashed on void-invoice and zero-amount events (bug). _apply_event let record_payment 's ValueError escape for a payment completing on a voided invoice (a client paying an outstanding link after a void) and for a zero-amount session — and because the event was never marked processed, it became a poison event that crashed on every redelivery. Both cases are now ignored gracefully ( ignored:void / ignored:zero_amount ), mirroring the FastAPI path, and the event is marked processed. invoices.stripe_session_id held two kinds of id (bug). invoice create stored the Stripe Payment Link id ( plink_... ) in stripe_session_id , whose readers expect a checkout session id ( cs_... ), so the web webhook's session-id fallback lookup could never match a CLI-created invoice (masked in practice by the metadata hint). The link id now lives in its own column, invoices.stripe_link_id (additive migration, applied on connect), stripe_session_id holds session ids only, and the fallback lookup only ever matches cs_ values — pre-0.41.0 databases carrying a plink_ value in the column keep working through the metadata hint, exactly as before. Added Dashboard token authentication. Set INVOICEGUARD_DASHBOARD_TOKEN (or dashboard_token in ~/.invoiceguard/config.yaml ) and the dashboard pages require it: an Authorization: Bearer <token> header, or ?token=<token> in the URL — a successful query-token visit sets an HttpOnly cookie so in-dashboard links keep working. invoiceguard dashbo"
  },
  {
   "url": "roadmap.html",

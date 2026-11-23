@@ -113,6 +113,7 @@
         </details>
       </div>
       <p><code>POST /webhooks/stripe</code> (served by the <a href="dashboard.html">dashboard</a>) lets Stripe tell InvoiceGuard when a client pays. On a verified <code>checkout.session.completed</code> event whose payment has actually settled, the matching invoice is marked <code>paid</code> automatically.</p>
+<p><strong>Idempotency (v0.41.0):</strong> Stripe delivers events at least once. The endpoint records each processed event id and acknowledges redeliveries without re-applying them, and a checkout session can never record its payment twice (a <code>checkout.session.completed</code> followed by <code>checkout.session.async_payment_succeeded</code> for the same session records the money once) — a replayed partial payment can no longer inflate the ledger or close an invoice early.</p>
 <h2 id="setup">Setup</h2>
 <ol>
 <li>Stripe dashboard → <strong>Developers → Webhooks → Add endpoint</strong>.
