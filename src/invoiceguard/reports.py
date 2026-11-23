@@ -324,9 +324,9 @@ def freelancer_show_csv(freelancer, rows: list[dict],
     the two new (empty) columns.
 
     Free-text cells (freelancer name, email, phone) are neutralized
-    against CSV formula injection (see `_csv_cell`). The attributed
-    invoice lines and the recorded payouts stay text-only: this
-    exports the earnings detail, not the whole screen. Read-only.
+    against CSV formula injection (see `_csv_cell`). The recorded
+    payouts stay text-only: this exports the earnings detail, not
+    the whole screen. Read-only.
     """
     buf = io.StringIO()
     w = csv.writer(buf, lineterminator="\n")
@@ -356,6 +356,67 @@ def freelancer_show_csv(freelancer, rows: list[dict],
             (_units(r["expected_payout_cents"]) if has_share else ""),
             (_units(r["still_due_to_freelancer_cents"])
              if has_share else ""),
+            status, payout_date,
+        ]])
+    return buf.getvalue()
+
+
+FREELANCER_SHOW_INVOICES_CSV_COLUMNS = [
+    "freelancer_id", "freelancer", "invoice_id", "client", "currency",
+    "amount", "collected", "outstanding", "status",
+    "payout_status", "payout_date",
+]
+
+
+def freelancer_show_invoices_csv(freelancer, invoices: list[dict],
+                                 timing: dict | None = None) -> str:
+    """One freelancer's attributed invoice lines as CSV — one row per
+    invoice, in the same id order the text view prints them.
+
+    *freelancer* is the `get_freelancer()` row (sqlite row or dict)
+    and *invoices* are that freelancer's attributed invoices in a
+    real state (drafts and voids excluded, exactly like the text
+    view), each carrying the `paid_cents` / `outstanding_cents` the
+    text lines print — the same dicts `freelancer show` builds from
+    `db.list_invoices()` plus the payment ledger. The columns mirror
+    what the text lines print: the invoice id, client, currency,
+    amount, collected, outstanding, and status — with the freelancer
+    id and name on every row so the file stands alone.
+
+    Pass the same per-currency timing map the text view joins onto
+    its earnings lines (the `agency_summary()` rows keyed by
+    currency) and each row also carries that invoice's currency
+    timing: the status (due / overdue / upcoming / settled /
+    no schedule) in ``payout_status`` and the date it refers to in
+    ``payout_date`` — the missed run date when overdue, the next
+    payout date when due or upcoming, empty for settled / no
+    schedule. An invoice in a currency with no timing entry carries
+    empty cells rather than a misleading status. Without ``timing``
+    both columns stay empty, so a bare
+    ``freelancer_show_invoices_csv(f, invoices)`` call is unchanged
+    apart from the two new (empty) columns.
+
+    Free-text cells (freelancer name, client) are neutralized
+    against CSV formula injection (see `_csv_cell`). A freelancer
+    with no attributed invoices exports a header-only CSV. The
+    recorded payouts stay text-only. Read-only.
+    """
+    buf = io.StringIO()
+    w = csv.writer(buf, lineterminator="\n")
+    w.writerow(FREELANCER_SHOW_INVOICES_CSV_COLUMNS)
+    for inv in sorted(invoices, key=lambda i: i["id"]):
+        currency = inv["currency"]
+        status = ""
+        payout_date = ""
+        if timing is not None and currency:
+            t = timing.get(currency, {})
+            status = t.get("payout_status") or ""
+            payout_date = _payout_date_for(status, t)
+        w.writerow([_csv_cell(v) for v in [
+            freelancer["id"], freelancer["name"],
+            inv["id"], inv["client_name"], currency,
+            _units(inv["amount_cents"]), _units(inv["paid_cents"]),
+            _units(inv["outstanding_cents"]), inv["status"],
             status, payout_date,
         ]])
     return buf.getvalue()

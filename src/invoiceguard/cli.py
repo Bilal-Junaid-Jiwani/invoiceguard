@@ -22,6 +22,7 @@ from .messaging import (message_channel, messaging_configured,
 from .reports import (agency_summary, agency_summary_csv,
                       agency_summary_totals, freelancer_earnings,
                       freelancer_list_csv, freelancer_show_csv,
+                      freelancer_show_invoices_csv,
                       invoices_csv, next_payout_date, payments_csv,
                       pay_run_csv, payout_due, payout_overdue,
                       payout_schedule, payout_schedule_csv,
@@ -478,7 +479,11 @@ def freelancer_list(as_of, csv_path):
 @click.option("--csv", "csv_path", default=None, metavar="PATH",
               help="Also write the earnings detail as CSV to PATH "
                    "('-' prints the CSV instead of the text view)")
-def freelancer_show(freelancer_id, as_of, csv_path):
+@click.option("--invoices-csv", "invoices_csv_path", default=None,
+              metavar="PATH",
+              help="Also write the attributed invoice lines as CSV "
+                   "to PATH ('-' prints it instead of the text view)")
+def freelancer_show(freelancer_id, as_of, csv_path, invoices_csv_path):
     """Show a freelancer: contact details, earnings, payouts, invoices.
 
     Earnings are per currency: billed (attributed invoices in a real
@@ -498,10 +503,19 @@ def freelancer_show(freelancer_id, as_of, csv_path):
     payouts follow. The `--csv` export writes the earnings detail as
     a spreadsheet: one row per currency with the same contact,
     schedule, and money columns the text lines print, plus the same
-    timing in trailing `payout_status` / `payout_date` columns — the
-    attributed invoice lines and the recorded payouts stay text-only.
+    timing in trailing `payout_status` / `payout_date` columns. The
+    `--invoices-csv` export writes the attributed invoice lines as a
+    spreadsheet: one row per invoice, in the same id order the text
+    lines print them, with the same columns the text lines print
+    (invoice id, client, currency, amount, collected, outstanding,
+    status) plus the same timing in trailing `payout_status` /
+    `payout_date` columns — the recorded payouts stay text-only.
     Read-only.
     """
+    if csv_path == "-" and invoices_csv_path == "-":
+        raise click.ClickException(
+            "only one CSV can be printed to stdout — "
+            "give the other a file path")
     db = _db()
     try:
         rows = freelancer_earnings(db, freelancer_id)
@@ -521,11 +535,28 @@ def freelancer_show(freelancer_id, as_of, csv_path):
                                    - inv["paid_cents"])
     payouts = db.list_payouts(freelancer_id)
     db.close()
+    inv_csv = (freelancer_show_invoices_csv(f, attributed, timing)
+               if invoices_csv_path else None)
+
+    notes = []
+    stdout_csv = None
     if csv_path == "-":
-        click.echo(csv_text, nl=False)
-        return
-    if csv_path:
+        stdout_csv = csv_text
+    elif csv_path:
         Path(csv_path).write_text(csv_text, encoding="utf-8")
+        notes.append(f"wrote freelancer show CSV: {csv_path} "
+                     f"({len(rows)} rows)")
+    if invoices_csv_path == "-":
+        stdout_csv = inv_csv
+    elif invoices_csv_path:
+        Path(invoices_csv_path).write_text(inv_csv, encoding="utf-8")
+        notes.append(f"wrote freelancer show invoices CSV: "
+                     f"{invoices_csv_path} ({len(attributed)} rows)")
+    if stdout_csv is not None:
+        for n in notes:
+            click.echo(n, err=True)
+        click.echo(stdout_csv, nl=False)
+        return
 
     def _money(cents):
         return f"{cents / 100:,.2f}"
@@ -602,9 +633,8 @@ def freelancer_show(freelancer_id, as_of, csv_path):
             if p["note"]:
                 detail += f"  \"{p['note']}\""
             click.echo(f"    #{p['id']:<4} {detail}")
-    if csv_path:
-        click.echo(f"wrote freelancer show CSV: {csv_path} "
-                   f"({len(rows)} rows)")
+    for n in notes:
+        click.echo(n)
 
 
 # -- payout (agency mode) ----------------------------------------------
