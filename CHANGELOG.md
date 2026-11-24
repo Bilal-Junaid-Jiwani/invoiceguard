@@ -2,6 +2,16 @@
 
 Every release, newest first. InvoiceGuard follows semver.
 
+## [0.41.1] - 2026-11-24
+
+Agency-mode slice #35: CSV export for the recorded payouts of `freelancer show`. Slices #33–#34 put the earnings detail and the attributed invoice lines of `freelancer show` in spreadsheets, but the recorded payouts underneath them — the per-payout amount, date, method, and note that the earnings lines only summarize as paid-out totals — still had to be retyped from the text view. This slice adds `--payouts-csv PATH` (or `-` for stdout) to `freelancer show`, writing the same recorded payouts as a spreadsheet through one shared library call. With all three exports the whole `freelancer show` screen is now a spreadsheet.
+
+### Added
+- **`invoiceguard freelancer show ID [--as-of DATE] [--csv PATH] [--invoices-csv PATH] [--payouts-csv PATH]`** — one CSV row per recorded payout, in the same newest-first order the text lines print them, with the same columns the text lines print (payout id, currency, amount, paid date, method, note — method and note empty when unset, exactly like the text lines omitting them) — with the freelancer id and name on every row so the file stands alone — plus the same per-currency payout timing in trailing `payout_status` / `payout_date` columns — the missed run date when overdue, the next payout date when due or upcoming, empty for settled / no schedule — taken from the same `agency_summary()` rows keyed by currency the earnings lines use, projected with `--as-of` (default: today). The date cell carries the full stored `paid_at` value, like the `payout list` CSV export; the text view truncates it to the date for display. A freelancer with no recorded payouts exports a header-only CSV. `-` prints the CSV to stdout instead of the text view; a file path writes the file and still prints the text view with a `wrote freelancer show payouts CSV` note. `--csv`, `--invoices-csv`, and `--payouts-csv` can be used together to separate files; only one may print to stdout. `reports.freelancer_show_payouts_csv(freelancer, payouts, timing=None)` is the library call — without a timing map both columns stay empty. Pinned by a new test file `tests/test_freelancer_show_payouts_csv.py` (header + money columns, multi-payout rows newest first, per-currency timing, `--as-of` projection, no-payouts header-only export, file + stdout modes, all three CSVs to files, two to stdout is a clean error, invalid `--as-of` clean error, unknown-freelancer error, bare library call with and without timing, CSV formula-injection neutralization). Docs: README freelancer show row + roadmap + test count, docs/src/cli.md, docs/src/roadmap.md, and the changelog; generated docs pages rebuilt.
+
+### Honest scope (0.41.1)
+- A view, not a workflow: the export reports the freelancer's recorded payouts as of `--as-of`, not a settlement. Recording a payout is still `payout settle` / `payout record`. Multi-freelancer workspaces remain the unshipped half of agency mode.
+
 ## [0.41.0] - 2026-11-23
 
 Security release — the fixes from a full security audit of the web app, both Stripe webhook paths, and the e-signature flow (2 High, 1 Medium, 2 plain bugs; every finding reproduced before it was fixed). No new user-facing features; everyone who serves the dashboard app or receives Stripe webhooks should upgrade.

@@ -23,6 +23,7 @@ from .reports import (agency_summary, agency_summary_csv,
                       agency_summary_totals, freelancer_earnings,
                       freelancer_list_csv, freelancer_show_csv,
                       freelancer_show_invoices_csv,
+                      freelancer_show_payouts_csv,
                       invoices_csv, next_payout_date, payments_csv,
                       pay_run_csv, payout_due, payout_overdue,
                       payout_schedule, payout_schedule_csv,
@@ -483,7 +484,12 @@ def freelancer_list(as_of, csv_path):
               metavar="PATH",
               help="Also write the attributed invoice lines as CSV "
                    "to PATH ('-' prints it instead of the text view)")
-def freelancer_show(freelancer_id, as_of, csv_path, invoices_csv_path):
+@click.option("--payouts-csv", "payouts_csv_path", default=None,
+              metavar="PATH",
+              help="Also write the recorded payouts as CSV "
+                   "to PATH ('-' prints it instead of the text view)")
+def freelancer_show(freelancer_id, as_of, csv_path, invoices_csv_path,
+                    payouts_csv_path):
     """Show a freelancer: contact details, earnings, payouts, invoices.
 
     Earnings are per currency: billed (attributed invoices in a real
@@ -509,13 +515,18 @@ def freelancer_show(freelancer_id, as_of, csv_path, invoices_csv_path):
     lines print them, with the same columns the text lines print
     (invoice id, client, currency, amount, collected, outstanding,
     status) plus the same timing in trailing `payout_status` /
-    `payout_date` columns — the recorded payouts stay text-only.
-    Read-only.
+    `payout_date` columns. The `--payouts-csv` export writes the
+    recorded payouts as a spreadsheet: one row per payout, in the
+    same newest-first order the text lines print them, with the same
+    columns the text lines print (payout id, currency, amount, paid
+    date, method, note) plus the same timing in trailing
+    `payout_status` / `payout_date` columns. Read-only.
     """
-    if csv_path == "-" and invoices_csv_path == "-":
+    if sum(p == "-" for p in
+           (csv_path, invoices_csv_path, payouts_csv_path)) > 1:
         raise click.ClickException(
             "only one CSV can be printed to stdout — "
-            "give the other a file path")
+            "give the others a file path")
     db = _db()
     try:
         rows = freelancer_earnings(db, freelancer_id)
@@ -537,6 +548,8 @@ def freelancer_show(freelancer_id, as_of, csv_path, invoices_csv_path):
     db.close()
     inv_csv = (freelancer_show_invoices_csv(f, attributed, timing)
                if invoices_csv_path else None)
+    pay_csv = (freelancer_show_payouts_csv(f, payouts, timing)
+               if payouts_csv_path else None)
 
     notes = []
     stdout_csv = None
@@ -552,6 +565,12 @@ def freelancer_show(freelancer_id, as_of, csv_path, invoices_csv_path):
         Path(invoices_csv_path).write_text(inv_csv, encoding="utf-8")
         notes.append(f"wrote freelancer show invoices CSV: "
                      f"{invoices_csv_path} ({len(attributed)} rows)")
+    if payouts_csv_path == "-":
+        stdout_csv = pay_csv
+    elif payouts_csv_path:
+        Path(payouts_csv_path).write_text(pay_csv, encoding="utf-8")
+        notes.append(f"wrote freelancer show payouts CSV: "
+                     f"{payouts_csv_path} ({len(payouts)} rows)")
     if stdout_csv is not None:
         for n in notes:
             click.echo(n, err=True)

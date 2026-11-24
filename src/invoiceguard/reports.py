@@ -324,9 +324,10 @@ def freelancer_show_csv(freelancer, rows: list[dict],
     the two new (empty) columns.
 
     Free-text cells (freelancer name, email, phone) are neutralized
-    against CSV formula injection (see `_csv_cell`). The recorded
-    payouts stay text-only: this exports the earnings detail, not
-    the whole screen. Read-only.
+    against CSV formula injection (see `_csv_cell`). The attributed
+    invoice lines and the recorded payouts have their own exports
+    (`freelancer_show_invoices_csv`,
+    `freelancer_show_payouts_csv`). Read-only.
     """
     buf = io.StringIO()
     w = csv.writer(buf, lineterminator="\n")
@@ -399,7 +400,8 @@ def freelancer_show_invoices_csv(freelancer, invoices: list[dict],
     Free-text cells (freelancer name, client) are neutralized
     against CSV formula injection (see `_csv_cell`). A freelancer
     with no attributed invoices exports a header-only CSV. The
-    recorded payouts stay text-only. Read-only.
+    recorded payouts have their own export
+    (`freelancer_show_payouts_csv`). Read-only.
     """
     buf = io.StringIO()
     w = csv.writer(buf, lineterminator="\n")
@@ -417,6 +419,66 @@ def freelancer_show_invoices_csv(freelancer, invoices: list[dict],
             inv["id"], inv["client_name"], currency,
             _units(inv["amount_cents"]), _units(inv["paid_cents"]),
             _units(inv["outstanding_cents"]), inv["status"],
+            status, payout_date,
+        ]])
+    return buf.getvalue()
+
+
+FREELANCER_SHOW_PAYOUTS_CSV_COLUMNS = [
+    "freelancer_id", "freelancer", "payout_id", "currency", "amount",
+    "paid_at", "method", "note",
+    "payout_status", "payout_date",
+]
+
+
+def freelancer_show_payouts_csv(freelancer, payouts: list[dict],
+                                timing: dict | None = None) -> str:
+    """One freelancer's recorded payouts as CSV — one row per payout,
+    in the same newest-first order the text view prints them.
+
+    *freelancer* is the `get_freelancer()` row (sqlite row or dict)
+    and *payouts* are that freelancer's `db.list_payouts()` dicts.
+    The columns mirror what the text lines print: the payout id,
+    currency, amount, the date it was paid, and the method and note
+    when set (empty when unset, exactly like the text lines omitting
+    them) — with the freelancer id and name on every row so the file
+    stands alone. The date is the full stored `paid_at` value, like
+    the `payout list` CSV export; the text view truncates it to the
+    date for display.
+
+    Pass the same per-currency timing map the text view joins onto
+    its earnings lines (the `agency_summary()` rows keyed by
+    currency) and each row also carries that payout's currency
+    timing: the status (due / overdue / upcoming / settled /
+    no schedule) in ``payout_status`` and the date it refers to in
+    ``payout_date`` — the missed run date when overdue, the next
+    payout date when due or upcoming, empty for settled / no
+    schedule. A payout in a currency with no timing entry carries
+    empty cells rather than a misleading status. Without ``timing``
+    both columns stay empty, so a bare
+    ``freelancer_show_payouts_csv(f, payouts)`` call is unchanged
+    apart from the two new (empty) columns.
+
+    Free-text cells (freelancer name, method, note) are neutralized
+    against CSV formula injection (see `_csv_cell`). A freelancer
+    with no recorded payouts exports a header-only CSV. Read-only.
+    """
+    buf = io.StringIO()
+    w = csv.writer(buf, lineterminator="\n")
+    w.writerow(FREELANCER_SHOW_PAYOUTS_CSV_COLUMNS)
+    for p in payouts:
+        currency = p["currency"]
+        status = ""
+        payout_date = ""
+        if timing is not None and currency:
+            t = timing.get(currency, {})
+            status = t.get("payout_status") or ""
+            payout_date = _payout_date_for(status, t)
+        w.writerow([_csv_cell(v) for v in [
+            freelancer["id"], freelancer["name"],
+            p["id"], currency,
+            _units(p["amount_cents"]), p["paid_at"],
+            p["method"] or "", p["note"] or "",
             status, payout_date,
         ]])
     return buf.getvalue()
