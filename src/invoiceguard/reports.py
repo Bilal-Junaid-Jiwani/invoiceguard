@@ -223,6 +223,44 @@ def invoices_csv(rows: list[dict], timing: dict | None = None) -> str:
     return buf.getvalue()
 
 
+INVOICE_LIST_CSV_COLUMNS = [
+    "invoice_id", "kind", "status", "amount", "currency", "project",
+    "freelancer", "due_date",
+]
+
+
+def invoice_list_csv(rows: list[dict]) -> str:
+    """The invoice list as CSV — one row per `list_invoices()` row,
+    in the same id order the text list prints them.
+
+    *rows* are `list_invoices()` rows (sqlite rows or dicts). The
+    columns mirror what the text lines print: the invoice id, kind,
+    status, amount, currency, project title, the attributed
+    freelancer's name (empty when unassigned, exactly like the text
+    lines omitting the bracketed name), and the due date (empty when
+    unset, exactly like the text lines printing `-`). The amount is
+    the stored cents as a plain decimal string (see `_units`), like
+    the other CSV exports; the text view renders it as money. The
+    list command carries no `--as-of`, so — unlike the invoice
+    report CSV — there are no payout timing columns here.
+
+    Free-text cells (project title, freelancer name) are neutralized
+    against CSV formula injection (see `_csv_cell`). An empty list
+    exports a header-only CSV. Read-only.
+    """
+    buf = io.StringIO()
+    w = csv.writer(buf, lineterminator="\n")
+    w.writerow(INVOICE_LIST_CSV_COLUMNS)
+    for r in rows:
+        w.writerow([_csv_cell(v) for v in [
+            r["id"], r["kind"], r["status"],
+            _units(r["amount_cents"]), r["currency"],
+            r["project_title"], r["freelancer_name"] or "",
+            r["due_date"] or "",
+        ]])
+    return buf.getvalue()
+
+
 FREELANCER_LIST_CSV_COLUMNS = [
     "freelancer_id", "freelancer", "email", "phone", "split_pct",
     "payout_status", "payout_date",

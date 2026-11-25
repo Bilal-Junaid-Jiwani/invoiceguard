@@ -24,6 +24,7 @@ from .reports import (agency_summary, agency_summary_csv,
                       freelancer_list_csv, freelancer_show_csv,
                       freelancer_show_invoices_csv,
                       freelancer_show_payouts_csv,
+                      invoice_list_csv,
                       invoices_csv, next_payout_date, payments_csv,
                       pay_run_csv, payout_due, payout_overdue,
                       payout_schedule, payout_schedule_csv,
@@ -1717,21 +1718,40 @@ def invoice_create(project_id, kind, amount, due_days):
 @invoice.command("list")
 @click.option("--freelancer", "freelancer_id", type=int, default=None,
               help="Only show invoices attributed to freelancer ID")
-def invoice_list(freelancer_id):
-    """List invoices."""
+@click.option("--csv", "csv_path", default=None, metavar="PATH",
+              help="Also write the list as CSV to PATH "
+                   "('-' prints the CSV instead of the text list)")
+def invoice_list(freelancer_id, csv_path):
+    """List invoices.
+
+    The `--csv` export writes the same list as a spreadsheet: one
+    row per invoice, in the same id order the text lines print them,
+    with the same columns the text lines print (invoice id, kind,
+    status, amount, currency, project, freelancer, due date). An
+    empty list exports a header-only CSV. Read-only.
+    """
     db = _db()
     if freelancer_id is not None and not db.get_freelancer(freelancer_id):
         db.close()
         raise click.ClickException(f"no freelancer #{freelancer_id}")
     rows = db.list_invoices()
-    db.close()
     if freelancer_id is not None:
         rows = [r for r in rows if r["freelancer_id"] == freelancer_id]
+    csv_text = invoice_list_csv(rows) if csv_path else None
+    db.close()
+    if csv_path == "-":
+        click.echo(csv_text, nl=False)
+        return
+    if csv_path:
+        Path(csv_path).write_text(csv_text, encoding="utf-8")
     for r in rows:
         fl = f" [{r['freelancer_name']}]" if r["freelancer_name"] else ""
         click.echo(f"#{r['id']:>3}  {r['kind']:<9} {r['status']:<14} "
                    f"{money(r['amount_cents'], r['currency']):>12}  "
                    f"{r['project_title']:<30}{fl} due {r['due_date'] or '-'}")
+    if csv_path:
+        click.echo(f"wrote invoice list CSV: {csv_path} "
+                   f"({len(rows)} rows)")
 
 
 @invoice.command("assign")

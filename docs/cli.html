@@ -237,7 +237,7 @@ invoiceguard project sign-status 1    # pending / signed + signer + hash
 <p>See <a href="contracts.html">Contracts</a> for what the contract contains and the honest limits of the e-signature.</p>
 <h2 id="invoice"><code>invoice</code></h2>
 <pre class="codeblock" data-lang="bash"><code>invoiceguard invoice create --project 1 --kind deposit [--amount 1000] [--due-days 7]
-invoiceguard invoice list [--freelancer 1]
+invoiceguard invoice list [--freelancer 1] [--csv invoices.csv]
 invoiceguard invoice assign 1 --freelancer 1   # or: --none to clear
 invoiceguard invoice record-payment 1 --amount 250 [--note "check #1"] [--method bank]
 invoiceguard invoice mark-paid 1
@@ -255,7 +255,7 @@ invoiceguard invoice report [--as-of 2026-10-08] [--freelancer 1] [--csv invoice
 </li>
 <li>On success it creates a real Stripe payment link (test mode friendly), stores the URL, and sets status to <code>sent</code>. If the Stripe secret key is missing or still the placeholder, the command fails with a clear error — no invoice is left half-created.
 </li>
-<li><code>list</code> shows <code>#id  kind  status  amount  project  [freelancer]  due-date</code>; <code>--freelancer ID</code> shows only that freelancer's invoices.
+<li><code>list</code> shows <code>#id  kind  status  amount  project  [freelancer]  due-date</code>; <code>--freelancer ID</code> shows only that freelancer's invoices. <code>--csv PATH</code> (v0.42.0) exports the same list as a spreadsheet: one row per invoice, in the same id order the text lines print them, with the same columns the text lines print (invoice id, kind, status, amount, currency, project, freelancer, due date — freelancer empty when unassigned, due date empty when unset). <code>-</code> prints the CSV to stdout instead of the text view; a file path writes the file and still prints the text view with a <code>wrote invoice list CSV</code> note. An empty list exports a header-only CSV. The list carries no <code>--as-of</code>, so — unlike the invoice report CSV — there are no payout timing columns. CSV exports neutralize spreadsheet formula injection (see <code>report</code>). Read-only.
 </li>
 <li><code>assign</code> (v0.8.0, agency mode) attributes an invoice to a freelancer (<code>--freelancer ID</code>), or clears the attribution with <code>--none</code>. Pure bookkeeping: dunning, payments, and status are untouched.
 </li>

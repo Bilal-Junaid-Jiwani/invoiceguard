@@ -106,7 +106,7 @@ See [Contracts](contracts.html) for what the contract contains and the honest li
 
 ```bash
 invoiceguard invoice create --project 1 --kind deposit [--amount 1000] [--due-days 7]
-invoiceguard invoice list [--freelancer 1]
+invoiceguard invoice list [--freelancer 1] [--csv invoices.csv]
 invoiceguard invoice assign 1 --freelancer 1   # or: --none to clear
 invoiceguard invoice record-payment 1 --amount 250 [--note "check #1"] [--method bank]
 invoiceguard invoice mark-paid 1
@@ -120,7 +120,7 @@ invoiceguard invoice report [--as-of 2026-10-08] [--freelancer 1] [--csv invoice
 - Amount defaults by kind: `deposit` = `deposit_pct`% of the project total; `final` = the remainder after the deposit; `milestone` = the full project amount. `--amount` overrides in currency units.
 - `--due-days` defaults to 7; `0` or negative means "due today".
 - On success it creates a real Stripe payment link (test mode friendly), stores the URL, and sets status to `sent`. If the Stripe secret key is missing or still the placeholder, the command fails with a clear error — no invoice is left half-created.
-- `list` shows `#id  kind  status  amount  project  [freelancer]  due-date`; `--freelancer ID` shows only that freelancer's invoices.
+- `list` shows `#id  kind  status  amount  project  [freelancer]  due-date`; `--freelancer ID` shows only that freelancer's invoices. `--csv PATH` (v0.42.0) exports the same list as a spreadsheet: one row per invoice, in the same id order the text lines print them, with the same columns the text lines print (invoice id, kind, status, amount, currency, project, freelancer, due date — freelancer empty when unassigned, due date empty when unset). `-` prints the CSV to stdout instead of the text view; a file path writes the file and still prints the text view with a `wrote invoice list CSV` note. An empty list exports a header-only CSV. The list carries no `--as-of`, so — unlike the invoice report CSV — there are no payout timing columns. CSV exports neutralize spreadsheet formula injection (see `report`). Read-only.
 - `assign` (v0.8.0, agency mode) attributes an invoice to a freelancer (`--freelancer ID`), or clears the attribution with `--none`. Pure bookkeeping: dunning, payments, and status are untouched.
 - `record-payment` records a (partial) payment in the ledger. A payment that clears the outstanding balance marks the invoice `paid`; otherwise the invoice becomes `partially-paid` and keeps dunning against the remaining balance. Overpaying is rejected.
 - `mark-paid` manually marks an invoice paid — since v0.2.0 it records the full outstanding balance in the ledger, and it errors on already-paid or void invoices. `void` voids an unpaid invoice; a **paid** invoice cannot be voided (0.8.4 — its ledger payments stand; refund through Stripe instead), and voiding an already-void invoice errors too.

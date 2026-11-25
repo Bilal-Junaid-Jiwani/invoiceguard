@@ -6,6 +6,16 @@ description: InvoiceGuard release history — newest first, no fluff.
 
 Every release, newest first. InvoiceGuard follows semver.
 
+## [0.42.0] - 2026-11-25
+
+Agency-mode slice #36: CSV export for `invoice list`. Slices #32–#35 put CSV exports on every agency view (freelancer list/show, payout list/suggest/schedule/due/overdue, agency summary, invoice report), but the core `invoice list` view itself — the one list an agency operator opens first to see the whole book — was still text-only. This slice adds `--csv PATH` (or `-` for stdout) to `invoice list`, writing the same list as a spreadsheet through one shared library call. The list carries no `--as-of`, so — unlike the invoice report CSV — there are no payout timing columns here.
+
+### Added
+- **`invoiceguard invoice list [--freelancer ID] [--csv PATH]`** — one CSV row per listed invoice, in the same id order the text lines print them, with the same columns the text lines print (invoice id, kind, status, amount, currency, project, freelancer, due date — freelancer empty when unassigned and due date empty when unset, exactly like the text lines omitting the bracketed name and printing `-`). The amount is the stored cents as a plain decimal string, like the other CSV exports; the text view renders it as money. An empty list exports a header-only CSV. `-` prints the CSV to stdout instead of the text view; a file path writes the file and still prints the text view with a `wrote invoice list CSV` note. `--freelancer ID` composes with the export, restricting the rows. `reports.invoice_list_csv(rows)` is the library call — it takes the same `db.list_invoices()` rows the text view prints and needs no timing map. Pinned by a new test file `tests/test_invoice_list_csv.py` (header + money columns, multi-invoice rows in id order, freelancer filter, no-invoices header-only export, file + stdout modes, unknown-freelancer error, bare library call, CSV formula-injection neutralization). Docs: README invoice list row + roadmap + test count, docs/src/cli.md, docs/src/roadmap.md, and the changelog; generated docs pages rebuilt.
+
+### Honest scope (0.42.0)
+- A view, not a workflow: the export lists invoices as they stand, not a settlement or a report. Receivables aging, late fees, and per-freelancer payout timing stay on `invoice report` (`--as-of` projection) and the other agency views. Multi-freelancer workspaces remain the unshipped half of agency mode.
+
 ## [0.41.1] - 2026-11-24
 
 Agency-mode slice #35: CSV export for the recorded payouts of `freelancer show`. Slices #33–#34 put the earnings detail and the attributed invoice lines of `freelancer show` in spreadsheets, but the recorded payouts underneath them — the per-payout amount, date, method, and note that the earnings lines only summarize as paid-out totals — still had to be retyped from the text view. This slice adds `--payouts-csv PATH` (or `-` for stdout) to `freelancer show`, writing the same recorded payouts as a spreadsheet through one shared library call. With all three exports the whole `freelancer show` screen is now a spreadsheet.
