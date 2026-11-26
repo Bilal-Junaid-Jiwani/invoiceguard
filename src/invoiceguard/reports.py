@@ -261,6 +261,96 @@ def invoice_list_csv(rows: list[dict]) -> str:
     return buf.getvalue()
 
 
+CLIENT_LIST_CSV_COLUMNS = [
+    "client_id", "client", "email", "phone",
+    "dunning_day1", "dunning_day7", "dunning_day15",
+]
+
+
+def _dunning_override_cell(value) -> str:
+    """One dunning-override cell, exactly as the text list prints it.
+
+    The stored override is NULL when the client uses the global
+    default (empty cell — the text list omits the stage entirely),
+    0 when the stage is disabled for this client (``off``, like the
+    text list's ``day7=off``), and a positive int for a custom
+    threshold.
+    """
+    if value is None:
+        return ""
+    if int(value) <= 0:
+        return "off"
+    return str(int(value))
+
+
+def client_list_csv(rows: list[dict]) -> str:
+    """The client list as CSV — one row per `list_clients()` row,
+    in the same id order the text list prints them.
+
+    *rows* are `list_clients()` rows (sqlite rows or dicts). The
+    columns mirror what the text lines print: the client id, name,
+    email, and phone (empty when unset, exactly like the text lines
+    printing nothing), plus the per-client dunning-policy overrides
+    the text lines carry in the ``[dunning ...]`` marker — one cell
+    per stage (see `_dunning_override_cell`): the custom threshold,
+    ``off`` when the stage is disabled for this client, empty when
+    the client uses the global default. The client list carries no
+    `--as-of`, so — like the invoice list CSV — there are no payout
+    timing columns here.
+
+    Free-text cells (client name, email, phone) are neutralized
+    against CSV formula injection (see `_csv_cell`). An empty list
+    exports a header-only CSV. Read-only.
+    """
+    buf = io.StringIO()
+    w = csv.writer(buf, lineterminator="\n")
+    w.writerow(CLIENT_LIST_CSV_COLUMNS)
+    for r in rows:
+        w.writerow([_csv_cell(v) for v in [
+            r["id"], r["name"], r["email"] or "", r["phone"] or "",
+            _dunning_override_cell(r["dunning_day1"]),
+            _dunning_override_cell(r["dunning_day7"]),
+            _dunning_override_cell(r["dunning_day15"]),
+        ]])
+    return buf.getvalue()
+
+
+PROJECT_LIST_CSV_COLUMNS = [
+    "project_id", "project", "client", "amount", "currency",
+    "contract_ack",
+]
+
+
+def project_list_csv(rows: list[dict]) -> str:
+    """The project list as CSV — one row per `list_projects()` row,
+    in the same id order the text list prints them.
+
+    *rows* are `list_projects()` rows (sqlite rows or dicts). The
+    columns mirror what the text lines print: the project id, title,
+    client name, amount, currency, and the contract-acknowledgment
+    state (``ack`` / ``no-ack``, exactly like the bracket the text
+    lines print). The amount is the stored cents as a plain decimal
+    string (see `_units`), like the other CSV exports; the text view
+    renders it as money. The project list carries no `--as-of`, so —
+    like the invoice list CSV — there are no payout timing columns
+    here.
+
+    Free-text cells (project title, client name) are neutralized
+    against CSV formula injection (see `_csv_cell`). An empty list
+    exports a header-only CSV. Read-only.
+    """
+    buf = io.StringIO()
+    w = csv.writer(buf, lineterminator="\n")
+    w.writerow(PROJECT_LIST_CSV_COLUMNS)
+    for r in rows:
+        w.writerow([_csv_cell(v) for v in [
+            r["id"], r["title"], r["client_name"],
+            _units(r["amount_cents"]), r["currency"],
+            "ack" if r["contract_ack"] else "no-ack",
+        ]])
+    return buf.getvalue()
+
+
 FREELANCER_LIST_CSV_COLUMNS = [
     "freelancer_id", "freelancer", "email", "phone", "split_pct",
     "payout_status", "payout_date",

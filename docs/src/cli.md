@@ -20,14 +20,14 @@ invoiceguard client add --name "Acme Corp" --email "billing@acme.com" [--phone +
 invoiceguard client set-phone 1 [--phone +15551234567]   # omit --phone to clear
 invoiceguard client set-email 1 [--email billing@acme.com]     # omit --email to clear
 invoiceguard client set-dunning-policy 1 [--day1 N] [--day7 N] [--day15 N] [--reset]
-invoiceguard client list
+invoiceguard client list [--csv PATH]   # CSV in v0.43.0
 ```
 
 - `add` requires `--name`; `--email` is optional (needed later for dunning emails). `--phone` (E.164 form) enables SMS/WhatsApp escalation for that client; invalid numbers are rejected.
 - `set-phone` updates or clears the phone number of an existing client.
 - `set-email` updates or clears the email address of an existing client (dunning).
 - `set-dunning-policy` sets per-client dunning stage thresholds (v0.7.0, agency mode): each `--dayN` is the days-overdue threshold for that stage; `0` disables the stage for that client; omit a flag to leave it unchanged. Thresholds must stay in escalation order (day1 → day7 → day15); negative values are rejected. `--reset` clears overrides back to the global defaults (1/7/15).
-- `list` prints `#id  name  email  phone` rows, plus a `[dunning ...]` marker for clients with policy overrides.
+- `list` prints `#id  name  email  phone` rows, plus a `[dunning ...]` marker for clients with policy overrides. `--csv PATH` (v0.43.0) exports the same list as a spreadsheet: one row per client with the same columns the text lines print plus the dunning-policy overrides per stage (`off` when disabled, empty at the global default). `-` prints the CSV to stdout instead of the text list; a file path writes the file and still prints the text list. CSV exports neutralize spreadsheet formula injection (see `report`).
 
 ## `freelancer` (v0.8.0, agency mode)
 
@@ -86,7 +86,7 @@ invoiceguard agency summary [--freelancer 1] [--as-of 2026-11-15] [--csv summary
 invoiceguard project create --client "Acme Corp" --title "Website redesign" \
   --amount 2000 --currency USD --deposit-pct 50 \
   --late-fee-pct 1.5 --late-fee-grace-days 15 [--ack]
-invoiceguard project list
+invoiceguard project list [--csv PATH]   # CSV in v0.43.0
 invoiceguard project ack 1
 invoiceguard project sign-request 1   # one-time e-signature link
 invoiceguard project sign-status 1    # pending / signed + signer + hash
@@ -97,7 +97,7 @@ invoiceguard project sign-status 1    # pending / signed + signer + hash
 - Validation: `--deposit-pct` and `--late-fee-pct` must be between 0 and 100; `--late-fee-grace-days` must be 0 or more. Out-of-range values are refused before anything is written (the percentages also land in the generated contract text).
 - Prints the generated contract (with the late-fee clause) as a preview.
 - `--ack` records the contract as acknowledged by the client at creation time; without it, the contract shows `no-ack` until you run `project ack ID` after the client accepts the deposit link.
-- `list` shows `#id  title  client  amount  [ack|no-ack]`.
+- `list` shows `#id  title  client  amount  [ack|no-ack]`. `--csv PATH` (v0.43.0) exports the same list as a spreadsheet: one row per project with the same columns the text lines print, incl. contract acknowledgment (`ack` / `no-ack`). `-` prints the CSV to stdout instead of the text list; a file path writes the file and still prints the text list. CSV exports neutralize spreadsheet formula injection (see `report`).
 - `sign-request` creates a one-time, single-use signing link (`/sign/<token>`, served by the dashboard) for the client to type their name and draw a signature; the contract text is frozen at link-creation time and its SHA-256 is stored as tamper evidence. Re-running while a request is pending returns the same link (with its original frozen text). `sign-status` shows both tracks: the e-signature state *and* the deposit-link acknowledgment (`project ack` / `--ack`) — an acknowledged project with a signature still outstanding says so, instead of only reporting "awaiting signature" (0.8.4).
 
 See [Contracts](contracts.html) for what the contract contains and the honest limits of the e-signature.

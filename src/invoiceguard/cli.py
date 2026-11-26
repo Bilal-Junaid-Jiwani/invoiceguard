@@ -20,7 +20,8 @@ from .messaging import (message_channel, messaging_configured,
                         messaging_from_config, normalize_phone,
                         render_message, send_message)
 from .reports import (agency_summary, agency_summary_csv,
-                      agency_summary_totals, freelancer_earnings,
+                      agency_summary_totals, client_list_csv,
+                      freelancer_earnings,
                       freelancer_list_csv, freelancer_show_csv,
                       freelancer_show_invoices_csv,
                       freelancer_show_payouts_csv,
@@ -31,7 +32,7 @@ from .reports import (agency_summary, agency_summary_csv,
                       payout_schedule_timing,
                       payout_suggestion_timing, payout_suggestions,
                       payout_suggestions_csv, payouts_csv,
-                      receivables_report)
+                      project_list_csv, receivables_report)
 from .stripe_links import create_payment_link, default_due_date
 
 TEMPLATE_SOURCE = Path(__file__).resolve().parent / "email_templates"
@@ -228,11 +229,28 @@ def client_set_dunning_policy(client_id, day1, day7, day15, reset):
 
 
 @client.command("list")
-def client_list():
-    """List clients."""
+@click.option("--csv", "csv_path", default=None, metavar="PATH",
+              help="Also write the list as CSV to PATH "
+                   "('-' prints the CSV instead of the text list)")
+def client_list(csv_path):
+    """List clients.
+
+    The `--csv` export writes the same list as a spreadsheet: one
+    row per client, in the same id order the text lines print them,
+    with the same columns the text lines print (client id, name,
+    email, phone, and the per-client dunning-policy overrides from
+    the `[dunning ...]` marker). An empty list exports a header-only
+    CSV. Read-only.
+    """
     db = _db()
     rows = db.list_clients()
+    csv_text = client_list_csv(rows) if csv_path else None
     db.close()
+    if csv_path == "-":
+        click.echo(csv_text, nl=False)
+        return
+    if csv_path:
+        Path(csv_path).write_text(csv_text, encoding="utf-8")
     for r in rows:
         policy = resolve_dunning_policy(r)
         overrides = [
@@ -243,6 +261,9 @@ def client_list():
         marker = f"  [dunning {' '.join(overrides)}]" if overrides else ""
         click.echo(f"#{r['id']:>3}  {r['name']:<30} {r['email'] or '':<28} "
                    f"{r['phone'] or ''}{marker}")
+    if csv_path:
+        click.echo(f"wrote client list CSV: {csv_path} "
+                   f"({len(rows)} rows)")
 
 
 # -- freelancer (agency mode) -------------------------------------------
@@ -1553,15 +1574,34 @@ def project_create(client_name, title, amount, currency, deposit_pct,
 
 
 @project.command("list")
-def project_list():
-    """List projects."""
+@click.option("--csv", "csv_path", default=None, metavar="PATH",
+              help="Also write the list as CSV to PATH "
+                   "('-' prints the CSV instead of the text list)")
+def project_list(csv_path):
+    """List projects.
+
+    The `--csv` export writes the same list as a spreadsheet: one
+    row per project, in the same id order the text lines print them,
+    with the same columns the text lines print (project id, title,
+    client, amount, currency, contract acknowledgment). An empty list
+    exports a header-only CSV. Read-only.
+    """
     db = _db()
     rows = db.list_projects()
+    csv_text = project_list_csv(rows) if csv_path else None
     db.close()
+    if csv_path == "-":
+        click.echo(csv_text, nl=False)
+        return
+    if csv_path:
+        Path(csv_path).write_text(csv_text, encoding="utf-8")
     for r in rows:
         ack = "ack" if r["contract_ack"] else "no-ack"
         click.echo(f"#{r['id']:>3}  {r['title']:<35} {r['client_name']:<20} "
                    f"{money(r['amount_cents'], r['currency']):>12} [{ack}]")
+    if csv_path:
+        click.echo(f"wrote project list CSV: {csv_path} "
+                   f"({len(rows)} rows)")
 
 
 @project.command("ack")
