@@ -242,7 +242,7 @@ invoiceguard invoice assign 1 --freelancer 1   # or: --none to clear
 invoiceguard invoice record-payment 1 --amount 250 [--note "check #1"] [--method bank]
 invoiceguard invoice mark-paid 1
 invoiceguard invoice void 1
-invoiceguard invoice late-fees 1 [--as-of 2026-10-06]
+invoiceguard invoice late-fees 1 [--as-of 2026-10-06] [--csv late-fees.csv]
 invoiceguard invoice notify 1 [--channel sms|whatsapp] [--dry-run]
 invoiceguard invoice report [--as-of 2026-10-08] [--freelancer 1] [--csv invoices.csv] [--payments-csv payments.csv]
 </code></pre>
@@ -263,7 +263,7 @@ invoiceguard invoice report [--as-of 2026-10-08] [--freelancer 1] [--csv invoice
 </li>
 <li><code>mark-paid</code> manually marks an invoice paid — since v0.2.0 it records the full outstanding balance in the ledger, and it errors on already-paid or void invoices. <code>void</code> voids an unpaid invoice; a <strong>paid</strong> invoice cannot be voided (0.8.4 — its ledger payments stand; refund through Stripe instead), and voiding an already-void invoice errors too.
 </li>
-<li><code>late-fees</code> (v0.4.0) shows the accrued late fees for an invoice under contract §3: due date, grace window, monthly rate, months billed, accrued fees, and total due. One fee is billed per <strong>full monthly period elapsed</strong> since accrual started (0.8.4 — see the changelog for why started-calendar-month counting was wrong). <code>--as-of YYYY-MM-DD</code> computes as of a past date (default: today).
+<li><code>late-fees</code> (v0.4.0) shows the accrued late fees for an invoice under contract §3: due date, grace window, monthly rate, months billed, accrued fees, and total due. One fee is billed per <strong>full monthly period elapsed</strong> since accrual started (0.8.4 — see the changelog for why started-calendar-month counting was wrong). <code>--as-of YYYY-MM-DD</code> computes as of a past date (default: today). <code>--csv PATH</code> (v0.44.0) exports the same accrual as a spreadsheet: one row with the same columns the text view prints (invoice id, client, project, currency, due date, rate, grace days, accrual start, as-of date, outstanding, months billed, accrued fees, total due). <code>-</code> prints the CSV to stdout instead of the text view; a file path writes the file and still prints the text view with a <code>wrote invoice late-fees CSV</code> note. CSV exports neutralize spreadsheet formula injection (see <code>report</code>). Read-only.
 </li>
 <li><code>notify</code> (v0.5.0) sends an SMS/WhatsApp payment reminder for one invoice right now (same text as the automatic day-15 message). <code>--dry-run</code> prints the rendered message without sending — no Twilio credentials needed, but the client needs a phone number.
 </li>

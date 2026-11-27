@@ -357,11 +357,23 @@
   "description": "InvoiceGuard release history — newest first, no fluff.",
   "headings": [
    {
+    "id": "0440---2026-11-27",
+    "text": "[0.44.0] - 2026-11-27"
+   },
+   {
+    "id": "added",
+    "text": "Added"
+   },
+   {
+    "id": "honest-scope-0440",
+    "text": "Honest scope (0.44.0)"
+   },
+   {
     "id": "0430---2026-11-26",
     "text": "[0.43.0] - 2026-11-26"
    },
    {
-    "id": "added",
+    "id": "added-2",
     "text": "Added"
    },
    {
@@ -373,7 +385,7 @@
     "text": "[0.42.0] - 2026-11-25"
    },
    {
-    "id": "added-2",
+    "id": "added-3",
     "text": "Added"
    },
    {
@@ -385,7 +397,7 @@
     "text": "[0.41.1] - 2026-11-24"
    },
    {
-    "id": "added-3",
+    "id": "added-4",
     "text": "Added"
    },
    {
@@ -401,7 +413,7 @@
     "text": "Fixed"
    },
    {
-    "id": "added-4",
+    "id": "added-5",
     "text": "Added"
    },
    {
@@ -413,7 +425,7 @@
     "text": "[0.40.0] - 2026-11-23"
    },
    {
-    "id": "added-5",
+    "id": "added-6",
     "text": "Added"
    },
    {
@@ -425,7 +437,7 @@
     "text": "[0.39.0] - 2026-11-22"
    },
    {
-    "id": "added-6",
+    "id": "added-7",
     "text": "Added"
    },
    {
@@ -437,7 +449,7 @@
     "text": "[0.38.0] - 2026-11-21"
    },
    {
-    "id": "added-7",
+    "id": "added-8",
     "text": "Added"
    },
    {
@@ -449,7 +461,7 @@
     "text": "[0.37.0] - 2026-11-20"
    },
    {
-    "id": "added-8",
+    "id": "added-9",
     "text": "Added"
    },
    {
@@ -465,7 +477,7 @@
     "text": "[0.36.0] - 2026-11-19"
    },
    {
-    "id": "added-9",
+    "id": "added-10",
     "text": "Added"
    },
    {
@@ -477,7 +489,7 @@
     "text": "[0.35.0] - 2026-11-18"
    },
    {
-    "id": "added-10",
+    "id": "added-11",
     "text": "Added"
    },
    {
@@ -489,7 +501,7 @@
     "text": "[0.34.0] - 2026-11-17"
    },
    {
-    "id": "added-11",
+    "id": "added-12",
     "text": "Added"
    },
    {
@@ -501,7 +513,7 @@
     "text": "[0.33.0] - 2026-11-16"
    },
    {
-    "id": "added-12",
+    "id": "added-13",
     "text": "Added"
    },
    {
@@ -513,7 +525,7 @@
     "text": "[0.32.0] - 2026-11-15"
    },
    {
-    "id": "added-13",
+    "id": "added-14",
     "text": "Added"
    },
    {
@@ -525,7 +537,7 @@
     "text": "[0.31.0] - 2026-11-14"
    },
    {
-    "id": "added-14",
+    "id": "added-15",
     "text": "Added"
    },
    {
@@ -537,7 +549,7 @@
     "text": "[0.30.0] - 2026-11-13"
    },
    {
-    "id": "added-15",
+    "id": "added-16",
     "text": "Added"
    },
    {
@@ -549,7 +561,7 @@
     "text": "[0.29.0] - 2026-11-12"
    },
    {
-    "id": "added-16",
+    "id": "added-17",
     "text": "Added"
    },
    {
@@ -561,7 +573,7 @@
     "text": "[0.28.0] - 2026-11-11"
    },
    {
-    "id": "added-17",
+    "id": "added-18",
     "text": "Added"
    },
    {
@@ -573,7 +585,7 @@
     "text": "[0.27.0] - 2026-11-10"
    },
    {
-    "id": "added-18",
+    "id": "added-19",
     "text": "Added"
    },
    {
@@ -585,7 +597,7 @@
     "text": "[0.26.0] - 2026-11-09"
    },
    {
-    "id": "added-19",
+    "id": "added-20",
     "text": "Added"
    },
    {
@@ -605,7 +617,7 @@
     "text": "[0.25.0] - 2026-11-07"
    },
    {
-    "id": "added-20",
+    "id": "added-21",
     "text": "Added"
    },
    {
@@ -617,7 +629,7 @@
     "text": "[0.24.0] - 2026-11-06"
    },
    {
-    "id": "added-21",
+    "id": "added-22",
     "text": "Added"
    },
    {
@@ -629,7 +641,7 @@
     "text": "[0.23.0] - 2026-11-05"
    },
    {
-    "id": "added-22",
+    "id": "added-23",
     "text": "Added"
    },
    {
@@ -641,7 +653,7 @@
     "text": "[0.22.0] - 2026-11-04"
    },
    {
-    "id": "added-23",
+    "id": "added-24",
     "text": "Added"
    },
    {
@@ -653,7 +665,7 @@
     "text": "[0.21.0] - 2026-11-03"
    },
    {
-    "id": "added-24",
+    "id": "added-25",
     "text": "Added"
    },
    {
@@ -669,7 +681,7 @@
     "text": "[0.19.0] - 2026-11-01"
    },
    {
-    "id": "added-25",
+    "id": "added-26",
     "text": "Added"
    },
    {
@@ -681,7 +693,7 @@
     "text": "[0.18.0] - 2026-10-31"
    },
    {
-    "id": "added-26",
+    "id": "added-27",
     "text": "Added"
    },
    {
@@ -693,7 +705,7 @@
     "text": "[0.17.0] - 2026-10-30"
    },
    {
-    "id": "added-27",
+    "id": "added-28",
     "text": "Added"
    },
    {
@@ -705,7 +717,7 @@
     "text": "[0.16.0] - 2026-10-29"
    },
    {
-    "id": "added-28",
+    "id": "added-29",
     "text": "Added"
    },
    {
@@ -717,7 +729,7 @@
     "text": "[0.15.0] - 2026-10-28"
    },
    {
-    "id": "added-29",
+    "id": "added-30",
     "text": "Added"
    },
    {
@@ -729,7 +741,7 @@
     "text": "[0.14.0] - 2026-10-27"
    },
    {
-    "id": "added-30",
+    "id": "added-31",
     "text": "Added"
    },
    {
@@ -741,7 +753,7 @@
     "text": "[0.13.0] - 2026-10-26"
    },
    {
-    "id": "added-31",
+    "id": "added-32",
     "text": "Added"
    },
    {
@@ -753,7 +765,7 @@
     "text": "[0.12.0] - 2026-10-25"
    },
    {
-    "id": "added-32",
+    "id": "added-33",
     "text": "Added"
    },
    {
@@ -765,7 +777,7 @@
     "text": "[0.11.0] - 2026-10-24"
    },
    {
-    "id": "added-33",
+    "id": "added-34",
     "text": "Added"
    },
    {
@@ -777,7 +789,7 @@
     "text": "[0.10.0] - 2026-10-23"
    },
    {
-    "id": "added-34",
+    "id": "added-35",
     "text": "Added"
    },
    {
@@ -789,7 +801,7 @@
     "text": "[0.9.0] - 2026-10-22"
    },
    {
-    "id": "added-35",
+    "id": "added-36",
     "text": "Added"
    },
    {
@@ -805,7 +817,7 @@
     "text": "Fixed"
    },
    {
-    "id": "added-36",
+    "id": "added-37",
     "text": "Added"
    },
    {
@@ -857,7 +869,7 @@
     "text": "[0.8.0] - 2026-10-16"
    },
    {
-    "id": "added-37",
+    "id": "added-38",
     "text": "Added"
    },
    {
@@ -877,7 +889,7 @@
     "text": "[0.7.0] - 2026-10-14"
    },
    {
-    "id": "added-38",
+    "id": "added-39",
     "text": "Added"
    },
    {
@@ -917,7 +929,7 @@
     "text": "Fixed"
    },
    {
-    "id": "added-39",
+    "id": "added-40",
     "text": "Added"
    },
    {
@@ -953,7 +965,7 @@
     "text": "[0.6.0] - 2026-10-08"
    },
    {
-    "id": "added-40",
+    "id": "added-41",
     "text": "Added"
    },
    {
@@ -965,7 +977,7 @@
     "text": "[0.5.0] - 2026-10-07"
    },
    {
-    "id": "added-41",
+    "id": "added-42",
     "text": "Added"
    },
    {
@@ -977,7 +989,7 @@
     "text": "[0.4.0] - 2026-10-06"
    },
    {
-    "id": "added-42",
+    "id": "added-43",
     "text": "Added"
    },
    {
@@ -989,7 +1001,7 @@
     "text": "[0.3.0] - 2026-10-05"
    },
    {
-    "id": "added-43",
+    "id": "added-44",
     "text": "Added"
    },
    {
@@ -1005,7 +1017,7 @@
     "text": "[0.2.0] - 2026-10-04"
    },
    {
-    "id": "added-44",
+    "id": "added-45",
     "text": "Added"
    },
    {
@@ -1017,7 +1029,7 @@
     "text": "[0.1.0] - 2026-10-02"
    },
    {
-    "id": "added-45",
+    "id": "added-46",
     "text": "Added"
    },
    {
@@ -1029,7 +1041,7 @@
     "text": "Honest scope (v1)"
    }
   ],
-  "text": "Every release, newest first. InvoiceGuard follows semver. [0.43.0] - 2026-11-26 Agency-mode slice #37: CSV export for client list and project list . Slices #32–#36 put CSV exports on every agency view (freelancer list/show, payout list/suggest/schedule/due/overdue, agency summary, invoice report, invoice list), but the two core rosters themselves — the client list with its per-client dunning-policy overrides and the project list with its contract-acknowledgment state — were still text-only. This slice adds --csv PATH (or - for stdout) to both, writing the same lists as spreadsheets through two shared library calls. With these two, every CLI list view in the app is now a spreadsheet. Added invoiceguard client list [--csv PATH] — one CSV row per client, in the same id order the text lines print them, with the same columns the text lines print (client id, name, email, phone — empty when unset, exactly like the text lines printing nothing), plus the per-client dunning-policy overrides from the text lines' [dunning ...] marker as one cell per stage ( dunning_day1 / dunning_day7 / dunning_day15 ): the custom threshold, off when the stage is disabled for this client, empty when the client uses the global default. reports.client_list_csv(rows) is the library call — it takes the same db.list_clients() rows the text view prints and needs no timing map. Pinned by a new test file tests/test_client_project_list_csv.py (header + columns, multi-client rows in id order, dunning overrides incl. custom / disabled / default, no-clients header-only export, file + stdout modes, bare library call, CSV formula-injection neutralization). Docs: README client list row + roadmap + test count, docs/src/cli.md, docs/src/roadmap.md, and the changelog; generated docs pages rebuilt. invoiceguard project list [--csv PATH] — one CSV row per project, in the same id order the text lines print them, with the same columns the text lines print (project id, title, client, amount, currency, contract acknowledgment — ack / no-ack , exactly like the bracket the text lines print). The amount is the stored cents as a plain decimal string, like the other CSV exports; the text view renders it as money. reports.project_list_csv(rows) is the library call — it takes the same db.list_projects() rows the text view prints and needs no timing map. Pinned by the same new test file (header + money columns, multi-project rows in id order, ack / no-ack states, no-projects header-only export, file + stdout modes, bare library call, CSV formula-injection neutralization). Docs: README project list row + roadmap + test count, docs/src/cli.md, docs/src/roadmap.md, and the changelog; generated docs pages rebuilt. Honest scope (0.43.0) A view, not a workflow: the exports list clients and projects as they stand, not a settlement or a report. Receivables aging, late fees, and per-freelancer payout timing stay on invoice report ( --as-of projection) and the other agency views. Multi-freelancer workspaces remain the unshipped half of agency mode. [0.42.0] - 2026-11-25 Agency-mode slice #36: CSV export for invoice list . Slices #32–#35 put CSV exports on every agency view (freelancer list/show, payout list/suggest/schedule/due/overdue, agency summary, invoice report), but the core invoice list view itself — the one list an agency operator opens first to see the whole book — was still text-only. This slice adds --csv PATH (or - for stdout) to invoice list , writing the same list as a spreadsheet through one shared library call. The list carries no --as-of , so — unlike the invoice report CSV — there are no payout timing columns here. Added invoiceguard invoice list [--freelancer ID] [--csv PATH] — one CSV row per listed invoice, in the same id order the text lines print them, with the same columns the text lines print (invoice id, kind, status, amount, currency, project, freelancer, due date — freelancer empty when unassigned and due date empty when unset, exactly like the text lines omitting the"
+  "text": "Every release, newest first. InvoiceGuard follows semver. [0.44.0] - 2026-11-27 Agency-mode slice #38: CSV export for invoice late-fees . Slices #32–#37 put CSV exports on every agency view and every CLI list view, but the late-fee accrual view itself — the one invoice's due date, rate, grace window, months billed, accrued fees, and total due — was still text-only. This slice adds --csv PATH (or - for stdout) to invoice late-fees , writing the same accrual as a spreadsheet through one shared library call. With this, every CLI view in the app that prints numbers is now a spreadsheet. Added invoiceguard invoice late-fees ID [--as-of DATE] [--csv PATH] — one CSV row for the invoice, with the same columns the text view prints (invoice id, client, project, currency, due date, monthly rate, grace days, accrual start, as-of date, outstanding, months billed, accrued fees, total due). The amounts are the stored cents as plain decimal strings, like the other CSV exports; the text view renders them as money. The outstanding cell comes from the summary ( total_cents - fees_cents ), so the bare library call needs no ledger lookup. An invoice with no due date carries empty due-date and accrual-start cells and zero months/fees, exactly like the text view's \"no due date: no fees accrue\" line; an invoice whose accrual has started but no full month has elapsed yet still carries its accrual start, exactly like the text view. - prints the CSV to stdout instead of the text view; a file path writes the file and still prints the text view with a wrote invoice late-fees CSV note. reports.late_fees_csv(invoice, summary, as_of=None) is the library call — it takes the same db.invoice_full() dict and late_fee_summary() dict the text view prints, projected with --as-of (default: today). Pinned by a new test file tests/test_invoice_late_fees_csv.py (header + money columns, accrual not started, accrual started with no full month, no due date, partial payment accruing on the outstanding balance, default as-of is today, file + stdout modes, unknown-invoice error, invalid --as-of clean error, bare library call, CSV formula-injection neutralization). Docs: README late-fees row + roadmap + test count, docs/src/cli.md, docs/src/roadmap.md, and the changelog; generated docs pages rebuilt. Honest scope (0.44.0) A view, not a workflow: the export reports one invoice's accrual as of --as-of , not a settlement. Recording a payment is still invoice record-payment / invoice mark-paid . Multi-freelancer workspaces remain the unshipped half of agency mode. [0.43.0] - 2026-11-26 Agency-mode slice #37: CSV export for client list and project list . Slices #32–#36 put CSV exports on every agency view (freelancer list/show, payout list/suggest/schedule/due/overdue, agency summary, invoice report, invoice list), but the two core rosters themselves — the client list with its per-client dunning-policy overrides and the project list with its contract-acknowledgment state — were still text-only. This slice adds --csv PATH (or - for stdout) to both, writing the same lists as spreadsheets through two shared library calls. With these two, every CLI list view in the app is now a spreadsheet. Added invoiceguard client list [--csv PATH] — one CSV row per client, in the same id order the text lines print them, with the same columns the text lines print (client id, name, email, phone — empty when unset, exactly like the text lines printing nothing), plus the per-client dunning-policy overrides from the text lines' [dunning ...] marker as one cell per stage ( dunning_day1 / dunning_day7 / dunning_day15 ): the custom threshold, off when the stage is disabled for this client, empty when the client uses the global default. reports.client_list_csv(rows) is the library call — it takes the same db.list_clients() rows the text view prints and needs no timing map. Pinned by a new test file tests/test_client_project_list_csv.py (header + columns, multi-client rows in id order, dunning overrides incl"
  },
  {
   "url": "roadmap.html",
