@@ -26,7 +26,7 @@ from .reports import (agency_summary, agency_summary_csv,
                       freelancer_show_invoices_csv,
                       freelancer_show_payouts_csv,
                       invoice_list_csv,
-                      invoices_csv, next_payout_date, payments_csv,
+                      invoices_csv, late_fees_csv, next_payout_date, payments_csv,
                       pay_run_csv, payout_due, payout_overdue,
                       payout_schedule, payout_schedule_csv,
                       payout_schedule_timing,
@@ -1914,12 +1914,21 @@ def invoice_void(invoice_id):
 @click.argument("invoice_id", type=int)
 @click.option("--as-of", "as_of", default=None,
               help="Accrual date as YYYY-MM-DD (default: today)")
-def invoice_late_fees(invoice_id, as_of):
+@click.option("--csv", "csv_path", default=None, metavar="PATH",
+              help="Also write the accrual as CSV to PATH "
+                   "('-' prints the CSV instead of the text view)")
+def invoice_late_fees(invoice_id, as_of, csv_path):
     """Show accrued late fees for an invoice (contract §3).
 
     Fees accrue at the project's monthly rate, compounding monthly,
     starting the day after the grace period ends: one fee per full
     monthly period elapsed since accrual started.
+
+    The `--csv` export writes the same accrual as a spreadsheet: one
+    row with the same columns the text view prints (invoice id,
+    client, project, currency, due date, rate, grace days, accrual
+    start, as-of date, outstanding, months billed, accrued fees, and
+    total due). Read-only.
     """
     db = _db()
     full = db.invoice_full(invoice_id)
@@ -1933,9 +1942,17 @@ def invoice_late_fees(invoice_id, as_of):
             raise click.ClickException(
                 f"bad --as-of date {as_of!r} — use YYYY-MM-DD")
     summary = late_fee_summary(full, as_of=as_of)
+    effective_as_of = as_of[:10] if as_of else date.today().isoformat()
+    csv_text = (late_fees_csv(full, summary, as_of=effective_as_of)
+                if csv_path else None)
+    if csv_path == "-":
+        click.echo(csv_text, nl=False)
+        return
+    if csv_path:
+        Path(csv_path).write_text(csv_text, encoding="utf-8")
     cur = full["currency"]
     click.echo(f"invoice #{invoice_id}: late-fee accrual "
-               f"(as of {as_of[:10] if as_of else date.today().isoformat()})")
+               f"(as of {effective_as_of})")
     click.echo(f"  due date:      {full['due_date'] or '— (no due date: no fees accrue)'}")
     click.echo(f"  rate:          {full['late_fee_pct']}%/month, compounding monthly")
     click.echo(f"  grace:         {full['late_fee_grace_days']} days"
@@ -1945,6 +1962,8 @@ def invoice_late_fees(invoice_id, as_of):
     click.echo(f"  months billed: {summary['months']}")
     click.echo(f"  accrued fees:  {money(summary['fees_cents'], cur)}")
     click.echo(f"  total due:     {money(summary['total_cents'], cur)}")
+    if csv_path:
+        click.echo(f"wrote invoice late-fees CSV: {csv_path} (1 row)")
 
 
 @invoice.command("notify")

@@ -261,6 +261,61 @@ def invoice_list_csv(rows: list[dict]) -> str:
     return buf.getvalue()
 
 
+LATE_FEES_CSV_COLUMNS = [
+    "invoice_id", "client", "project", "currency",
+    "due_date", "late_fee_pct", "grace_days", "accrual_start",
+    "as_of", "outstanding", "months_billed", "fees", "total_due",
+]
+
+
+def late_fees_csv(invoice: dict, summary: dict,
+                  as_of: str | date | None = None) -> str:
+    """The late-fee accrual view as CSV — one row for the invoice.
+
+    *invoice* is a `db.invoice_full()` dict and *summary* the
+    `late_fee_summary()` dict for it (the same two dicts the text
+    view prints). The columns mirror what the text lines print: the
+    invoice id, client, project, currency, due date, monthly rate,
+    grace days, accrual start, the as-of date the accrual was
+    computed for, the outstanding balance, months billed, accrued
+    fees, and total due. Money is the stored cents as plain decimal
+    strings (see `_units`), like the other CSV exports; the text view
+    renders it as money. The outstanding cell is derived from the
+    summary (`total_cents - fees_cents`), so a bare call needs no
+    ledger lookup — it is the same outstanding balance the text view
+    prints. An invoice with no due date carries empty due-date and
+    accrual-start cells and zero months/fees, exactly like the text
+    view's \"no due date: no fees accrue\" line; an invoice whose
+    accrual has started but no full month has elapsed yet still
+    carries its accrual start, exactly like the text view.
+
+    Free-text cells (client name, project title) are neutralized
+    against CSV formula injection (see `_csv_cell`). Read-only.
+    """
+    effective_as_of = _as_date(as_of).isoformat() if as_of else date.today().isoformat()
+    rate = summary.get("rate_pct", invoice.get("late_fee_pct"))
+    grace = invoice.get("late_fee_grace_days")
+    outstanding_cents = (summary.get("total_cents", 0)
+                         - summary.get("fees_cents", 0))
+    buf = io.StringIO()
+    w = csv.writer(buf, lineterminator="\n")
+    w.writerow(LATE_FEES_CSV_COLUMNS)
+    w.writerow([_csv_cell(v) for v in [
+        invoice.get("id"), invoice.get("client_name"),
+        invoice.get("project_title"), invoice.get("currency"),
+        invoice.get("due_date") or "",
+        "" if rate is None else str(rate),
+        "" if grace is None else str(int(grace)),
+        summary.get("accrual_start") or "",
+        effective_as_of,
+        _units(outstanding_cents),
+        summary.get("months", 0),
+        _units(summary.get("fees_cents", 0)),
+        _units(summary.get("total_cents", 0)),
+    ]])
+    return buf.getvalue()
+
+
 CLIENT_LIST_CSV_COLUMNS = [
     "client_id", "client", "email", "phone",
     "dunning_day1", "dunning_day7", "dunning_day15",

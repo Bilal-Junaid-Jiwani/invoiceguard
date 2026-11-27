@@ -6,6 +6,16 @@ description: InvoiceGuard release history — newest first, no fluff.
 
 Every release, newest first. InvoiceGuard follows semver.
 
+## [0.44.0] - 2026-11-27
+
+Agency-mode slice #38: CSV export for `invoice late-fees`. Slices #32–#37 put CSV exports on every agency view and every CLI list view, but the late-fee accrual view itself — the one invoice's due date, rate, grace window, months billed, accrued fees, and total due — was still text-only. This slice adds `--csv PATH` (or `-` for stdout) to `invoice late-fees`, writing the same accrual as a spreadsheet through one shared library call. With this, every CLI view in the app that prints numbers is now a spreadsheet.
+
+### Added
+- **`invoiceguard invoice late-fees ID [--as-of DATE] [--csv PATH]`** — one CSV row for the invoice, with the same columns the text view prints (invoice id, client, project, currency, due date, monthly rate, grace days, accrual start, as-of date, outstanding, months billed, accrued fees, total due). The amounts are the stored cents as plain decimal strings, like the other CSV exports; the text view renders them as money. The outstanding cell comes from the summary (`total_cents - fees_cents`), so the bare library call needs no ledger lookup. An invoice with no due date carries empty due-date and accrual-start cells and zero months/fees, exactly like the text view's "no due date: no fees accrue" line; an invoice whose accrual has started but no full month has elapsed yet still carries its accrual start, exactly like the text view. `-` prints the CSV to stdout instead of the text view; a file path writes the file and still prints the text view with a `wrote invoice late-fees CSV` note. `reports.late_fees_csv(invoice, summary, as_of=None)` is the library call — it takes the same `db.invoice_full()` dict and `late_fee_summary()` dict the text view prints, projected with `--as-of` (default: today). Pinned by a new test file `tests/test_invoice_late_fees_csv.py` (header + money columns, accrual not started, accrual started with no full month, no due date, partial payment accruing on the outstanding balance, default as-of is today, file + stdout modes, unknown-invoice error, invalid `--as-of` clean error, bare library call, CSV formula-injection neutralization). Docs: README late-fees row + roadmap + test count, docs/src/cli.md, docs/src/roadmap.md, and the changelog; generated docs pages rebuilt.
+
+### Honest scope (0.44.0)
+- A view, not a workflow: the export reports one invoice's accrual as of `--as-of`, not a settlement. Recording a payment is still `invoice record-payment` / `invoice mark-paid`. Multi-freelancer workspaces remain the unshipped half of agency mode.
+
 ## [0.43.0] - 2026-11-26
 
 Agency-mode slice #37: CSV export for `client list` and `project list`. Slices #32–#36 put CSV exports on every agency view (freelancer list/show, payout list/suggest/schedule/due/overdue, agency summary, invoice report, invoice list), but the two core rosters themselves — the client list with its per-client dunning-policy overrides and the project list with its contract-acknowledgment state — were still text-only. This slice adds `--csv PATH` (or `-` for stdout) to both, writing the same lists as spreadsheets through two shared library calls. With these two, every CLI list view in the app is now a spreadsheet.
