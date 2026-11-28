@@ -1756,20 +1756,40 @@ def invoice_create(project_id, kind, amount, due_days):
 
 
 @invoice.command("list")
+@click.option("--as-of", "as_of", default=None,
+              help="Project payout timing as of YYYY-MM-DD "
+                   "(default: today)")
 @click.option("--freelancer", "freelancer_id", type=int, default=None,
               help="Only show invoices attributed to freelancer ID")
 @click.option("--csv", "csv_path", default=None, metavar="PATH",
               help="Also write the list as CSV to PATH "
                    "('-' prints the CSV instead of the text list)")
-def invoice_list(freelancer_id, csv_path):
+def invoice_list(as_of, freelancer_id, csv_path):
     """List invoices.
 
-    The `--csv` export writes the same list as a spreadsheet: one
-    row per invoice, in the same id order the text lines print them,
+    Each line also carries payout timing for the invoice's attributed
+    freelancer, taken from the same `agency summary` rows (derived
+    from the exact `payout due` / `overdue` rules as of `--as-of`,
+    default today): due, overdue (with the missed run date),
+    upcoming, settled, or no schedule — per currency, matching the
+    invoice's own currency, so the book itself answers \"does this
+    invoice's freelancer need paying now\" without cross-checking
+    `payout due` and `payout overdue`. Unassigned invoices and
+    freelancers with no billable invoices carry no timing phrase.
+    An invalid `--as-of` is a clean error, not a traceback. The
+    `--csv` export writes the same list as a spreadsheet: one row
+    per invoice, in the same id order the text lines print them,
     with the same columns the text lines print (invoice id, kind,
-    status, amount, currency, project, freelancer, due date). An
-    empty list exports a header-only CSV. Read-only.
+    status, amount, currency, project, freelancer, due date) plus
+    the same timing in trailing `payout_status` / `payout_date`
+    columns. An empty list exports a header-only CSV. Read-only.
     """
+    if as_of:
+        try:
+            date.fromisoformat(as_of[:10])
+        except ValueError:
+            raise click.ClickException(
+                f"bad --as-of date {as_of!r} — use YYYY-MM-DD")
     db = _db()
     if freelancer_id is not None and not db.get_freelancer(freelancer_id):
         db.close()
@@ -1777,7 +1797,17 @@ def invoice_list(freelancer_id, csv_path):
     rows = db.list_invoices()
     if freelancer_id is not None:
         rows = [r for r in rows if r["freelancer_id"] == freelancer_id]
-    csv_text = invoice_list_csv(rows) if csv_path else None
+    try:
+        # Per-(freelancer, currency) timing from the same agency
+        # summary rows the report joins onto its rows — each invoice
+        # takes its own freelancer's status in its own currency.
+        timing = {(r["freelancer_id"], r["currency"]): r
+                  for r in agency_summary(db, as_of=as_of)
+                  if r["currency"]}
+    except ValueError as e:
+        db.close()
+        raise click.ClickException(str(e))
+    csv_text = invoice_list_csv(rows, timing) if csv_path else None
     db.close()
     if csv_path == "-":
         click.echo(csv_text, nl=False)
@@ -1786,9 +1816,32 @@ def invoice_list(freelancer_id, csv_path):
         Path(csv_path).write_text(csv_text, encoding="utf-8")
     for r in rows:
         fl = f" [{r['freelancer_name']}]" if r["freelancer_name"] else ""
+        # Same per-currency timing the invoice report joins onto its
+        # rows: the "unassigned" invoice has no freelancer id, and a
+        # freelancer with no billable invoices has no timing entry —
+        # both print no phrase rather than a misleading one.
+        timing_txt = ""
+        fid = r["freelancer_id"]
+        if fid is not None:
+            t = timing.get((fid, r["currency"]), {})
+            status = t.get("payout_status")
+            if status == "overdue":
+                timing_txt = (f"  payout overdue "
+                              f"(missed {t['missed_payout_date']})")
+            elif status == "due":
+                timing_txt = (f"  payout due "
+                              f"(next payout {t['next_payout_date']})")
+            elif status == "upcoming":
+                timing_txt = (f"  payout upcoming "
+                              f"(next payout {t['next_payout_date']})")
+            elif status == "settled":
+                timing_txt = "  payout settled"
+            elif status == "no schedule":
+                timing_txt = "  payout no schedule"
         click.echo(f"#{r['id']:>3}  {r['kind']:<9} {r['status']:<14} "
                    f"{money(r['amount_cents'], r['currency']):>12}  "
-                   f"{r['project_title']:<30}{fl} due {r['due_date'] or '-'}")
+                   f"{r['project_title']:<30}{fl} due {r['due_date'] or '-'}"
+                   + timing_txt)
     if csv_path:
         click.echo(f"wrote invoice list CSV: {csv_path} "
                    f"({len(rows)} rows)")

@@ -2,6 +2,16 @@
 
 Every release, newest first. InvoiceGuard follows semver.
 
+## [0.45.0] - 2026-11-28
+
+Agency-mode slice #39: payout timing on `invoice list`. Slices #20–#38 put payout timing on every agency view and CSV export — except the core `invoice list` itself: the one list an agency operator opens first to see the whole book showed the attributed freelancer but not whether that freelancer needs paying now. This slice adds `--as-of DATE` to `invoice list` and appends the same per-(freelancer, currency) timing to each text line and to the CSV export as trailing `payout_status` / `payout_date` columns, taken from the same `agency summary` rows the invoice report joins onto its rows. With this, every CLI list view in the app now answers "does this row's freelancer need paying now" as of `--as-of`.
+
+### Added
+- **`invoiceguard invoice list [--freelancer ID] [--as-of DATE] [--csv PATH]`** — each line now appends its attributed freelancer's payout timing in the invoice's own currency (due / overdue with the missed run date / upcoming / settled / no schedule), projected with `--as-of` (default: today); the CSV export gains the same timing in trailing `payout_status` / `payout_date` columns. Unassigned invoices and freelancers with no billable invoices carry no timing phrase and empty CSV cells rather than a misleading status. `--freelancer ID` composes with the export and the timing, restricting the rows. `reports.invoice_list_csv(rows, timing=None)` is the library call — it takes the same `db.list_invoices()` rows the text view prints, and without a timing map both columns stay empty. Pinned by a new test file `tests/test_invoice_list_timing.py` (due / overdue / upcoming / settled / no-schedule phrases, unassigned invoice with no phrase, draft-only freelancer with no phrase, `--as-of` projection, invalid `--as-of` clean error, CSV timing columns incl. per-currency join, `--as-of` projection, bare library call with and without timing, `--freelancer` filter). Docs: README invoice list row + roadmap + test count, docs/src/cli.md, docs/src/roadmap.md, and the changelog; generated docs pages rebuilt. Also synced the 0.20.0 section of docs/src/changelog.md with CHANGELOG.md (the `### Added` / `### Honest scope` headings, the no-billable-rows sentence, and the "matching `payout due`/`overdue`" phrase were missing there).
+
+### Honest scope (0.45.0)
+- A view, not a workflow: the timing reports when the freelancer's share is due; recording a payout is still `payout settle` / `payout settle-due` / `payout settle-overdue`. Multi-freelancer workspaces remain the unshipped half of agency mode.
+
 ## [0.44.0] - 2026-11-27
 
 Agency-mode slice #38: CSV export for `invoice late-fees`. Slices #32–#37 put CSV exports on every agency view and every CLI list view, but the late-fee accrual view itself — the one invoice's due date, rate, grace window, months billed, accrued fees, and total due — was still text-only. This slice adds `--csv PATH` (or `-` for stdout) to `invoice late-fees`, writing the same accrual as a spreadsheet through one shared library call. With this, every CLI view in the app that prints numbers is now a spreadsheet.

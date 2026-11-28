@@ -225,11 +225,12 @@ def invoices_csv(rows: list[dict], timing: dict | None = None) -> str:
 
 INVOICE_LIST_CSV_COLUMNS = [
     "invoice_id", "kind", "status", "amount", "currency", "project",
-    "freelancer", "due_date",
+    "freelancer", "due_date", "payout_status", "payout_date",
 ]
 
 
-def invoice_list_csv(rows: list[dict]) -> str:
+def invoice_list_csv(rows: list[dict],
+                     timing: dict | None = None) -> str:
     """The invoice list as CSV — one row per `list_invoices()` row,
     in the same id order the text list prints them.
 
@@ -240,9 +241,19 @@ def invoice_list_csv(rows: list[dict]) -> str:
     lines omitting the bracketed name), and the due date (empty when
     unset, exactly like the text lines printing `-`). The amount is
     the stored cents as a plain decimal string (see `_units`), like
-    the other CSV exports; the text view renders it as money. The
-    list command carries no `--as-of`, so — unlike the invoice
-    report CSV — there are no payout timing columns here.
+    the other CSV exports; the text view renders it as money.
+
+    Pass the same per-(freelancer, currency) agency-summary timing
+    map the text list joins onto its lines and each row also carries
+    that freelancer's payout timing: the status (due / overdue /
+    upcoming / settled / no schedule) in ``payout_status`` and the
+    date it refers to in ``payout_date`` — the missed run date when
+    overdue, the next payout date when due or upcoming, empty for
+    settled / no schedule. Unassigned invoices and freelancers with
+    no timing entry carry empty cells rather than a misleading
+    status. Without ``timing`` both columns stay empty, so a bare
+    ``invoice_list_csv(rows)`` call is unchanged apart from the two
+    new (empty) columns.
 
     Free-text cells (project title, freelancer name) are neutralized
     against CSV formula injection (see `_csv_cell`). An empty list
@@ -252,11 +263,21 @@ def invoice_list_csv(rows: list[dict]) -> str:
     w = csv.writer(buf, lineterminator="\n")
     w.writerow(INVOICE_LIST_CSV_COLUMNS)
     for r in rows:
+        status = ""
+        payout_date = ""
+        if timing is not None:
+            t = timing.get((r["freelancer_id"], r["currency"]), {})
+            status = t.get("payout_status") or ""
+            if status == "overdue":
+                payout_date = t.get("missed_payout_date") or ""
+            elif status in ("due", "upcoming"):
+                payout_date = t.get("next_payout_date") or ""
         w.writerow([_csv_cell(v) for v in [
             r["id"], r["kind"], r["status"],
             _units(r["amount_cents"]), r["currency"],
             r["project_title"], r["freelancer_name"] or "",
             r["due_date"] or "",
+            status, payout_date,
         ]])
     return buf.getvalue()
 

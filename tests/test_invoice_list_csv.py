@@ -10,9 +10,10 @@ text lines print them, with the same columns the text lines print
 (invoice id, kind, status, amount, currency, project, freelancer,
 due date), through one shared library call
 `reports.invoice_list_csv()`. No new library rules: the rows are
-the same `db.list_invoices()` rows the text view prints, and the
-list carries no `--as-of`, so — unlike the invoice report CSV —
-there are no payout timing columns here. Read-only.
+the same `db.list_invoices()` rows the text view prints. Slice #39
+(0.45.0) added payout timing to the list: `--as-of DATE` projects
+it and the CSV gains trailing `payout_status` / `payout_date`
+columns — see `tests/test_invoice_list_timing.py`. Read-only.
 """
 
 from __future__ import annotations
@@ -133,9 +134,9 @@ def test_invoice_list_csv_unknown_freelancer_is_clean_error(
 
 
 def test_invoice_list_csv_bare_library_call(db, sample_project):
-    # A bare call needs no timing map — the list carries no `--as-of`
-    # — and formula-looking project titles and freelancer names are
-    # neutralized on the free-text cells.
+    # A bare call needs no timing map and carries empty timing
+    # cells — and formula-looking project titles and freelancer
+    # names are neutralized on the free-text cells.
     fid = db.add_freelancer("=Evil")
     evil_project = db.get_project(db.add_project(
         1, "=Evil Project", 200_000, "USD", 50.0, 1.5, 15, ""))
